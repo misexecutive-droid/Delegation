@@ -78,7 +78,9 @@ export const taskImageService = {
         if (!image) throw AppError.notFound("Image not found");
 
         const [item] = await db.select().from(taskChecklistItems).where(eq(taskChecklistItems.id, image.taskChecklistItemId)).limit(1);
-        if (item) assertCanUpload(user, item);
+        // Parent checklist item may be gone (no assignee to check against) — fall back to
+        // treating the photo's uploader as the "assignee" so the same rule still applies.
+        assertCanUpload(user, item ?? { assigneeId: image.uploadedBy });
 
         // Delete the real file from disk. If this fails (e.g. it was already gone), we log it
         // but still proceed to clean up the database record — a stray file on disk is a much
