@@ -1,0 +1,27 @@
+import { z } from "zod"
+import { ROLES } from "../../db/schema/core.js"
+import { objectId } from "../../utils/index.js"
+
+export const createUserSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    firstName: z.string().min(1),
+    lastName: z.string().optional(),
+    role: z.enum(ROLES),
+    departmentId: objectId.optional(),
+    storeId: objectId.optional(),
+});
+
+// Password changes aren't handled through this update endpoint (see user.service.ts's
+// UpdateUserInput comment) — same reason it's left out of update here, only create needs it.
+// departmentId/storeId are overridden to also accept `null` (unlike create) so an admin can
+// explicitly clear a user's department/store, not just set a new one — mirrors
+// ticket.validation.ts's assigneeId.
+export const updateUserSchema = createUserSchema.omit({ password: true, departmentId: true, storeId: true }).partial().extend({
+    isActive: z.boolean().optional(),
+    departmentId: objectId.nullable().optional(),
+    storeId: objectId.nullable().optional(),
+});
+
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;

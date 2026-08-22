@@ -1,0 +1,207 @@
+import {
+  mysqlTable,
+  varchar,
+  text,
+  int,
+  float,
+  boolean,
+  datetime,
+  mysqlEnum,
+  index,
+} from 'drizzle-orm/mysql-core';
+import { createId } from '@paralleldrive/cuid2';
+import { users, stores, categories, departments } from './core.js';
+import { CAPTURE_METHODS } from './task.js';
+
+// ---------------------------------------------------------------------------
+// Shared enum value arrays
+// ---------------------------------------------------------------------------
+
+export const TICKET_STATUSES = ['OPEN', 'IN_PROGRESS', 'IN_REVIEW', 'CLOSED', 'ON_HOLD'] as const;
+export const TICKET_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export const ASSIGNMENT_MODES = ['AUTO', 'MANUAL'] as const;
+export const RESTRICTED_STATUSES = ['IN_PROGRESS', 'ON_HOLD', 'IN_REVIEW'] as const;
+export const CHECKLIST_TEMPLATE_TARGETS = ['TASK', 'TICKET'] as const;
+
+// ---------------------------------------------------------------------------
+// Ticket — support/issue ticket raised by a user
+// ---------------------------------------------------------------------------
+export const tickets = mysqlTable(
+  'Ticket',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    title: varchar('title', { length: 191 }).notNull(),
+    description: text('description').notNull(),
+    status: mysqlEnum('status', TICKET_STATUSES).notNull().default('OPEN'),
+    priority: mysqlEnum('priority', TICKET_PRIORITIES).notNull().default('MEDIUM'),
+    assignmentMode: mysqlEnum('assignmentMode', ASSIGNMENT_MODES).notNull().default('MANUAL'),
+    tatHours: float('tatHours'),
+    // Recomputed from tatHours by a service-layer helper (was a Mongoose pre('save') hook).
+    tatDueAt: datetime('tatDueAt', { mode: 'date' }),
+    isOverdue: boolean('isOverdue').notNull().default(false),
+    closedAt: datetime('closedAt', { mode: 'date' }),
+    userId: varchar('userId', { length: 191 }).notNull().references(() => users.id),
+    assigneeId: varchar('assigneeId', { length: 191 }).references(() => users.id),
+    storeId: varchar('storeId', { length: 191 }).references(() => stores.id),
+    categoryId: varchar('categoryId', { length: 191 }).references(() => categories.id),
+    departmentId: varchar('departmentId', { length: 191 }).references(() => departments.id),
+    verifiedBy: varchar('verifiedBy', { length: 191 }).references(() => users.id),
+    verifiedAt: datetime('verifiedAt', { mode: 'date' }),
+    verificationNote: text('verificationNote'),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index('Ticket_userId_createdAt_idx').on(table.userId, table.createdAt),
+    index('Ticket_assigneeId_createdAt_idx').on(table.assigneeId, table.createdAt),
+    index('Ticket_departmentId_createdAt_idx').on(table.departmentId, table.createdAt),
+    index('Ticket_status_createdAt_idx').on(table.status, table.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// TicketStatusUpdate — audit trail entry for a Ticket's status changes
+// ---------------------------------------------------------------------------
+export const ticketStatusUpdates = mysqlTable(
+  'TicketStatusUpdate',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    ticketId: varchar('ticketId', { length: 191 }).notNull().references(() => tickets.id),
+    changedBy: varchar('changedBy', { length: 191 }).notNull().references(() => users.id),
+    // Plain string, not enum-constrained (unlike toStatus) — matches source.
+    fromStatus: varchar('fromStatus', { length: 191 }).notNull(),
+    toStatus: mysqlEnum('toStatus', RESTRICTED_STATUSES).notNull(),
+    remark: text('remark').notNull(),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index('TicketStatusUpdate_ticketId_idx').on(table.ticketId)],
+);
+
+// ---------------------------------------------------------------------------
+// TicketAttachment — file uploaded to a Ticket (optionally tied to a status update)
+// ---------------------------------------------------------------------------
+export const ticketAttachments = mysqlTable(
+  'TicketAttachment',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    url: varchar('url', { length: 2048 }).notNull(),
+    originalFilename: varchar('originalFilename', { length: 191 }),
+    sizeBytes: int('sizeBytes').notNull(),
+    mimeType: varchar('mimeType', { length: 191 }).notNull(),
+    captureMethod: mysqlEnum('captureMethod', CAPTURE_METHODS).notNull().default('GALLERY'),
+    statusUpdateId: varchar('statusUpdateId', { length: 191 }).references(() => ticketStatusUpdates.id),
+    ticketId: varchar('ticketId', { length: 191 }).notNull().references(() => tickets.id),
+    uploadedBy: varchar('uploadedBy', { length: 191 }).notNull().references(() => users.id),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index('TicketAttachment_statusUpdateId_idx').on(table.statusUpdateId),
+    index('TicketAttachment_ticketId_idx').on(table.ticketId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// TicketComment — a comment on a Ticket
+// ---------------------------------------------------------------------------
+export const ticketComments = mysqlTable(
+  'TicketComment',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    body: text('body').notNull(),
+    ticketId: varchar('ticketId', { length: 191 }).notNull().references(() => tickets.id),
+    authorId: varchar('authorId', { length: 191 }).notNull().references(() => users.id),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index('TicketComment_ticketId_idx').on(table.ticketId)],
+);
+
+// ---------------------------------------------------------------------------
+// Checklist — ticket-side checklist (distinct from ChecklistDefinition/Instance)
+// ---------------------------------------------------------------------------
+export const checklists = mysqlTable('Checklist', {
+  id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+  title: varchar('title', { length: 191 }).notNull(),
+  ticketId: varchar('ticketId', { length: 191 }).notNull().references(() => tickets.id),
+  createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+});
+
+// ---------------------------------------------------------------------------
+// ChecklistItem — a single line item within a ticket-side Checklist
+// ---------------------------------------------------------------------------
+export const checklistItems = mysqlTable(
+  'ChecklistItem',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    label: varchar('label', { length: 191 }).notNull(),
+    isDone: boolean('isDone').notNull().default(false),
+    assigneeId: varchar('assigneeId', { length: 191 }).references(() => users.id),
+    dueAt: datetime('dueAt', { mode: 'date' }),
+    // Kept in sync with isDone by a service-layer helper (was a Mongoose pre('save') hook).
+    completedAt: datetime('completedAt', { mode: 'date' }),
+    checklistId: varchar('checklistId', { length: 191 }).notNull().references(() => checklists.id),
+    requiredImageCount: int('requiredImageCount').notNull().default(0),
+    maxImageCount: int('maxImageCount'),
+    requiresLivePhoto: boolean('requiresLivePhoto').notNull().default(false),
+    remarks: text('remarks'),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index('ChecklistItem_checklistId_idx').on(table.checklistId)],
+);
+
+// ---------------------------------------------------------------------------
+// ChecklistImage — photo proof captured against a ticket-side ChecklistItem
+// ---------------------------------------------------------------------------
+export const checklistImages = mysqlTable(
+  'ChecklistImage',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    url: varchar('url', { length: 2048 }).notNull(),
+    originalFilename: varchar('originalFilename', { length: 191 }),
+    sizeBytes: int('sizeBytes').notNull(),
+    mimeType: varchar('mimeType', { length: 191 }).notNull(),
+    captureMethod: mysqlEnum('captureMethod', CAPTURE_METHODS).notNull(),
+    checklistItemId: varchar('checklistItemId', { length: 191 }).notNull().references(() => checklistItems.id),
+    uploadedBy: varchar('uploadedBy', { length: 191 }).notNull().references(() => users.id),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index('ChecklistImage_checklistItemId_idx').on(table.checklistItemId)],
+);
+
+// ---------------------------------------------------------------------------
+// ChecklistTemplate — reusable checklist blueprint for Task or Ticket
+// ---------------------------------------------------------------------------
+export const checklistTemplates = mysqlTable('ChecklistTemplate', {
+  id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+  name: varchar('name', { length: 191 }).notNull(),
+  appliesTo: mysqlEnum('appliesTo', CHECKLIST_TEMPLATE_TARGETS).notNull(),
+  departmentId: varchar('departmentId', { length: 191 }).references(() => departments.id),
+  createdBy: varchar('createdBy', { length: 191 }).notNull().references(() => users.id),
+  createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+});
+
+// ---------------------------------------------------------------------------
+// ChecklistTemplateItem — a line item within a ChecklistTemplate
+// ---------------------------------------------------------------------------
+export const checklistTemplateItems = mysqlTable(
+  'ChecklistTemplateItem',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    label: varchar('label', { length: 191 }).notNull(),
+    order: int('order').notNull().default(0),
+    requiredImageCount: int('requiredImageCount').notNull().default(0),
+    maxImageCount: int('maxImageCount'),
+    requiresLivePhoto: boolean('requiresLivePhoto').notNull().default(false),
+    defaultAssigneeId: varchar('defaultAssigneeId', { length: 191 }).references(() => users.id),
+    templateId: varchar('templateId', { length: 191 }).notNull().references(() => checklistTemplates.id),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index('ChecklistTemplateItem_templateId_idx').on(table.templateId)],
+);

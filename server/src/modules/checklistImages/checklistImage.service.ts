@@ -1,0 +1,81 @@
+import path from "node:path";
+import fs from "node:fs";
+import { createId } from "@paralleldrive/cuid2";
+import { db } from "../../config/db.js";
+import { checklistItems, checklistImages } from "../../db/schema/index.js";
+import { eq, inArray, sql } from "drizzle-orm";
+import { AppError } from "../../utils/AppError.js";
+import type { AccessTokenPayload } from "../../middleware/auth/auth.js";
+
+type ChecklistItemRow = typeof checklistItems.$inferSelect;
+
+// Same rule as the Task side — only the assignee (or an admin) can add evidence photos.
+const assertCanUpload = (user: AccessTokenPayload, item: Pick<ChecklistItemRow, "assigneeId">) => {
+    if (user.role === "ADMIN" || user.role === "PC") return;
+    if (item.assigneeId && item.assigneeId === user.sub) return;
+    throw AppError.forbidden("Only the assigned person can upload evidence for this item");
+};
+
+export const checklistImageService = {
+    async upload(itemId: string, files: Express.Multer.File[], captureMethod: "LIVE" | "GALLERY", user: AccessTokenPayload) {
+        const [item] = await db.select().from(checklistItems).where(eq(checklistItems.id, itemId)).limit(1);
+        if (!item) throw AppError.notFound("Checklist item not found");
+        assertCanUpload(user, item);
+
+        if (!files.length) {
+            throw AppError.badRequest("No valid image files were received (check file type and size)");
+        }
+
+        if (item.requiresLivePhoto && captureMethod !== "LIVE") {
+            files.forEach((f) => fs.unlink(f.path, () => {}));
+            throw AppError.badRequest("This item requires a live camera photo, not a gallery upload");
+        }
+
+        // maxImageCount: an upper cap on how much evidence can pile up on one item — distinct
+        // from requiredImageCount (the minimum needed to complete it). null means no cap.
+        if (item.maxImageCount != null) {
+            const [{ count: existingCount }] = await db
+                .select({ count: sql<number>`count(*)` })
+                .from(checklistImages)
+                .where(eq(checklistImages.checklistItemId, item.id));
+            if (Number(existingCount) + files.length > item.maxImageCount) {
+                files.forEach((f) => fs.unlink(f.path, () => {}));
+                const remaining = Math.max(item.maxImageCount - Number(existingCount), 0);
+                throw AppError.badRequest(
+                    remaining > 0
+                        ? `This item allows at most ${item.maxImageCount} photo(s) — only ${remaining} more can be uploaded`
+                        : `This item already has the maximum of ${item.maxImageCount} photo(s)`,
+                );
+            }
+        }
+
+        const rows = files.map((file) => ({
+            id: createId(),
+            url: `/uploads/tickets/${path.basename(file.path)}`,
+            originalFilename: file.originalname,
+            mimeType: file.mimetype,
+            sizeBytes: file.size,
+            captureMethod,
+            checklistItemId: item.id,
+            uploadedBy: user.sub,
+        }));
+        await db.insert(checklistImages).values(rows);
+        return db.select().from(checklistImages).where(inArray(checklistImages.id, rows.map((r) => r.id)));
+    },
+
+    async remove(imageId: string, user: AccessTokenPayload) {
+        const [image] = await db.select().from(checklistImages).where(eq(checklistImages.id, imageId)).limit(1);
+        if (!image) throw AppError.notFound("Image not found");
+
+        const [item] = await db.select().from(checklistItems).where(eq(checklistItems.id, image.checklistItemId)).limit(1);
+        if (item) assertCanUpload(user, item);
+
+        const absolutePath = path.resolve(process.cwd(), "uploads", "tickets", path.basename(image.url));
+        fs.unlink(absolutePath, (err) => {
+            if (err) console.error("Failed to delete image file from disk:", err);
+        });
+
+        await db.delete(checklistImages).where(eq(checklistImages.id, imageId));
+        return image;
+    },
+};

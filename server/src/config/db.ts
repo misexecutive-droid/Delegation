@@ -1,0 +1,40 @@
+import mysql from 'mysql2/promise'
+import { drizzle } from 'drizzle-orm/mysql2'
+import { env } from './env.js'
+import * as schema from '../db/schema/index.js'
+import * as relations from '../db/schema/relations.js'
+
+// A shared connection pool (not a single connection) — mysql2's pool handles
+// reconnects and concurrent queries across requests/cluster workers the same
+// way Mongoose's connection pool did for MongoDB. mysql2 pools are lazy (no actual
+// TCP connection is opened until the first query/`getConnection()` call), so it's
+// safe to create the pool — and the Drizzle client wrapping it — at module load
+// time; `connectDB()` below just does an explicit "fail fast if unreachable" check
+// before the server starts accepting requests.
+const pool = mysql.createPool({
+    uri: env.DATABASE_URL,
+    connectionLimit: env.DB_CONNECTION_LIMIT,
+    // Return JS Date objects (not strings) for DATETIME/TIMESTAMP columns, matching
+    // what every service already expects (Mongoose always gave back real Dates).
+    dateStrings: false,
+});
+
+// The Drizzle client used everywhere else in the app (`import { db } from '../config/db.js'`).
+// Exported as `db` (not `mongoose`/a model) — every service module now imports this
+// instead of a Mongoose model. Declared as a plain `const` (type fully inferred) rather
+// than a pre-typed `let` assigned later — an explicit `ReturnType<typeof drizzle<...>>`
+// annotation here runs into a TS2719 "two different types with this name" quirk against
+// this drizzle-orm version when the schema+relations modules are merged at the call site.
+export const db = drizzle(pool, { schema: { ...schema, ...relations }, mode: 'default' });
+
+export const connectDB = async () => {
+    // Fail fast on startup if the DB is unreachable, same as Mongoose's connect() did.
+    const connection = await pool.getConnection();
+    connection.release();
+
+    console.log(`MySQL connected : ${env.DB_NAME}`)
+}
+
+export const disconnectDB = async () => {
+    await pool.end();
+}

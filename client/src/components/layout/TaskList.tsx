@@ -1,0 +1,746 @@
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { Wand2, CheckCheck, AlertCircle, LayoutList, Kanban, Table2, GanttChartSquare, Check, Save, Inbox, X, Plus, Settings2, FileDown } from "lucide-react";
+import { Button, Skeleton, DateRangePicker, type DateRangeValue } from "../../components";
+import { ExportDialog } from "../reports";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { useTasksQuery, useAssignableUsersQuery } from "./hook";
+import { useDepartmentsQuery } from "../tickets/hook";
+import type { Task } from '../../api/task';
+import { TaskForm } from "./TaskForm";
+import { TaskDetail } from "./TaskDetail";
+import { TaskBoard } from "./TaskBoard";
+import { TaskTable } from "./TaskTable";
+import { TaskTimeline } from "./TaskTimeline";
+import { TaskRow } from "./TaskRow";
+import { SmartTaskModal } from "./SmartTaskModal";
+import { TaskFiltersPopover, type TaskFilters } from "./TaskFiltersPopover";
+import { TaskQuickStats, type QuickFilterKey } from "./TaskQuickStats";
+import { CATEGORY_PREDICATES, SORT_LABEL, SORT_ICON, SORT_COMPARATORS, type CategoryFilterKey, type TaskSortKey } from "./taskFilters";
+import { STATUS_LABEL, PRIORITY_MAP } from "./taskDisplay";
+import { useCardFieldVisibility, CARD_FIELD_CONFIG, taskAssigneeIds } from "./cardFields";
+import { useAuth } from "../../context/AuthContext"
+
+// Groups tasks by due date (day granularity), earliest first, with undated tasks in one
+// trailing bucket. Used by the list view below — the board view keeps its own status-column
+// grouping. Department is still visible per-row (via Customize Cards), just no longer the
+// grouping key.
+const groupByDueDate = (tasks: Task[]) => {
+    const groups = new Map<string, { key: string; label: string; sortValue: number; tasks: Task[] }>();
+
+    for (const task of tasks) {
+        const due = task.dueDate ? new Date(task.dueDate) : null;
+        const key = due ? due.toDateString() : '__none__';
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                label: due
+                    ? due.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+                    : 'No due date',
+                sortValue: due ? due.setHours(0, 0, 0, 0) : Number.MAX_SAFE_INTEGER,
+                tasks: [],
+            });
+        }
+        groups.get(key)!.tasks.push(task);
+    }
+
+    return [...groups.values()].sort((a, b) => a.sortValue - b.sortValue);
+};
+
+interface TaskListProps {
+    userId?: string;
+    hideHeader?: boolean;
+}
+
+type TaskView = 'list' | 'board' | 'table' | 'timeline';
+
+const VIEW_TABS: { key: TaskView; label: string; icon: typeof LayoutList }[] = [
+    { key: 'list', label: 'List', icon: LayoutList },
+    { key: 'board', label: 'Board', icon: Kanban },
+    { key: 'table', label: 'Table', icon: Table2 },
+    { key: 'timeline', label: 'Timeline', icon: GanttChartSquare },
+];
+
+const DEFAULT_FILTERS: TaskFilters = { category: 'all', status: 'all', priority: [], departmentId: '', assigneeIds: [], raisedByIds: [] };
+
+// The subset of TaskFilters a sidebar deep link can set via URL search params — every field here
+// round-trips through syncFiltersToUrl below, so the URL is always a faithful mirror of them.
+// (priority is the one filter field that's never URL-backed — it stays local-only.)
+const URL_TRACKED_DEFAULTS: Pick<TaskFilters, 'category' | 'status' | 'departmentId' | 'assigneeIds' | 'raisedByIds'> = {
+    category: 'all', status: 'all', departmentId: '', assigneeIds: [], raisedByIds: [],
+};
+
+const filtersFromUrl = (searchParams: URLSearchParams): Partial<TaskFilters> => {
+    const fromUrl: Partial<TaskFilters> = {};
+    const category = searchParams.get('category');
+    const status = searchParams.get('status');
+    const departmentId = searchParams.get('departmentId');
+    const assigneeIds = searchParams.get('assigneeIds');
+    const raisedByIds = searchParams.get('raisedByIds');
+    if (category) fromUrl.category = category as CategoryFilterKey;
+    if (status) fromUrl.status = status as Task['status'];
+    if (departmentId) fromUrl.departmentId = departmentId;
+    if (assigneeIds) fromUrl.assigneeIds = assigneeIds.split(',');
+    if (raisedByIds) fromUrl.raisedByIds = raisedByIds.split(',');
+    return fromUrl;
+};
+
+const filtersStorageKey = (userId?: string) => `task-filters:${userId ?? 'anon'}`;
+
+// "My Delegations" (?mine=1) defaults to List — a personal to-do reads better as a flat list.
+// "Smart Delegations" (?category=delegation) defaults to Board — AI/WhatsApp-origin delegations
+// read better as status columns. Every other link (Pending Approvals, Team Delegations, plain
+// /tasks, etc.) is left alone — returning null here means "don't override whatever view is
+// already active."
+const viewFromUrl = (searchParams: URLSearchParams): TaskView | null => {
+    if (searchParams.get('mine') === '1') return 'list';
+    if (searchParams.get('category') === 'delegation') return 'board';
+    return null;
+};
+
+export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => {
+    const { user } = useAuth();
+    // PC has full parity with ADMIN throughout this app.
+    const isVerifier = user?.role === "PC" || user?.role === "ADMIN";
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [ showSmartModal , setShowSmartModal ] = useState(false)
+    const [showForm, setShowForm] = useState(false);
+    const [showExport, setShowExport] = useState(false);
+    const [selected, setSelected] = useState<Task | null>(null);
+    const { data: tasks, isPending, isError } = useTasksQuery(userId);
+    const { data: assignableUsers } = useAssignableUsersQuery();
+    const { data: departments } = useDepartmentsQuery();
+
+    // Sidebar links (e.g. "Delegated Tasks", "Pending Approvals") pass their filter via URL
+    // search params, which take priority over a saved filter — otherwise, restore whatever the
+    // user last saved with "Save this filter" for this account, if anything.
+    const [filters, setFilters] = useState<TaskFilters>(() => {
+        const fromUrl = filtersFromUrl(searchParams);
+        if (Object.keys(fromUrl).length) return { ...DEFAULT_FILTERS, ...fromUrl };
+
+        try {
+            const raw = localStorage.getItem(filtersStorageKey(user?.id));
+            if (raw) {
+                const saved = JSON.parse(raw);
+                // priority/assigneeIds used to be single values before multi-select — drop an
+                // old-shaped saved filter's value for those two fields rather than crash on it.
+                // raisedByIds didn't exist at all before — same treatment for a filter saved
+                // before this field was introduced.
+                if (!Array.isArray(saved.priority)) delete saved.priority;
+                if (!Array.isArray(saved.assigneeIds)) delete saved.assigneeIds;
+                if (!Array.isArray(saved.raisedByIds)) delete saved.raisedByIds;
+                return { ...DEFAULT_FILTERS, ...saved };
+            }
+        } catch {
+            // Corrupt/unavailable localStorage — fall through to defaults.
+        }
+        return DEFAULT_FILTERS;
+    });
+
+    // TaskList never remounts when one sidebar link (e.g. Smart Delegations) is swapped for
+    // another (e.g. My Delegations) — both point at this same /tasks route, just with a different
+    // query string, so React Router keeps the same component instance alive. Without this effect,
+    // `filters` above only ever got read from the URL on the very first mount: clicking a second
+    // sidebar link afterward changed the address bar but silently left the stale filter in place
+    // (e.g. Smart Delegations would keep showing whatever category — or none — was active before,
+    // including plain manually-created delegations that category was supposed to exclude). This
+    // re-derives the URL-backed fields on every subsequent navigation; the initial mount is
+    // skipped since the lazy initializer above already handled it (including the saved-filter
+    // fallback when the URL has no hints at all, which this effect deliberately doesn't repeat).
+    const isFirstFiltersRun = useRef(true);
+    useEffect(() => {
+        if (isFirstFiltersRun.current) {
+            isFirstFiltersRun.current = false;
+            return;
+        }
+        setFilters(prev => ({ ...prev, ...URL_TRACKED_DEFAULTS, ...filtersFromUrl(searchParams) }));
+    }, [searchParams]);
+
+    const [sort, setSort] = useState<TaskSortKey>('dueDate');
+    const [view, setView] = useState<TaskView>(() => viewFromUrl(searchParams) ?? 'board');
+    // The Delegation page's own "at a glance" tiles (Pending/Completed/Due/Delayed) — a single
+    // active category at a time, layered on top of the fuller TaskFiltersPopover filters below
+    // rather than replacing them. Click the active tile again to clear it.
+    const [quickFilter, setQuickFilter] = useState<QuickFilterKey | null>(null);
+
+    // Same remount-free-navigation issue the filters effect above deals with: clicking "My
+    // Delegations" then "Smart Delegations" (or back) keeps this same TaskList instance mounted,
+    // so the lazy initializer above only ever fires once. Re-derive the view every time the URL
+    // actually changes, but only when that specific link has an opinion (viewFromUrl returns
+    // non-null) — every other navigation leaves whatever view the user is already on alone.
+    const isFirstViewRun = useRef(true);
+    useEffect(() => {
+        if (isFirstViewRun.current) {
+            isFirstViewRun.current = false;
+            return;
+        }
+        setView(prev => viewFromUrl(searchParams) ?? prev);
+    }, [searchParams]);
+    const { visibility: fieldVisibility, toggle: toggleField } = useCardFieldVisibility();
+    // Built into the toolbar for everyone — admin/PC get it org-wide same as their other
+    // filters, a regular user gets it scoped to their own tasks same as everything else here.
+    const [dueDateRange, setDueDateRange] = useState<DateRangeValue>({ from: null, to: null });
+
+    // Keeps the URL's filter params (category/status/departmentId/assigneeIds/raisedByIds — the
+    // ones a deep link like a dashboard tile or sidebar link can set on mount) in sync with
+    // whatever the user does afterward in the filter UI. Without this, clearing or changing a
+    // filter only updated React state: the original deep-link params stayed in the address bar,
+    // so refreshing the page (or the URL-resync effect above, on the next sidebar navigation)
+    // re-read them and silently brought back a filter the user had just removed.
+    const syncFiltersToUrl = (next: TaskFilters) => {
+        setSearchParams(prev => {
+            const params = new URLSearchParams(prev);
+            if (next.category !== 'all') params.set('category', next.category); else params.delete('category');
+            if (next.status !== 'all') params.set('status', next.status); else params.delete('status');
+            if (next.departmentId) params.set('departmentId', next.departmentId); else params.delete('departmentId');
+            if (next.assigneeIds.length) params.set('assigneeIds', next.assigneeIds.join(',')); else params.delete('assigneeIds');
+            if (next.raisedByIds.length) params.set('raisedByIds', next.raisedByIds.join(',')); else params.delete('raisedByIds');
+            return params;
+        }, { replace: true });
+    };
+    // Once a user has ever clicked "Save this filter", that saved copy in localStorage is what
+    // a plain refresh (no URL params) restores — so it has to track every later change too, not
+    // just stay frozen at whatever was true the moment "Save" was clicked. Otherwise, clearing
+    // or editing a filter after saving looked like it worked, but refreshing brought the stale
+    // saved combination straight back. No-ops for anyone who's never saved a filter.
+    const persistFiltersIfSaved = (next: TaskFilters) => {
+        try {
+            const key = filtersStorageKey(user?.id);
+            if (localStorage.getItem(key) !== null) {
+                localStorage.setItem(key, JSON.stringify(next));
+            }
+        } catch {
+            // Corrupt/unavailable localStorage — the URL sync above still keeps this refresh-safe.
+        }
+    };
+    const updateFilters = (patch: Partial<TaskFilters>) => {
+        const next = { ...filters, ...patch };
+        setFilters(next);
+        syncFiltersToUrl(next);
+        persistFiltersIfSaved(next);
+    };
+    const clearFilters = () => {
+        setFilters(DEFAULT_FILTERS);
+        syncFiltersToUrl(DEFAULT_FILTERS);
+        persistFiltersIfSaved(DEFAULT_FILTERS);
+        setQuickFilter(null);
+    };
+    const toggleQuickFilter = (key: QuickFilterKey) => {
+        setQuickFilter((prev) => (prev === key ? null : key));
+    };
+    const saveFilters = () => {
+        try {
+            localStorage.setItem(filtersStorageKey(user?.id), JSON.stringify(filters));
+            toast.success('Filter saved');
+        } catch {
+            toast.error('Could not save filter');
+        }
+    };
+
+    const assigneeNames = new Map(
+        (assignableUsers ?? []).map(u => [u.id, `${u.firstName} ${u.lastName ?? ''}`.trim()]),
+    );
+    const departmentNames = new Map((departments ?? []).map(d => [d.id, d.name]));
+
+    // Due-date range filter — tasks with no due date drop out once a range is set, since
+    // "due between this date and that date" can't match a task that has no due date at all.
+    const dateFiltered = !dueDateRange.from
+        ? (tasks ?? [])
+        : (tasks ?? []).filter(t => {
+            if (!t.dueDate) return false;
+            const due = new Date(t.dueDate);
+            const from = new Date(dueDateRange.from!.getFullYear(), dueDateRange.from!.getMonth(), dueDateRange.from!.getDate());
+            if (due < from) return false;
+            if (dueDateRange.to) {
+                const to = new Date(dueDateRange.to.getFullYear(), dueDateRange.to.getMonth(), dueDateRange.to.getDate(), 23, 59, 59, 999);
+                if (due > to) return false;
+            }
+            return true;
+        });
+
+    // "My Delegations" (Sidebar's /tasks?mine=1) — ADMIN/PC/MANAGER's server-side visibility is
+    // broader than "just mine" (org-wide / department-wide, see task.service.ts's
+    // visiblityFilter), so without this they'd land on "My Delegations" and see everyone else's
+    // delegations too. Narrows back down to creator/assignee/additional-assignee regardless of
+    // role — a no-op for AGENT/USER, who are already scoped to themselves server-side.
+    const mineOnly = searchParams.get('mine') === '1';
+    const mineFiltered = !mineOnly || !user
+        ? dateFiltered
+        : dateFiltered.filter(t => t.userId === user.id || t.assigneeId === user.id || t.additionalAssigneeIds.includes(user.id));
+
+    const categoryFiltered = mineFiltered.filter(CATEGORY_PREDICATES[filters.category]);
+    const priorityFiltered = filters.priority.length === 0 ? categoryFiltered : categoryFiltered.filter(t => filters.priority.includes(t.priority));
+    const departmentFiltered = filters.departmentId ? priorityFiltered.filter(t => t.departmentId === filters.departmentId) : priorityFiltered;
+    const assigneeFiltered = filters.assigneeIds.length === 0
+        ? departmentFiltered
+        : departmentFiltered.filter(t => taskAssigneeIds(t).some(id => filters.assigneeIds.includes(id)));
+    const raisedByFiltered = filters.raisedByIds.length === 0
+        ? assigneeFiltered
+        : assigneeFiltered.filter(t => filters.raisedByIds.includes(t.userId));
+    const statusFiltered = filters.status === 'all' ? raisedByFiltered : raisedByFiltered.filter(t => t.status === filters.status);
+
+    // Quick-stat tiles (Pending / Completed / Due / Delayed) — "Delayed" is overdue-and-not-done;
+    // "Due" is everything else that still has an open due date ahead of it. Counts are taken from
+    // mineFiltered (same base the rest of the filter pipeline starts from) rather than the fully
+    // filtered list, so the tiles read as a stable overview of the current scope, not a number
+    // that shrinks every time another filter is layered on top.
+    const isOverdue = (t: Task) => !!t.dueDate && t.status !== 'done' && new Date(t.dueDate).getTime() < Date.now();
+    const quickFilterPredicates: Record<QuickFilterKey, (t: Task) => boolean> = {
+        pending: (t) => t.status !== 'done',
+        completed: (t) => t.status === 'done',
+        due: (t) => !!t.dueDate && t.status !== 'done' && !isOverdue(t),
+        delayed: isOverdue,
+    };
+    const quickCounts = {
+        pending: mineFiltered.filter(quickFilterPredicates.pending).length,
+        completed: mineFiltered.filter(quickFilterPredicates.completed).length,
+        due: mineFiltered.filter(quickFilterPredicates.due).length,
+        delayed: mineFiltered.filter(quickFilterPredicates.delayed).length,
+    };
+    const filtered = quickFilter ? statusFiltered.filter(quickFilterPredicates[quickFilter]) : statusFiltered;
+
+    const sorted = [...filtered].sort(SORT_COMPARATORS[sort]);
+    const dateGroups = groupByDueDate(sorted);
+
+    const formatShortDate = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    const QUICK_FILTER_LABEL: Record<QuickFilterKey, string> = {
+        pending: 'Pending', completed: 'Completed', due: 'Due', delayed: 'Delayed',
+    };
+
+    const activeChips: { key: string; label: string; onClear: () => void }[] = [
+        ...(quickFilter ? [{ key: 'quickFilter', label: `Showing: ${QUICK_FILTER_LABEL[quickFilter]}`, onClear: () => setQuickFilter(null) }] : []),
+        ...(filters.status !== 'all' ? [{ key: 'status', label: `Status: ${STATUS_LABEL[filters.status]}`, onClear: () => updateFilters({ status: 'all' }) }] : []),
+        ...(filters.category !== 'all' ? [{ key: 'category', label: `Category: ${filters.category === 'task' ? 'Direct Task' : filters.category === 'issue' ? 'Issues' : 'Delegations'}`, onClear: () => updateFilters({ category: 'all' }) }] : []),
+        ...(filters.priority.length > 0 ? [{
+            key: 'priority',
+            label: `Priority: ${filters.priority.map(p => PRIORITY_MAP[p].label).join(', ')}`,
+            onClear: () => updateFilters({ priority: [] }),
+        }] : []),
+        ...(filters.departmentId ? [{ key: 'departmentId', label: `Dept: ${departmentNames.get(filters.departmentId) ?? 'Unknown'}`, onClear: () => updateFilters({ departmentId: '' }) }] : []),
+        ...(filters.assigneeIds.length > 0 ? [{
+            key: 'assigneeIds',
+            label: filters.assigneeIds.length === 1
+                ? `Assignee: ${assigneeNames.get(filters.assigneeIds[0]) ?? 'Unknown'}`
+                : `Assignees: ${filters.assigneeIds.length}`,
+            onClear: () => updateFilters({ assigneeIds: [] }),
+        }] : []),
+        ...(filters.raisedByIds.length > 0 ? [{
+            key: 'raisedByIds',
+            label: filters.raisedByIds.length === 1
+                ? `Raised by: ${assigneeNames.get(filters.raisedByIds[0]) ?? 'Unknown'}`
+                : `Raised by: ${filters.raisedByIds.length}`,
+            onClear: () => updateFilters({ raisedByIds: [] }),
+        }] : []),
+        ...(dueDateRange.from ? [{
+            key: 'dueDateRange',
+            label: `Due: ${formatShortDate(dueDateRange.from)}${dueDateRange.to ? ` – ${formatShortDate(dueDateRange.to)}` : ''}`,
+            onClear: () => setDueDateRange({ from: null, to: null }),
+        }] : []),
+    ];
+
+    const isEmpty = sorted.length === 0;
+
+    return (
+        <div className="flex flex-col gap-6 mx-auto w-full max-w-[1400px] transition-all duration-300">
+            
+            {/* Header & Controls Section */}
+            <div className="flex flex-col gap-3.5">
+                <div className="flex items-center justify-between gap-3">
+                    {!hideHeader && (
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="flex items-center justify-center size-9 sm:size-10 rounded-xl bg-primary-50 text-primary-700 shrink-0 dark:bg-primary-500/15 dark:text-primary-400">
+                                <CheckCheck size={18} strokeWidth={2} className="sm:w-5 sm:h-5" />
+                            </div>
+                            <div>
+                                <h1 className="text-lg sm:text-xl font-bold text-text tracking-tight">Delegation</h1>
+                                <p className="text-xs sm:text-sm text-text-muted">
+                                    {tasks?.length ?? 0} total delegation{tasks?.length !== 1 ? 's' : ''}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+                        {!userId && isVerifier && (
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                className="px-2 sm:px-2.5 border-0 shadow-none rounded-full"
+                                onClick={() => setShowSmartModal(true)}
+                                aria-label="Smart Task"
+                                title="Smart Task"
+                            >
+                                <Wand2 size={15} strokeWidth={2} />
+                            </Button>
+                        )}
+
+                        {!userId && (
+                            <Button
+                                size="sm"
+                                variant="primary"
+                                className="group gap-1.5 sm:gap-2 font-semibold shadow-sm rounded-full text-xs px-3 sm:px-4 py-1.5 sm:py-2"
+                                onClick={() => setShowForm(true)}
+                            >
+                                <Plus size={15} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-90" />
+                                <span>New Delegation</span>
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Controls Bar */}
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between overflow-x-auto no-scrollbar pb-1">
+                    {/* View Toggle (Segmented Control) */}
+                    <div className="flex items-center gap-0.5 p-1 rounded-full bg-surface-hover/50 shrink-0">
+                        {VIEW_TABS.map(tab => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                onClick={() => setView(tab.key)}
+                                title={`${tab.label} view`}
+                                aria-label={`${tab.label} view`}
+                                aria-pressed={view === tab.key}
+                                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 shrink-0 ${
+                                    view === tab.key
+                                        ? 'bg-surface text-text shadow-xs font-bold'
+                                        : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
+                                }`}
+                            >
+                                <tab.icon size={13} className="sm:w-3.5 sm:h-3.5" />
+                                <span>{tab.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
+                        <TaskFiltersPopover
+                            filters={filters}
+                            onChange={updateFilters}
+                            onClearAll={clearFilters}
+                            departments={departments}
+                            assignableUsers={assignableUsers}
+                            currentUserId={user?.id}
+                            isAdmin={isVerifier}
+                            activeCount={activeChips.length}
+                        />
+
+                        <DateRangePicker
+                            value={dueDateRange}
+                            onChange={setDueDateRange}
+                            placeholder="Due date"
+                            className="w-auto"
+                            triggerClassName="h-8 w-auto rounded-full text-xs px-2.5 sm:px-3"
+                        />
+
+                        <span className="hidden sm:inline text-xs font-medium text-text-muted whitespace-nowrap">
+                            {sorted.length} task{sorted.length !== 1 ? 's' : ''}
+                        </span>
+
+                        <div className="flex items-center gap-0.5 p-1 rounded-full bg-surface-hover/60">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="px-2.5 border-0 shadow-none rounded-full bg-transparent hover:bg-surface"
+                                    aria-label={`Sort: ${SORT_LABEL[sort]}`}
+                                    title={`Sort: ${SORT_LABEL[sort]}`}
+                                >
+                                    {(() => {
+                                        const SortIcon = SORT_ICON[sort];
+                                        return <SortIcon size={14} />;
+                                    })()}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                                {(Object.keys(SORT_LABEL) as TaskSortKey[]).map(key => {
+                                    const Icon = SORT_ICON[key];
+                                    return (
+                                        <DropdownMenuItem key={key} onClick={() => setSort(key)} className="gap-2">
+                                            <Icon size={14} className="text-text-light" />
+                                            {SORT_LABEL[key]}
+                                            {sort === key && <Check size={14} className="ml-auto text-primary-600" />}
+                                        </DropdownMenuItem>
+                                    );
+                                })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="gap-1.5 border-0 shadow-none rounded-full bg-transparent hover:bg-surface"
+                                    aria-label="Customize cards"
+                                    title="Customize cards"
+                                >
+                                    <Settings2 size={14} />
+                                    Customize cards
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
+                                <DropdownMenuLabel>Show only</DropdownMenuLabel>
+                                {CARD_FIELD_CONFIG.map(({ key, label, icon: Icon }) => (
+                                    <DropdownMenuCheckboxItem
+                                        key={key}
+                                        checked={fieldVisibility[key]}
+                                        onCheckedChange={() => toggleField(key)}
+                                        onSelect={(e) => e.preventDefault()}
+                                        className="gap-2"
+                                    >
+                                        <Icon size={14} className="text-text-light" />
+                                        {label}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            className="gap-1.5 border-0 shadow-none rounded-full bg-transparent hover:bg-surface"
+                            onClick={() => setShowExport(true)}
+                            aria-label="Export delegations"
+                            title="Export delegations"
+                        >
+                            <FileDown size={14} />
+                            Export
+                        </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick-stat tiles — click any one to instantly narrow the list to just that
+                category; click again (or clear the chip below) to go back to everything. */}
+            {!hideHeader && (
+                <TaskQuickStats counts={quickCounts} active={quickFilter} onToggle={toggleQuickFilter} />
+            )}
+
+            {/* Active filter chips — only takes up space once something is actually filtered */}
+            {activeChips.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                    {activeChips.map(chip => (
+                        <span
+                            key={chip.key}
+                            className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-xs font-semibold rounded-full bg-primary-50 text-primary-700 border border-primary-200"
+                        >
+                            {chip.label}
+                            <button
+                                type="button"
+                                onClick={chip.onClear}
+                                aria-label={`Clear ${chip.label} filter`}
+                                className="p-0.5 rounded-full hover:bg-primary-100 transition-colors cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+
+                    <button
+                        type="button"
+                        onClick={saveFilters}
+                        title="Save this filter combination as your default"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full text-text-muted hover:text-text hover:bg-surface-hover transition-colors duration-200 cursor-pointer"
+                    >
+                        <Save size={13} />
+                        Save this filter
+                    </button>
+                </div>
+            )}
+
+            {/* Loading States */}
+            {isPending && view === 'list' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-4 px-5 py-4 rounded border border-border bg-surface">
+                            <Skeleton className="w-5 h-5 rounded-md shrink-0" />
+                            <Skeleton className="h-5 flex-1 max-w-md" />
+                            <Skeleton className="h-6 w-20 rounded-md shrink-0" />
+                            <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {isPending && view === 'table' && (
+                <div className="flex flex-col gap-1 rounded border border-border overflow-hidden">
+                    <Skeleton className="h-9 w-full rounded-none" />
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-6 px-4 py-2.5 bg-surface">
+                            <Skeleton className="h-4 flex-1 max-w-xs" />
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-4 w-16" />
+                            <Skeleton className="h-5 w-20 rounded-full" />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {isPending && view === 'timeline' && (
+                <div className="flex flex-col gap-1 rounded border border-border overflow-hidden">
+                    <Skeleton className="h-9 w-full rounded-none" />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-3 bg-surface">
+                            <Skeleton className="h-4 w-40" />
+                            <Skeleton className="h-6 flex-1 max-w-xs rounded-md" />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {isPending && view === 'board' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
+                    {Array.from({ length: 4 }).map((_, col) => (
+                        <div key={col} className="flex flex-col gap-4 p-3 bg-surface-hover/50 border border-border rounded">
+                            <Skeleton className="h-6 w-32 rounded-md mx-2 mt-2" />
+                            {Array.from({ length: 3 }).map((_, i) => (
+                                <div key={i} className="flex flex-col gap-3 p-4 rounded border border-border bg-surface">
+                                    <Skeleton className="h-5 w-3/4 rounded-md" />
+                                    <Skeleton className="h-4 w-1/2 rounded-md" />
+                                    <div className="flex justify-between items-center">
+                                        <Skeleton className="h-5 w-16 rounded-md" />
+                                        <Skeleton className="w-7 h-7 rounded-full" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {isError && (
+                <div className="flex items-start gap-3 p-4 bg-danger/10 rounded border border-danger/20 text-danger">
+                    <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                    <div>
+                        <h4 className="text-sm font-semibold">Error Loading Delegations</h4>
+                        <p className="text-sm mt-1">Failed to connect to the server. Please refresh the page.</p>
+                    </div>
+                </div>
+            )}
+
+            {!isPending && !isError && isEmpty && (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-surface-hover/40 rounded border-2 border-dashed border-border">
+                    <div className="flex items-center justify-center mb-4 text-text-light">
+                        <Inbox size={24} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-text tracking-tight">No delegations found</h3>
+                    <p className="text-sm text-text-muted mt-1 max-w-sm">
+                        {activeChips.length > 0
+                            ? "No delegations match the current filters — try clearing one or more of them."
+                            : "You're all caught up! There are no delegations assigned to this view."}
+                    </p>
+                </div>
+            )}
+
+            {/* List View Render */}
+            {!isPending && !isError && !isEmpty && view === 'list' && (() => {
+                let rowIndex = 0;
+                return (
+                    <div className="flex flex-col gap-6 pb-10">
+                        {dateGroups.map(group => (
+                            <div key={group.key} className="flex flex-col gap-3">
+                                {/* Date Header */}
+                                <div className="flex items-center gap-3">
+                                    <h3 className="text-sm font-bold text-text tracking-tight">
+                                        {group.label}
+                                    </h3>
+                                    <span className="flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-[10px] font-bold text-text-muted bg-surface-hover rounded-full border border-border shadow-xs">
+                                        {group.tasks.length}
+                                    </span>
+                                    <div className="flex-1 h-px bg-border/60" /> {/* Clean divider line */}
+                                </div>
+                                
+                                {/* Tasks Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {group.tasks.map(task => (
+                                        <TaskRow
+                                            key={task.id}
+                                            task={task}
+                                            isVerifier={isVerifier}
+                                            onOpen={setSelected}
+                                            index={rowIndex++}
+                                            assigneeName={task.assigneeId ? assigneeNames.get(task.assigneeId) : undefined}
+                                            departmentName={task.departmentId ? departmentNames.get(task.departmentId) : undefined}
+                                            fields={fieldVisibility}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+            })()}
+
+            {/* Board View Render */}
+            {!isPending && !isError && !isEmpty && view === 'board' && (
+                <div className="pb-10">
+                    <TaskBoard
+                        tasks={sorted}
+                        assigneeNames={assigneeNames}
+                        departmentNames={departmentNames}
+                        isVerifier={isVerifier}
+                        onOpen={setSelected}
+                        onAddTask={() => setShowForm(true)}
+                        fields={fieldVisibility}
+                    />
+                </div>
+            )}
+
+            {/* Table View Render */}
+            {!isPending && !isError && !isEmpty && view === 'table' && (
+                <div className="pb-10">
+                    <TaskTable
+                        tasks={sorted}
+                        assigneeNames={assigneeNames}
+                        departmentNames={departmentNames}
+                        onOpen={setSelected}
+                        fields={fieldVisibility}
+                    />
+                </div>
+            )}
+
+            {/* Timeline View Render */}
+            {!isPending && !isError && !isEmpty && view === 'timeline' && (
+                <div className="pb-10">
+                    <TaskTimeline tasks={sorted} assigneeNames={assigneeNames} onOpen={setSelected} />
+                </div>
+            )}
+
+            {/* Modals */}
+            {showForm && (
+                <TaskForm
+                    onClose={() => setShowForm(false)}
+                    onCreated={(task) => setSelected(task)}
+                />
+            )}
+            {showSmartModal && <SmartTaskModal onClose={() => setShowSmartModal(false)} />}
+            {showExport && (
+                <ExportDialog
+                    reportModule="tasks"
+                    title="Export Delegations"
+                    description="Every delegation matching your current filters — status, priority, department, and assignee."
+                    onClose={() => setShowExport(false)}
+                    filters={{
+                        category: filters.category !== 'all' ? filters.category : undefined,
+                        status: filters.status !== 'all' ? filters.status : undefined,
+                        priority: filters.priority.length ? filters.priority : undefined,
+                        departmentId: filters.departmentId || undefined,
+                        assigneeIds: filters.assigneeIds.length ? filters.assigneeIds : undefined,
+                    }}
+                />
+            )}
+            {selected && (
+                <TaskDetail
+                    key={selected.id}
+                    task={selected}
+                    onClose={() => setSelected(null)}
+                />
+            )}
+        </div>
+    );
+};

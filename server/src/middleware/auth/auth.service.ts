@@ -1,0 +1,264 @@
+// Node's built-in crypto module - used here for generating random tokens and hashing them.
+import crypto from 'node:crypto';
+// jsonwebtoken: library for creating and verifying signed JWTs (JSON Web Tokens).
+import jwt, { type SignOptions } from 'jsonwebtoken';
+// Centralized environment config (secrets, expiry settings, etc).
+import { env } from '../../config/env.js';
+// Drizzle client + table/type definitions — replaces the old Mongoose User/RefreshToken/
+// PasswordResetToken models.
+import { db } from '../../config/db.js';
+import { users, refreshTokens, passwordResetTokens, type Role } from '../../db/schema/core.js';
+import { eq, and, isNull } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
+// Custom error class used to throw clean, typed HTTP errors (e.g. 401 Unauthorized).
+import { AppError } from '../../utils/AppError.js';
+// Sends the actual reset-link email (real SMTP if configured, an Ethereal test inbox otherwise).
+import { sendMail } from '../../config/mailer.js';
+// Password hashing/comparison + rank-defaulting helpers — replace the Mongoose virtual
+// setter + pre('validate') hooks that used to live on the User model.
+import { hashPassword, comparePassword, deriveDefaultRank } from '../../utils/password.js';
+// TypeScript type describing the shape of a validated login request body.
+import type { LoginInput, RegisterInput, ResetPasswordInput } from './auth.validation.js';
+
+// The shape of a user row as used by this service (a plain object now, not a Mongoose
+// document — no more `._id`/`.comparePassword()` methods attached to it).
+type UserRow = {
+  id: string;
+  email: string;
+  passwordHash: string;
+  role: Role;
+  firstName: string;
+  departmentId: string | null;
+  storeId: string | null;
+  isActive: boolean;
+};
+
+// Creates a brand new refresh token for a given user, stores its HASH (not the raw value) in the
+// DB, and returns the raw token so it can be sent to the client as a cookie.
+// Why hash it? If someone ever reads the database (breach, leaked backup, etc.), they'd only see
+// hashes, not usable tokens - the same reason passwords are hashed instead of stored in plain text.
+const issueRefreshToken = async (userId: string): Promise<string> => {
+  // Generate 32 random bytes and represent them as a hex string - this is the actual secret
+  // that will be sent to the browser and stored in the cookie.
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  // Hash the raw token with SHA-256 before saving it - this is what actually goes into the database.
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+  // Save a record in the RefreshToken table linking this hashed token to the user,
+  // along with an expiry date so old tokens naturally become invalid.
+  await db.insert(refreshTokens).values({
+    userId,
+    tokenHash,
+    // Refresh tokens are long-lived (here: 7 days) compared to short-lived access tokens.
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  // Return the RAW (unhashed) token - this is the only moment it exists outside the DB;
+  // we never store or log the raw value again after this.
+  return rawToken;
+};
+
+// Small helper to hash any raw token the same way it was hashed when it was issued, so we can
+// look it up in the database by comparing hashes instead of raw values.
+const hashToken = (raw: string): string => {
+  return crypto.createHash('sha256').update(raw).digest('hex');
+};
+
+// Creates a short-lived JWT "access token" that identifies the user on each API request.
+// Unlike the refresh token, this is NOT stored in the database - its validity is verified purely
+// by checking its cryptographic signature (see auth.ts's `authenticate` middleware).
+const signAccessToken = (user: UserRow) =>
+  jwt.sign({
+    // "sub" (subject) is the standard JWT field for "who is this token about" - the user's id.
+    sub: user.id,
+    // Include the user's role so downstream middleware (requireRole) can do access control
+    // without needing another database lookup.
+    role: user.role,
+    // Optional extra context embedded in the token, useful for scoping requests to a department...
+    departmentId: user.departmentId ?? undefined,
+    // ...or a specific store, if the user belongs to one.
+    storeId: user.storeId ?? undefined,
+
+  }, env.JWT_ACCESS_SECRET, {
+    // How long this access token stays valid before the client must use the refresh token to get a new one.
+    expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions['expiresIn']
+  });
+
+// Strips out any sensitive/internal fields (like the password hash) before sending user data back
+// to the client - we only expose what the frontend actually needs.
+const publicUser = (user: UserRow) => ({
+  id: user.id,
+  email: user.email,
+  role: user.role,
+  firstName: user.firstName,
+  departmentId: user.departmentId ?? null,
+  storeId: user.storeId ?? null,
+});
+
+// The main authentication service - all the actual "business logic" for login/refresh/logout lives
+// here, separate from the HTTP-handling code in auth.controller.ts.
+export const authService = {
+  // Handles a brand new signup. Every self-registered account starts as a plain "USER" (never
+  // ADMIN/MANAGER/AGENT) with no department/store — those are only ever set by an admin later
+  // via the /users management endpoints, not chosen by the person signing themselves up.
+  async register(input: RegisterInput) {
+    const email = input.email.trim().toLowerCase();
+    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+    if (existing) throw AppError.conflict('Email already registered');
+
+    const passwordHash = await hashPassword(input.password);
+    const role: Role = 'USER';
+    // User.id is a client-generated cuid (see src/db/schema/core.ts), not a DB auto-increment
+    // column, so mysql2's `insertId` (which only makes sense for AUTO_INCREMENT PKs) can't be
+    // used to recover it — generate it up front instead, so we already have it after the insert.
+    const newId = createId();
+    await db.insert(users).values({
+      id: newId,
+      email,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      passwordHash,
+      role,
+      rank: deriveDefaultRank(role),
+    });
+    // We already know every field we need — no round-trip re-select required.
+    const user: UserRow = {
+      id: newId, email, passwordHash, role,
+      firstName: input.firstName, departmentId: null, storeId: null, isActive: true,
+    };
+
+    const accessToken = signAccessToken(user);
+    const refreshToken = await issueRefreshToken(user.id);
+    return { accessToken, refreshToken, user: publicUser(user) };
+  },
+
+  // Handles a login attempt: check credentials, and if valid, issue a fresh pair of tokens.
+  async login(input: LoginInput) {
+    // The schema lowercased/trimmed email on SAVE in the old Mongoose model, never on a query
+    // filter - so this lookup has to normalize the same way, or a merely differently-cased/padded
+    // email (which is how the account is actually stored) silently fails to match.
+    const email = input.email.trim().toLowerCase();
+    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    // If no user was found, OR the account has been deactivated, reject with a generic message.
+    // Using the same "Invalid credentials" message for "no such user" and "wrong password" stops
+    // attackers from being able to tell whether a given email is registered (user enumeration).
+    if (!user || !user.isActive) throw AppError.unauthorized('Invalid credentials');
+
+    // Compare the submitted plain-text password against the stored bcrypt hash.
+    const valid = await comparePassword(input.password, user.passwordHash);
+    if (!valid) throw AppError.unauthorized('Invalid credentials');
+
+    // Credentials check out - issue a new short-lived access token...
+    const accessToken = signAccessToken(user);
+    // ...and a new long-lived refresh token (stored hashed in the DB).
+    const refreshToken = await issueRefreshToken(user.id);
+    // Return everything the controller needs to build its response.
+    return { accessToken, refreshToken, user: publicUser(user) };
+  },
+
+  // Handles refreshing an access token using a previously issued refresh token (read from a cookie).
+  async refresh(rawToken: string | undefined) {
+    // No token at all means the client isn't logged in (or the cookie expired/was cleared).
+    if (!rawToken) throw AppError.unauthorized('Missing refresh token');
+
+    // Hash the incoming raw token the same way we did when it was created, so we can find it in
+    // the DB (we never store raw tokens, so we can't look them up directly).
+    const tokenHash = hashToken(rawToken);
+    const [stored] = await db.select().from(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash)).limit(1);
+    // Reject if: the token doesn't exist, it was already revoked (e.g. from a previous
+    // refresh/logout), or it has simply expired based on its stored expiry date.
+    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+      throw AppError.unauthorized('Invalid refresh token');
+    }
+
+    // Look up the user this token belongs to, and make sure their account is still active.
+    const [user] = await db.select().from(users).where(eq(users.id, stored.userId)).limit(1);
+    if (!user || !user.isActive) throw AppError.unauthorized('Invalid refresh token');
+
+    // Revoke (invalidate) the OLD refresh token now that it's being used - this is "refresh token
+    // rotation": each refresh token can only be used once, which limits the damage if a token were
+    // ever stolen (the thief and the real user can't both keep using the same one indefinitely).
+    await db.update(refreshTokens).set({ revokedAt: new Date(), updatedAt: new Date() }).where(eq(refreshTokens.id, stored.id));
+
+    // Issue a brand new access token...
+    const accessToken = signAccessToken(user);
+    // ...and a brand new refresh token to replace the one we just revoked.
+    const newRefreshToken = await issueRefreshToken(user.id);
+    return { accessToken, refreshToken: newRefreshToken, user: publicUser(user) };
+  },
+
+  // Handles logging a user out by revoking their refresh token so it can never be used again.
+  async logout(rawToken: string | undefined) {
+    // If there's no token to begin with, there's nothing to revoke - just quietly succeed.
+    if (!rawToken) return;
+    // Find the matching token by its hash and mark it revoked (soft-delete style, keeps a record around).
+    await db.update(refreshTokens)
+      .set({ revokedAt: new Date(), updatedAt: new Date() })
+      .where(eq(refreshTokens.tokenHash, hashToken(rawToken)));
+  },
+
+  // Handles a "forgot password" request: if the email belongs to a real, active account, generate
+  // a one-time reset token and email a reset link. Always resolves successfully either way (never
+  // reveals whether the email exists) - the controller responds the same generic message regardless,
+  // which is what actually protects against user enumeration; this just makes sure there's nothing
+  // to leak even if that changed later.
+  async forgotPassword(rawEmail: string) {
+    const [user] = await db.select().from(users)
+      .where(and(eq(users.email, rawEmail.trim().toLowerCase()), eq(users.isActive, true)))
+      .limit(1);
+    if (!user) return;
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = hashToken(rawToken);
+
+    await db.insert(passwordResetTokens).values({
+      userId: user.id,
+      tokenHash,
+      // Reset links are short-lived (1 hour) - much shorter than a refresh token, since this one
+      // grants the ability to take over the account entirely if it leaked (e.g. via a shared inbox).
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+
+    const resetLink = `${env.CLIENT_URL}/reset-password?token=${rawToken}`;
+    // The raw link is a live account-takeover credential (whoever has it can reset this user's
+    // password), so it's only ever logged outside production, purely as a local-dev convenience
+    // for testing the flow without a working SMTP setup. Production logs just the fact that a
+    // reset was requested, never the token itself — see config/mailer.ts for the actual send.
+    console.log(`[auth] Password reset requested for ${user.email}`);
+    if (env.NODE_ENV !== 'production') {
+      console.log(`[auth] Reset link: ${resetLink}`);
+    }
+
+    await sendMail({
+      to: user.email,
+      subject: 'Reset your Task Matrix password',
+      html: `<p>Someone requested a password reset for your Task Matrix account.</p>
+             <p><a href="${resetLink}">Click here to reset your password</a> (expires in 1 hour).</p>
+             <p>If you didn't request this, you can safely ignore this email.</p>`,
+    });
+  },
+
+  // Handles the actual password reset once the user clicks the emailed link and submits a new password.
+  async resetPassword(input: ResetPasswordInput) {
+    const tokenHash = hashToken(input.token);
+    const [stored] = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash)).limit(1);
+    if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+      throw AppError.badRequest('Invalid or expired reset link');
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, stored.userId)).limit(1);
+    if (!user || !user.isActive) throw AppError.badRequest('Invalid or expired reset link');
+
+    const passwordHash = await hashPassword(input.password);
+    await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, user.id));
+
+    // One-time use: mark this token spent so the same link can't be replayed.
+    await db.update(passwordResetTokens).set({ usedAt: new Date(), updatedAt: new Date() }).where(eq(passwordResetTokens.id, stored.id));
+
+    // Revoke every other active session too - if someone else had a stolen refresh token, this
+    // password reset is exactly the moment to kick them out.
+    await db.update(refreshTokens)
+      .set({ revokedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(refreshTokens.userId, user.id), isNull(refreshTokens.revokedAt)));
+  },
+};

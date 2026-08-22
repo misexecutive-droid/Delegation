@@ -1,0 +1,271 @@
+// Drizzle client + table/type definitions — replaces the old Mongoose Notification/User models.
+import { db } from '../../config/db.js';
+import { notifications, users } from '../../db/schema/core.js';
+import { eq, and, or, desc } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
+import { AppError } from '../../utils/AppError.js'; // helper for creating consistent HTTP error objects (e.g. 404 Not Found)
+import { getIO } from '../../sockets/socket.js'; // gives us access to the Socket.IO server so we can push notifications to the browser in real time
+
+// Shape of the data needed to create a single notification
+type CreateNotificationInput = {
+  recipientId: string; // who the notification is for
+  type: string; // a short machine-readable category, e.g. "TICKET_ASSIGNED"
+  title: string; // short headline shown in the UI
+  message: string; // the full human-readable text
+  ticketId?: string; // optional link back to the related ticket, if any
+  taskId?: string; // optional link back to the related task, if any
+  checklistInstanceId?: string; // optional link back to the related recurring checklist instance, if any
+};
+
+// A recurring ChecklistInstance, reduced to just the fields its verification notifications need.
+// Kept separate from VerifiableEntity below since it supports MULTIPLE assignees (assigneeIds)
+// instead of one, and has no storeId/userId concept.
+// NOTE: these input types are intentionally kept loose (`any`) — callers in task.service.ts,
+// ticket.service.ts, checklistInstance.service.ts and taskDeadlineReminder.job.ts have NOT been
+// migrated to Drizzle yet and still pass Mongoose documents (ObjectId fields, needing
+// `.toString()`). Do not tighten these types until every caller is migrated too — the exported
+// function signatures are deliberately unchanged from the Mongoose version.
+type VerifiableChecklistInstance = {
+  _id: any;
+  title: string;
+  storeId?: any;
+  assigneeIds?: any[];
+};
+
+// A ticket or task, reduced to just the fields the PC-verification notifications need.
+// additionalAssigneeIds only exists on Task (extra people beyond the primary assigneeId) — a
+// ticket passed in here just won't have it, so it's undefined and skipped.
+type VerifiableEntity = {
+  _id: any;
+  title: string;
+  departmentId?: any;
+  storeId?: any;
+  userId?: any;
+  assigneeId?: any;
+  additionalAssigneeIds?: any[];
+};
+
+// Sends a notification to one specific user over their personal Socket.IO "room" (user:<id>),
+// so if they have the app open, the notification appears instantly without needing to refresh.
+const emitToUser = (userId: string, notification: unknown) => {
+  getIO().to(`user:${userId}`).emit('notification:new', notification);
+};
+
+// The notification service is the in-app notification system: it creates notification records in the
+// database and also pushes them live over websockets so users see them immediately.
+export const notificationService = {
+  // Creates the SAME notification for multiple recipients at once (e.g. notify both the assignee and their manager).
+  async notifyMany(recipientIds: string[], base: Omit<CreateNotificationInput, 'recipientId'>) {
+    const uniqueIds = [...new Set(recipientIds)]; // de-duplicate ids, in case the same person would receive it twice (e.g. they're both the assignee and the manager)
+    if (!uniqueIds.length) return []; // nothing to do if there's no one to notify
+
+    // Notification.id is a client-generated cuid (see src/db/schema/core.ts), not a DB
+    // auto-increment column, so mysql2's `insertId` can't be used to recover it — generate
+    // every row's id (and a shared timestamp) up front instead of re-selecting afterwards.
+    const now = new Date();
+    const rows = uniqueIds.map((recipientId) => ({
+      id: createId(),
+      recipientId,
+      type: base.type,
+      title: base.title,
+      message: base.message,
+      ticketId: base.ticketId ?? null,
+      taskId: base.taskId ?? null,
+      checklistInstanceId: base.checklistInstanceId ?? null,
+      isRead: false,
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+    // create one notification row per recipient, all sharing the same title/message/type/ticketId
+    await db.insert(notifications).values(rows);
+    // push each newly created notification to its owner in real time via websockets
+    rows.forEach((row) => emitToUser(row.recipientId, row));
+    return rows;
+  },
+
+  // Called whenever a ticket gets assigned to someone - notifies the assignee AND that department's managers/HODs,
+  // so both the person doing the work and the people overseeing the department know about it.
+  async notifyTicketAssigned(ticket: { _id: any; title: string; departmentId?: any; assigneeId?: any }) {
+    const recipientIds: string[] = []; // will collect everyone who should be notified about this assignment
+
+    // if the ticket has an assignee, they should definitely be told they've been assigned something
+    if (ticket.assigneeId) recipientIds.push(ticket.assigneeId.toString());
+
+    // if the ticket belongs to a department, also notify that department's managers/HODs so they stay in the loop
+    if (ticket.departmentId) {
+      const heads = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(and(eq(users.role, 'MANAGER'), eq(users.departmentId, ticket.departmentId.toString())));
+      recipientIds.push(...heads.map((h) => h.id));
+    }
+
+    // send the same "ticket assigned" notification to everyone we collected above
+    return notificationService.notifyMany(recipientIds, {
+      type: 'TICKET_ASSIGNED',
+      title: 'Ticket assigned',
+      message: `Ticket "${ticket.title}" has been assigned.`,
+      ticketId: ticket._id.toString(),
+    });
+  },
+
+  // Called when a ticket/task is handed off for PC verification (ticket -> IN_REVIEW, task ->
+  // pending_verification) - notifies every PC scoped to that department/store that something's
+  // waiting on them. Mirrors notifyTicketAssigned's "look up the right people, notifyMany" shape.
+  async notifyPendingVerification(entity: VerifiableEntity, kind: 'TICKET' | 'TASK' = 'TICKET') {
+    const scopeConditions = [];
+    if (entity.departmentId) scopeConditions.push(eq(users.departmentId, entity.departmentId.toString()));
+    if (entity.storeId) scopeConditions.push(eq(users.storeId, entity.storeId.toString()));
+    if (!scopeConditions.length) return []; // nothing to scope PCs by - no one to notify
+
+    const pcs = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.role, 'PC'), or(...scopeConditions)));
+    const recipientIds = pcs.map((p) => p.id);
+    if (!recipientIds.length) return [];
+
+    const idField = kind === 'TICKET' ? { ticketId: entity._id.toString() } : { taskId: entity._id.toString() };
+    return notificationService.notifyMany(recipientIds, {
+      type: `${kind}_PENDING_VERIFICATION`,
+      title: kind === 'TICKET' ? 'Ticket awaiting verification' : 'Delegation awaiting verification',
+      message: `"${entity.title}" is ready for your review.`,
+      ...idField,
+    });
+  },
+
+  // Called after a PC/Admin approves or rejects - tells the assignee (and the original raiser,
+  // if different) the outcome, including the PC's note when there is one.
+  async notifyVerificationResult(entity: VerifiableEntity, action: 'APPROVE' | 'REJECT', note: string | undefined, kind: 'TICKET' | 'TASK' = 'TICKET') {
+    const recipientIds: string[] = [];
+    if (entity.assigneeId) recipientIds.push(entity.assigneeId.toString());
+    recipientIds.push(...(entity.additionalAssigneeIds ?? []).map((a) => a.toString()));
+    if (entity.userId && entity.userId.toString() !== entity.assigneeId?.toString()) recipientIds.push(entity.userId.toString());
+    if (!recipientIds.length) return [];
+
+    const idField = kind === 'TICKET' ? { ticketId: entity._id.toString() } : { taskId: entity._id.toString() };
+    const verb = action === 'APPROVE' ? 'verified and closed' : 'sent back for changes';
+    return notificationService.notifyMany(recipientIds, {
+      type: `${kind}_${action === 'APPROVE' ? 'APPROVED' : 'REJECTED'}`,
+      title: action === 'APPROVE' ? 'Verified' : 'Sent back for changes',
+      message: note ? `"${entity.title}" was ${verb}: ${note}` : `"${entity.title}" was ${verb}.`,
+      ...idField,
+    });
+  },
+
+  // Called when a ticket is put ON_HOLD through the restricted status-update flow - tells the
+  // assignee (and the original raiser, if different) it's stalled, including the remark that
+  // explains why. Whoever actually made the change is excluded, since notifying yourself about
+  // your own action is just noise.
+  async notifyTicketOnHold(entity: VerifiableEntity, remark: string, actorId: string, kind: 'TICKET' | 'TASK' = 'TICKET') {
+    const recipientIds: string[] = [];
+    if (entity.assigneeId && entity.assigneeId.toString() !== actorId) recipientIds.push(entity.assigneeId.toString());
+    if (entity.userId && entity.userId.toString() !== actorId && entity.userId.toString() !== entity.assigneeId?.toString()) {
+      recipientIds.push(entity.userId.toString());
+    }
+    if (!recipientIds.length) return [];
+
+    const idField = kind === 'TICKET' ? { ticketId: entity._id.toString() } : { taskId: entity._id.toString() };
+    return notificationService.notifyMany(recipientIds, {
+      type: `${kind}_ON_HOLD`,
+      title: kind === 'TICKET' ? 'Ticket put on hold' : 'Delegation put on hold',
+      message: `"${entity.title}" was put on hold: ${remark}`,
+      ...idField,
+    });
+  },
+
+  // Checklist-instance equivalent of notifyPendingVerification — a recurring checklist has no
+  // storeId and can have several assignees rather than one, so this scopes PCs by departmentId
+  // only rather than reusing the ticket/task departmentId-or-storeId `$or`.
+  // (Preserved exactly from the Mongoose source: this compares `instance.storeId` against the
+  // PC's `departmentId`, not `storeId` — looks odd but matches the original behavior.)
+  async notifyChecklistPendingVerification(instance: VerifiableChecklistInstance) {
+    if (!instance.storeId) return [];
+    const pcs = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.role, 'PC'), eq(users.departmentId, instance.storeId.toString())));
+    const recipientIds = pcs.map((p) => p.id);
+    if (!recipientIds.length) return [];
+
+    return notificationService.notifyMany(recipientIds, {
+      type: 'CHECKLIST_PENDING_VERIFICATION',
+      title: 'Checklist awaiting verification',
+      message: `"${instance.title}" is ready for your review.`,
+      checklistInstanceId: instance._id.toString(),
+    });
+  },
+
+  // Checklist-instance equivalent of notifyVerificationResult — notifies every assignee on the
+  // instance (not just one), since a recurring checklist can be shared by several people.
+  async notifyChecklistVerificationResult(instance: VerifiableChecklistInstance, action: 'APPROVE' | 'REJECT', note: string | undefined) {
+    const recipientIds = (instance.assigneeIds ?? []).map((id) => id.toString());
+    if (!recipientIds.length) return [];
+
+    const verb = action === 'APPROVE' ? 'verified' : 'sent back for changes';
+    return notificationService.notifyMany(recipientIds, {
+      type: `CHECKLIST_${action === 'APPROVE' ? 'APPROVED' : 'REJECTED'}`,
+      title: action === 'APPROVE' ? 'Verified' : 'Sent back for changes',
+      message: note ? `"${instance.title}" was ${verb}: ${note}` : `"${instance.title}" was ${verb}.`,
+      checklistInstanceId: instance._id.toString(),
+    });
+  },
+
+  // Fired by checklistInstance.service.ts when a Builder-authored conditional rule's
+  // NOTIFY_AREA_MANAGER action triggers (e.g. "if answer is No, notify Area Manager"). The app has
+  // no separate "Area Manager" role yet, so every ADMIN — the closest existing escalation contact —
+  // gets notified instead of a store-specific area manager.
+  async notifyAreaManagersOfChecklistFlag(instance: VerifiableChecklistInstance, item: { label: string }) {
+    const admins = await db.select({ id: users.id }).from(users).where(eq(users.role, 'ADMIN'));
+    const recipientIds = admins.map((a) => a.id);
+    if (!recipientIds.length) return [];
+
+    return notificationService.notifyMany(recipientIds, {
+      type: 'CHECKLIST_CONDITIONAL_FLAG',
+      title: 'Checklist flagged for review',
+      message: `"${item.label}" on "${instance.title}" needs attention.`,
+      checklistInstanceId: instance._id.toString(),
+    });
+  },
+
+  // Returns the most recent 50 notifications for a given user, newest first - used to populate the notifications dropdown/list in the UI
+  async listForUser(userId: string) {
+    return db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.recipientId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+  },
+
+  // Marks a single notification as read - but only if it actually belongs to this user
+  // (the { id, recipientId: userId } filter stops one user from marking someone else's notification as read)
+  async markRead(id: string, userId: string) {
+    const [existing] = await db
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.id, id), eq(notifications.recipientId, userId)))
+      .limit(1);
+    if (!existing) throw AppError.notFound('Notification not found'); // nothing matched (wrong id, or not this user's notification) -> fail with a 404
+
+    await db
+      .update(notifications)
+      .set({ isRead: true, updatedAt: new Date() }) // flip the isRead flag on, so the UI stops showing it as "new"
+      .where(eq(notifications.id, id));
+
+    // No Drizzle equivalent of findOneAndUpdate's `{ new: true }` — re-select to return the
+    // updated row.
+    const [updated] = await db.select().from(notifications).where(eq(notifications.id, id)).limit(1);
+    return updated;
+  },
+
+  // Marks EVERY unread notification belonging to this user as read in one bulk update -
+  // this is what powers a "mark all as read" button, instead of the user clicking each one individually
+  async markAllRead(userId: string) {
+    await db
+      .update(notifications)
+      .set({ isRead: true, updatedAt: new Date() })
+      .where(and(eq(notifications.recipientId, userId), eq(notifications.isRead, false)));
+  },
+};

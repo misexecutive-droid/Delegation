@@ -1,0 +1,272 @@
+import {
+  mysqlTable,
+  varchar,
+  text,
+  int,
+  float,
+  boolean,
+  datetime,
+  json,
+  mysqlEnum,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/mysql-core';
+import { createId } from '@paralleldrive/cuid2';
+
+// ---------------------------------------------------------------------------
+// Shared enum value arrays (exported for reuse in Zod validation etc.)
+// ---------------------------------------------------------------------------
+
+export const ROLES = ['ADMIN', 'SENIOR', 'MANAGER', 'AGENT', 'USER', 'PC'] as const;
+export type Role = (typeof ROLES)[number];
+export const EVENT_TYPES = ['DEADLINE', 'ANNOUNCEMENT', 'BROADCAST'] as const;
+
+// SENIOR sits between ADMIN and MANAGER: a Senior/Area Head oversees one whole store (all
+// departments in it), above a MANAGER/HOD who only heads a single department. Applied to a
+// new user's `rank` column at insert time when not explicitly provided (see
+// src/utils/password.ts#deriveDefaultRank) — mirrors the Mongoose pre('validate') hook.
+export const DEFAULT_RANK_BY_ROLE: Record<Role, number> = {
+  ADMIN: 1,
+  SENIOR: 2,
+  MANAGER: 3,
+  PC: 4,
+  AGENT: 5,
+  USER: 6,
+};
+
+// ---------------------------------------------------------------------------
+// Store — physical retail location
+// ---------------------------------------------------------------------------
+export const stores = mysqlTable(
+  'Store',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    name: varchar('name', { length: 191 }).notNull(),
+    code: varchar('code', { length: 191 }),
+    address: varchar('address', { length: 500 }),
+    isActive: boolean('isActive').notNull().default(true),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex('Store_name_key').on(table.name)],
+);
+
+// ---------------------------------------------------------------------------
+// Department — org unit, optionally scoped to a "home" store
+// ---------------------------------------------------------------------------
+export const departments = mysqlTable(
+  'Department',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    name: varchar('name', { length: 191 }).notNull(),
+    isActive: boolean('isActive').notNull().default(true),
+    storeId: varchar('storeId', { length: 191 }).references(() => stores.id),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex('Department_name_key').on(table.name)],
+);
+
+// ---------------------------------------------------------------------------
+// User — application account (agents, managers, admins, etc.)
+// ---------------------------------------------------------------------------
+export const users = mysqlTable(
+  'User',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    email: varchar('email', { length: 191 }).notNull(),
+    // bcrypt hash (~60 chars). NEVER select/return this column in API responses —
+    // Drizzle has no Mongoose `select:false` equivalent; always list explicit
+    // columns in `db.select({...})` for any user-facing read.
+    passwordHash: varchar('passwordHash', { length: 191 }).notNull(),
+    firstName: varchar('firstName', { length: 191 }).notNull(),
+    lastName: varchar('lastName', { length: 191 }),
+    role: mysqlEnum('role', ROLES).notNull().default('USER'),
+    departmentId: varchar('departmentId', { length: 191 }).references(() => departments.id),
+    storeId: varchar('storeId', { length: 191 }).references(() => stores.id),
+    isActive: boolean('isActive').notNull().default(true),
+    // Derived from `role` via DEFAULT_RANK_BY_ROLE when null; app-layer sets this
+    // on insert if not provided (min 1, max 6 — not enforced at the DB level).
+    rank: int('rank'),
+    phone: varchar('phone', { length: 191 }),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex('User_email_key').on(table.email),
+    // Mongoose had `unique: true, sparse: true`; MySQL unique indexes already
+    // allow multiple NULLs, so a plain unique index reproduces "sparse" semantics.
+    uniqueIndex('User_phone_key').on(table.phone),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// RefreshToken — long-lived auth refresh tokens
+// ---------------------------------------------------------------------------
+export const refreshTokens = mysqlTable(
+  'RefreshToken',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    userId: varchar('userId', { length: 191 }).notNull().references(() => users.id),
+    tokenHash: varchar('tokenHash', { length: 191 }).notNull(),
+    expiresAt: datetime('expiresAt', { mode: 'date' }).notNull(),
+    revokedAt: datetime('revokedAt', { mode: 'date' }),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index('RefreshToken_userId_idx').on(table.userId),
+    uniqueIndex('RefreshToken_tokenHash_key').on(table.tokenHash),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// PasswordResetToken — one-time password reset tokens
+// ---------------------------------------------------------------------------
+export const passwordResetTokens = mysqlTable(
+  'PasswordResetToken',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    userId: varchar('userId', { length: 191 }).notNull().references(() => users.id),
+    tokenHash: varchar('tokenHash', { length: 191 }).notNull(),
+    expiresAt: datetime('expiresAt', { mode: 'date' }).notNull(),
+    usedAt: datetime('usedAt', { mode: 'date' }),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index('PasswordResetToken_userId_idx').on(table.userId),
+    uniqueIndex('PasswordResetToken_tokenHash_key').on(table.tokenHash),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Category — task/ticket category scoped to a department
+// ---------------------------------------------------------------------------
+export const categories = mysqlTable(
+  'Category',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    name: varchar('name', { length: 191 }).notNull(),
+    isActive: boolean('isActive').notNull().default(true),
+    departmentId: varchar('departmentId', { length: 191 }).notNull().references(() => departments.id),
+    tatHours: float('tatHours'),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex('Category_name_key').on(table.name)],
+);
+
+// Category.assigneeIds — many-to-many junction (Category <-> User)
+export const categoryAssignees = mysqlTable(
+  'CategoryAssignee',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    categoryId: varchar('categoryId', { length: 191 }).notNull().references(() => categories.id, { onDelete: 'cascade' }),
+    userId: varchar('userId', { length: 191 }).notNull().references(() => users.id),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex('CategoryAssignee_categoryId_userId_key').on(table.categoryId, table.userId)],
+);
+
+// ---------------------------------------------------------------------------
+// Event — announcement / deadline / broadcast calendar entry
+// ---------------------------------------------------------------------------
+export const events = mysqlTable('Event', {
+  id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+  title: varchar('title', { length: 191 }).notNull(),
+  description: text('description'),
+  type: mysqlEnum('type', EVENT_TYPES).notNull().default('ANNOUNCEMENT'),
+  eventDate: datetime('eventDate', { mode: 'date' }).notNull(),
+  createdBy: varchar('createdBy', { length: 191 }).notNull().references(() => users.id),
+  createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+});
+
+// ---------------------------------------------------------------------------
+// Settings — single-row-style global config document
+// ---------------------------------------------------------------------------
+export const settings = mysqlTable('Settings', {
+  id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+  defaultTatHours: float('defaultTatHours').notNull().default(24),
+  maxUploadSizeMb: float('maxUploadSizeMb').notNull().default(5),
+  // Fixed typo from Mongoose source (`maxUploadFiltes`) — client/validation code
+  // already used the correct spelling, so the old field name was silently broken.
+  maxUploadFiles: int('maxUploadFiles').notNull().default(10),
+  allowedImageTypes: json('allowedImageTypes').$type<string[]>().notNull().default(['image/jpeg', 'image/png', 'image/webp']),
+  createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+});
+
+// ---------------------------------------------------------------------------
+// AuditLog — generic change-history log, polymorphic target
+// ---------------------------------------------------------------------------
+export const auditLogs = mysqlTable(
+  'AuditLog',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    // Polymorphic reference: entityType + entityId together identify a row in an
+    // arbitrary other table. No FK enforcement is possible for this in MySQL.
+    entityType: varchar('entityType', { length: 191 }).notNull(),
+    entityId: varchar('entityId', { length: 191 }).notNull(),
+    action: varchar('action', { length: 191 }).notNull(),
+    // Intentionally NOT a FK to users — stored as a plain string per source comment
+    // (actor identity here can't be joined to Users directly, e.g. system actors).
+    actorId: varchar('actorId', { length: 191 }).notNull(),
+    before: json('before').$type<unknown>(),
+    after: json('after').$type<unknown>(),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index('AuditLog_entityType_entityId_idx').on(table.entityType, table.entityId)],
+);
+
+// ---------------------------------------------------------------------------
+// Project — lightweight grouping of tasks with an owner and members
+// ---------------------------------------------------------------------------
+export const projects = mysqlTable('Project', {
+  id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+  name: varchar('name', { length: 191 }).notNull(),
+  description: text('description').notNull().default(''),
+  ownerId: varchar('ownerId', { length: 191 }).notNull().references(() => users.id),
+  createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+});
+
+// Project.memberIds — many-to-many junction (Project <-> User)
+export const projectMembers = mysqlTable(
+  'ProjectMember',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    projectId: varchar('projectId', { length: 191 }).notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    userId: varchar('userId', { length: 191 }).notNull().references(() => users.id),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex('ProjectMember_projectId_userId_key').on(table.projectId, table.userId)],
+);
+
+// ---------------------------------------------------------------------------
+// Notification — in-app notification, "polymorphic-lite" via 3 nullable FKs
+// ---------------------------------------------------------------------------
+export const notifications = mysqlTable(
+  'Notification',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    recipientId: varchar('recipientId', { length: 191 }).notNull().references(() => users.id),
+    type: varchar('type', { length: 191 }).notNull(),
+    title: varchar('title', { length: 191 }).notNull(),
+    message: text('message').notNull(),
+    // Exactly one of ticketId / taskId / checklistInstanceId is expected to be
+    // non-null (app-enforced invariant, not a DB constraint). These reference
+    // tables defined in ticket.ts / task.ts / checklistInstance.ts; declared as
+    // plain varchar (no `.references()`) here to avoid a circular file import,
+    // since those files already import from core.ts.
+    ticketId: varchar('ticketId', { length: 191 }), // FK to Ticket.id, no .references() to avoid a circular import
+    taskId: varchar('taskId', { length: 191 }), // FK to Task.id, no .references() to avoid a circular import
+    checklistInstanceId: varchar('checklistInstanceId', { length: 191 }), // FK to ChecklistInstance.id, no .references() to avoid a circular import
+    isRead: boolean('isRead').notNull().default(false),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index('Notification_recipientId_idx').on(table.recipientId)],
+);
