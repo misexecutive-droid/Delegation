@@ -11,10 +11,12 @@ import { RecentActivity } from './RecentActivity';
 import { UpcomingEvents } from './UpcomingEvents';
 import { type FeedItem, type CompliancePeriod, PERIOD_LABEL, periodStartDate, shiftPeriod, pointDelta } from './dashboardDisplay';
 import type { Task } from '../../api/task';
+import { TodoDrawer, TodoFab } from '../todo';
 
 export const HomePage = () => {
   const { user } = useAuth();
   const [period, setPeriod] = useState<CompliancePeriod>('month');
+  const [showTodoDrawer, setShowTodoDrawer] = useState(false);
   const { data: ticketPage, isPending: ticketsPending } = useTicketsQuery(1, 100);
   const { data: allTasks, isPending: tasksPending } = useTasksQuery();
   const { data: upcomingEvents, isPending: eventsPending } = useUpcomingEventsQuery(5);
@@ -86,7 +88,7 @@ export const HomePage = () => {
 
   return (
     <div className="flex flex-col gap-5 w-full animate-in fade-in duration-500 ease-out">
-      <DashboardHeader userName={user?.name} />
+      <DashboardHeader userName={user?.name} onOpenTodo={() => setShowTodoDrawer(true)} />
 
       <DashboardOverview isPending={isPending} tickets={tickets} tasks={tasks} />
 
@@ -103,6 +105,9 @@ export const HomePage = () => {
         <RecentActivity feed={feed} isPending={isPending} />
         <UpcomingEvents events={upcomingEvents ?? []} isPending={eventsPending} />
       </div>
+
+      <TodoDrawer open={showTodoDrawer} onClose={() => setShowTodoDrawer(false)} />
+      <TodoFab onOpenDrawer={() => setShowTodoDrawer(true)} />
     </div>
   );
 };

@@ -1,13 +1,16 @@
-import { useState } from 'react';
 import { CalendarDays, Plus } from 'lucide-react';
 import { Button } from '../../components/button';
 import { LightBeams } from '../../components/lightBeams';
-import { TodoDrawer } from '../todo';
 import { greeting } from './dashboardDisplay';
 
-export const DashboardHeader = ({ userName }: { userName?: string }) => {
-  const [showTodoDrawer, setShowTodoDrawer] = useState(false);
+interface DashboardHeaderProps {
+  userName?: string;
+  /** Opens the shared To-Do drawer — the trigger for it lives here on desktop (md and up); on
+   *  mobile it's a floating action button instead (see HomePage), so this button is hidden there. */
+  onOpenTodo: () => void;
+}
 
+export const DashboardHeader = ({ userName, onOpenTodo }: DashboardHeaderProps) => {
   // Using 'short' for weekday saves critical horizontal space on small mobile screens
   const now = new Date();
   const currentDate = now.toLocaleDateString(undefined, {
@@ -20,7 +23,12 @@ export const DashboardHeader = ({ userName }: { userName?: string }) => {
 
   return (
     <div className="relative isolate overflow-hidden flex flex-col gap-4 sm:gap-6 mb-5 md:mb-8 pb-5 md:pb-6 border-b border-border/40">
-      <LightBeams />
+      {/* Constrained to a short strip pinned to the header's top edge — LightBeams positions its
+          beams at percentages of *this* box's height, not the full header, so they stay clear of
+          the date pill and the greeting text below instead of one sweeping straight across it. */}
+      <div className="absolute inset-x-0 top-0 h-12 -z-10 overflow-hidden pointer-events-none">
+        <LightBeams />
+      </div>
 
       <div className="flex flex-col gap-1.5 sm:gap-2.5 relative z-10 w-full sm:w-auto">
         {/* Eyebrow Date/Time Pill, with the "New Todo" action right beside it */}
@@ -33,8 +41,8 @@ export const DashboardHeader = ({ userName }: { userName?: string }) => {
           <Button
             variant="primary"
             size="sm"
-            className="group size-8 sm:size-9 rounded-full p-0 shrink-0 shadow-md hover:shadow-lg transition-all duration-300 flex justify-center items-center"
-            onClick={() => setShowTodoDrawer(true)}
+            className="group size-8 sm:size-9 rounded-full p-0 shrink-0 shadow-md hover:shadow-lg transition-all duration-300 hidden md:inline-flex"
+            onClick={onOpenTodo}
             aria-label="New Todo"
             title="New Todo"
           >
@@ -52,8 +60,6 @@ export const DashboardHeader = ({ userName }: { userName?: string }) => {
           )}
         </h1>
       </div>
-
-      <TodoDrawer open={showTodoDrawer} onClose={() => setShowTodoDrawer(false)} />
     </div>
   );
 };

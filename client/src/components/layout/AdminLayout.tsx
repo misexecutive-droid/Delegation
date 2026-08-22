@@ -292,7 +292,7 @@ export const AdminLayout = () => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <BottomNav onToggleSidebar={() => setSidebarOpen(v => !v)} />
+      <BottomNav />
     </div>
   );
 };

@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { NavLink } from 'react-router';
+import { NavLink, useLocation } from 'react-router';
 import {
   CheckSquare,
   ChevronDown,
@@ -15,7 +14,7 @@ import {
 } from 'lucide-react';
 import { NotificationBell } from '../../features/notifications/NotificationBell';
 import { Dropdown, type DropdownAction } from '../dropdown';
-import { HeaderSearchInput } from './HeaderSearchInput';
+import { HeaderSearch } from './HeaderSearch';
 
 // Refined to be more modern and touch-friendly (fully rounded, slightly larger tap target)
 export const ICON_BUTTON_CLASS =
@@ -28,10 +27,32 @@ export const ICON_BUTTON_CLASS =
 const titleCase = (value: string) =>
   value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 
+// A lightweight "you are here" label shown next to the brand — the Sidebar owns real navigation,
+// this just echoes the active section's name using the same pill styling as its active links, so
+// the header reads as informative rather than purely chrome.
+const PAGE_LABELS: { pattern: RegExp; label: string }[] = [
+  { pattern: /^\/$/, label: 'Dashboard' },
+  { pattern: /^\/tasks/, label: 'Delegation' },
+  { pattern: /^\/tickets/, label: 'Tickets' },
+  { pattern: /^\/todo/, label: 'To-Do' },
+  { pattern: /^\/events/, label: 'Events' },
+  { pattern: /^\/checklists/, label: 'Checklists' },
+  { pattern: /^\/projects/, label: 'Projects' },
+  { pattern: /^\/calendar/, label: 'Calendar' },
+  { pattern: /^\/settings/, label: 'Settings' },
+  { pattern: /^\/analytics/, label: 'Analytics' },
+  { pattern: /^\/verify/, label: 'Verification Queue' },
+  { pattern: /^\/team/, label: 'Team Overview' },
+  { pattern: /^\/admin/, label: 'Admin' },
+];
+
+const getPageLabel = (pathname: string) => PAGE_LABELS.find((p) => p.pattern.test(pathname))?.label;
+
 export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const [search, setSearch] = useState('');
+  const location = useLocation();
+  const pageLabel = user ? getPageLabel(location.pathname) : undefined;
 
   const initials = (user?.name ?? 'U')
     .split(' ')
@@ -60,6 +81,10 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
         WebkitBackdropFilter: 'var(--glass-blur, blur(12px))',
       }}
     >
+      {/* Soft brand-colored accent line along the header's bottom edge — a subtle nod to the
+          colored active-link underlines in modern navbar designs, without adding a second row
+          of links the Sidebar already owns. */}
+      <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-primary-500/40 to-transparent" aria-hidden="true" />
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
         <div className="h-16 flex items-center gap-3 sm:gap-4">
 
@@ -87,17 +112,22 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
                 TaskMatrix
               </span>
             </NavLink>
+
+            {pageLabel && (
+              <>
+                <span className="hidden lg:block h-5 w-px bg-border/60" aria-hidden="true" />
+                <span className="hidden lg:inline-flex items-center rounded-full bg-primary-50/80 dark:bg-primary-900/20 px-3 py-1 text-xs font-bold text-primary-700 dark:text-primary-300 ring-1 ring-primary-200/50 dark:ring-primary-800/50 whitespace-nowrap">
+                  {pageLabel}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Center Module: Search — only when user is logged in */}
           {user && (
             <div className="hidden md:flex flex-1 justify-center px-4">
               <div className="w-full max-w-md">
-                <HeaderSearchInput
-                  value={search}
-                  onChange={setSearch}
-                  placeholder="Search checklists, tasks, tickets…"
-                />
+                <HeaderSearch />
               </div>
             </div>
           )}

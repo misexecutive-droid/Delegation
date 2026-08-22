@@ -12,7 +12,8 @@ import { getInitials } from '../../lib/getInitials';
 import type { Task } from '../../api/task';
 import type { Department } from '../../api/departments';
 import type { AssignableUser } from '../../api/users';
-import type { CategoryFilterKey } from './taskFilters';
+import { SORT_LABEL, SORT_ICON, type CategoryFilterKey, type TaskSortKey } from './taskFilters';
+import { CARD_FIELD_CONFIG, type CardFieldKey, type CardFieldVisibility } from './cardFields';
 
 export interface TaskFilters {
   category:     CategoryFilterKey;
@@ -32,6 +33,13 @@ interface TaskFiltersPopoverProps {
   currentUserId?:   string;
   isAdmin?:         boolean;
   activeCount:      number;
+  /** Sort and card-field visibility — desktop keeps these as their own separate toolbar
+   *  dropdowns, but on mobile there's no room for four separate buttons, so they fold into this
+   *  panel as two extra sections instead. */
+  sort:             TaskSortKey;
+  onSortChange:     (key: TaskSortKey) => void;
+  fieldVisibility:  CardFieldVisibility;
+  onToggleField:    (key: CardFieldKey) => void;
 }
 
 const UserForm = lazy(() =>
@@ -89,6 +97,7 @@ const MOBILE_QUERY = '(max-width: 639px)';
 
 export const TaskFiltersPopover = ({
   filters, onChange, onClearAll, departments, assignableUsers, currentUserId, isAdmin = false, activeCount,
+  sort, onSortChange, fieldVisibility, onToggleField,
 }: TaskFiltersPopoverProps) => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<TaskFilters>(filters);
@@ -189,7 +198,7 @@ export const TaskFiltersPopover = ({
     </>
   );
 
-  const triggerClassName = `h-9 px-3 gap-2 border shadow-sm rounded-lg transition-colors ${
+  const triggerClassName = `h-9 px-3 gap-2 border rounded-lg transition-colors ${
     activeCount > 0
       ? 'bg-primary-50 border-primary-200 hover:bg-primary-100 dark:bg-primary-900/20 dark:border-primary-800/50'
       : 'bg-surface border-border/60 hover:bg-surface-hover'
@@ -383,6 +392,47 @@ export const TaskFiltersPopover = ({
     </>
   );
 
+  // Mobile-only: desktop keeps Sort and "Show only" (card fields) as their own separate toolbar
+  // dropdowns, but a phone-width toolbar has no room for four buttons — these fold into the same
+  // sheet as the rest of the filters instead of disappearing entirely.
+  const mobileOnlySections = (
+    <>
+      <FilterSection title="Sort by">
+        <div className="grid grid-cols-2 gap-2">
+          {(Object.keys(SORT_LABEL) as TaskSortKey[]).map((key) => {
+            const Icon = SORT_ICON[key];
+            return (
+              <PillButton key={key} active={sort === key} onClick={() => onSortChange(key)}>
+                <span className="flex items-center gap-1.5">
+                  <Icon size={13} />
+                  {SORT_LABEL[key]}
+                </span>
+              </PillButton>
+            );
+          })}
+        </div>
+      </FilterSection>
+
+      <FilterSection title="Show only">
+        <div className="grid grid-cols-2 gap-1">
+          {CARD_FIELD_CONFIG.map(({ key, label, icon: Icon }) => {
+            const checked = fieldVisibility[key];
+            return (
+              <label key={key} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${checked ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
+                <div className={`flex items-center justify-center size-4 rounded-[4px] border shrink-0 transition-all ${checked ? 'bg-primary-600 border-primary-600 text-white' : 'bg-surface border-border-hover'}`}>
+                  {checked && <Check size={12} strokeWidth={3} />}
+                </div>
+                <Icon size={14} className="text-text-light shrink-0" />
+                <span className="truncate">{label}</span>
+                <input type="checkbox" className="sr-only" checked={checked} onChange={() => onToggleField(key)} />
+              </label>
+            );
+          })}
+        </div>
+      </FilterSection>
+    </>
+  );
+
   const footerButtons = (
     <>
       <button
@@ -471,6 +521,7 @@ export const TaskFiltersPopover = ({
       >
         {draftChipsRow}
         {filterSectionsBody}
+        {mobileOnlySections}
       </Modal>
     )}
 

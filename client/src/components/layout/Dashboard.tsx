@@ -60,7 +60,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <BottomNav onToggleSidebar={() => setSidebarOpen(v => !v)} />
+      <BottomNav />
     </div>
   );
 };

@@ -36,7 +36,9 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-300 data-[state=closed]:duration-150 fixed inset-0 z-50 bg-black/40 backdrop-blur-xs",
+        // z-[70] — above every other overlay in the app (drawers/sheets top out at z-[60]), since
+        // a modal dialog must always be able to stack on top of a drawer it was opened from.
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-300 data-[state=closed]:duration-150 fixed inset-0 z-[70] bg-black/40 backdrop-blur-xs",
         className,
       )}
       {...props}
@@ -58,7 +60,15 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-card text-card-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 data-[state=closed]:slide-out-to-bottom-2 data-[state=open]:slide-in-from-bottom-2 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded border border-border p-6 shadow-2xl data-[state=open]:duration-300 data-[state=open]:ease-out data-[state=closed]:duration-150 sm:max-w-md max-h-[90vh] overflow-y-auto",
+          "bg-card text-card-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed z-[70] grid w-full gap-4 border border-border p-6 shadow-2xl data-[state=open]:duration-300 data-[state=open]:ease-out data-[state=closed]:duration-150 max-h-[90vh] overflow-y-auto outline-none",
+          // Mobile: a bottom sheet, pinned edge-to-edge and sliding up from off-screen — the
+          // native pattern, instead of a small centered box floating in the middle of a phone
+          // screen. pb accounts for the home-indicator safe area (see index.html's viewport-fit).
+          "bottom-0 left-0 right-0 top-auto max-w-full translate-x-0 translate-y-0 rounded-t-2xl rounded-b-none pb-[max(1.5rem,env(safe-area-inset-bottom))]",
+          "data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full",
+          // Desktop (sm+): the original centered dialog, unchanged.
+          "sm:top-[50%] sm:left-[50%] sm:right-auto sm:bottom-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-md sm:rounded sm:pb-6",
+          "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-90 sm:data-[state=closed]:slide-out-to-bottom-2 sm:data-[state=open]:slide-in-from-bottom-2",
           className,
         )}
         {...props}

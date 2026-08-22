@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -18,6 +18,7 @@ import { twMerge } from 'tailwind-merge';
 import { useAuth } from "../../context/AuthContext";
 import { Header, BottomNav } from "../../components/layout";
 import { Breadcrumbs } from "../../components/breadcrumbs";
+import { RouteFallback } from "../../components/skeleton";
 import { OrbitDecoration } from "../../components/orbitDecoration";
 
 /** Utility for intelligent Tailwind class merging */
@@ -367,7 +368,9 @@ export const AdminLayout = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 bg-slate-50 dark:bg-slate-950">
-          <div className="max-w-7xl mx-auto w-full p-3 sm:p-5 lg:p-8 pb-20 md:pb-8">
+          {/* pb-44 clears BottomNav plus any page's floating Fab (e.g. Tickets' Create FAB),
+              which floats ~56px above the nav — see Dashboard.tsx's identical comment. */}
+          <div className="max-w-7xl mx-auto w-full p-3 sm:p-5 lg:p-8 pb-44 md:pb-8">
             
             <Breadcrumbs
               items={[
@@ -387,7 +390,9 @@ export const AdminLayout = () => {
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 className="w-full"
               >
-                <Outlet />
+                <Suspense fallback={<RouteFallback />}>
+                  <Outlet />
+                </Suspense>
               </motion.div>
             </AnimatePresence>
             
@@ -397,7 +402,7 @@ export const AdminLayout = () => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <BottomNav onToggleSidebar={() => setSidebarOpen(v => !v)} />
+      <BottomNav />
     </div>
   );
 };

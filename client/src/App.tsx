@@ -1,3 +1,4 @@
+import { lazy } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router';
 import { FolderKanban, Calendar } from 'lucide-react';
 import { ComingSoon } from './components/comingSoon';
@@ -6,27 +7,46 @@ import { LoginForm } from './features/auth/LoginForm';
 import { ForgotPasswordForm } from './features/auth/ForgotPasswordForm';
 import { ResetPasswordForm } from './features/auth/ResetPasswordForm';
 import { Dashboard } from './features/dashboard';
-import { HomePage } from './features/dashboard/HomePage';
 import { PublicLayout } from './components/layout';
-import { TicketList, useTicketSocket } from './features/tickets';
-import { TaskList, useTaskSocket } from './features/tasks';
+// Socket hooks are imported directly from their own module (not the feature's barrel) so pulling
+// them in eagerly here doesn't drag the barrel's heavy page components into the main bundle —
+// those are code-split below via lazy() instead.
+import { useTicketSocket } from './features/tickets/useTicketSocket';
+import { useTaskSocket } from './features/tasks/useTaskSocket';
 import { useNotificationSocket } from './features/notifications/useNotificationSocket';
 import { AdminLayout } from './features/admin/AdminLayout';
-import { DirectoryPage } from './features/admin/directory';
-import { ChecklistTemplateList } from './features/admin/checklistTemplate';
-import { OrgStructurePage } from './features/admin/orgStructure';
-import { TatReport } from './features/admin/report';
-import { AdminTaskList } from './features/admin/AdminTaskList';
-import { OrgOverview } from './features/admin/analytics';
-import { SettingsPage } from './features/admin/SettingsPage';
-import { ChecklistTemplatesGrid, ChecklistDefinitionDetail, ChecklistBuilder, MyChecklists, ChecklistInstanceDetail } from './features/checklist';
-import { VerificationQueue } from './features/verification';
-import { MyErrorBoundary, NotFoundPage } from './components/error';
-import { CategoryList, SettingsLayout } from './features/settings';
-import { ReportsPage } from './features/reports';
-import { EventList } from './features/events';
-import { TeamOverviewPage } from './features/team/TeamOverviewPage';
-import { TodoPage } from './features/todo';
+import { MyErrorBoundary, NotFoundPage, MaintenancePage } from './components/error';
+
+// Flip VITE_MAINTENANCE_MODE=true in the deploy's env to take the whole app down for planned
+// work — a build-time flag rather than a runtime API check, so it still works even when the API
+// itself is what's down for maintenance. Read once at module scope (not inside the component) so
+// it's a plain boolean by the time App() runs, keeping every hook call below unconditional.
+const MAINTENANCE_MODE = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
+
+// Route-level code splitting: every page below its own layout shell is a separate chunk, fetched
+// only when the user actually navigates to it, instead of all being bundled into the initial load.
+const HomePage = lazy(() => import('./features/dashboard/HomePage').then(m => ({ default: m.HomePage })));
+const TicketList = lazy(() => import('./features/tickets/TicketList').then(m => ({ default: m.TicketList })));
+const TaskList = lazy(() => import('./features/tasks/TaskList').then(m => ({ default: m.TaskList })));
+const TodoPage = lazy(() => import('./features/todo/TodoPage').then(m => ({ default: m.TodoPage })));
+const EventList = lazy(() => import('./features/events/EventList').then(m => ({ default: m.EventList })));
+const MyChecklists = lazy(() => import('./features/checklist/instance/MyChecklists').then(m => ({ default: m.MyChecklists })));
+const ChecklistInstanceDetail = lazy(() => import('./features/checklist/instance/ChecklistInstanceDetail').then(m => ({ default: m.ChecklistInstanceDetail })));
+const OrgOverview = lazy(() => import('./features/admin/analytics').then(m => ({ default: m.OrgOverview })));
+const VerificationQueue = lazy(() => import('./features/verification').then(m => ({ default: m.VerificationQueue })));
+const AdminTaskList = lazy(() => import('./features/admin/AdminTaskList').then(m => ({ default: m.AdminTaskList })));
+const TeamOverviewPage = lazy(() => import('./features/team/TeamOverviewPage').then(m => ({ default: m.TeamOverviewPage })));
+const SettingsLayout = lazy(() => import('./features/settings/SettingsLayout').then(m => ({ default: m.SettingsLayout })));
+const CategoryList = lazy(() => import('./features/settings/CategoryList').then(m => ({ default: m.CategoryList })));
+const TatReport = lazy(() => import('./features/admin/report').then(m => ({ default: m.TatReport })));
+const DirectoryPage = lazy(() => import('./features/admin/directory').then(m => ({ default: m.DirectoryPage })));
+const OrgStructurePage = lazy(() => import('./features/admin/orgStructure').then(m => ({ default: m.OrgStructurePage })));
+const ChecklistTemplateList = lazy(() => import('./features/admin/checklistTemplate').then(m => ({ default: m.ChecklistTemplateList })));
+const ChecklistTemplatesGrid = lazy(() => import('./features/checklist/definition/ChecklistTemplatesGrid').then(m => ({ default: m.ChecklistTemplatesGrid })));
+const ChecklistBuilder = lazy(() => import('./features/checklist/definition/builder/ChecklistBuilder').then(m => ({ default: m.ChecklistBuilder })));
+const ChecklistDefinitionDetail = lazy(() => import('./features/checklist/definition/ChecklistDefinitionDetail').then(m => ({ default: m.ChecklistDefinitionDetail })));
+const ReportsPage = lazy(() => import('./features/reports').then(m => ({ default: m.ReportsPage })));
+const SettingsPage = lazy(() => import('./features/admin/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
 const ProtectedRoute = () => {
   const { token } = useAuth();
@@ -177,6 +197,9 @@ export default function App() {
   useTicketSocket();
   useTaskSocket();
   useNotificationSocket();
+
+  if (MAINTENANCE_MODE) return <MaintenancePage />;
+
   return <RouterProvider router={router} />;
 }
   

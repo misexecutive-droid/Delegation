@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Plus, AlertCircle, Inbox, RotateCcw, Building2, User, FileDown, X, LayoutGrid, UserPen, UserCheck } from 'lucide-react';
-import { Button, PageNav } from '../../components';
+import { Button, PageNav, Fab } from '../../components';
 import { useAuth } from '@/context/AuthContext';
 import { useTicketsQuery, useDepartmentsQuery } from './hook';
 import { TicketForm } from './TicketForm';
@@ -133,16 +133,20 @@ export const TicketList = () => {
             </p>
           </div>
 
+          {/* Desktop: inline circular button. Mobile: the Fab below instead — same size/color/
+              position as the Dashboard's To-Do FAB and Delegation's New Delegation FAB. */}
           <Button
             variant="primary"
             size="sm"
-            className="group size-10 sm:size-11 rounded-full p-0 shadow-md hover:shadow-lg transition-all duration-300 flex justify-center items-center"
+            className="group hidden md:flex size-10 sm:size-11 rounded-full p-0 shadow-md hover:shadow-lg transition-all duration-300 justify-center items-center"
             onClick={() => setShowForm(true)}
             aria-label="Create Ticket"
             title="Create Ticket"
           >
             <Plus size={18} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-90" />
           </Button>
+
+          <Fab actions={[{ key: 'create', label: 'Create Ticket', icon: Plus, onClick: () => setShowForm(true) }]} />
         </div>
 
         {/* Controls Bar — icon-sized controls (scope, group-by, status, export) share one row;

@@ -7,7 +7,6 @@ import {
   ShieldQuestion,
   Clock,
   SquarePen,
-  ListChecks,
   CalendarPlus,
   History,
 } from "lucide-react";
@@ -21,7 +20,9 @@ import { coverPhotoFor } from "./taskAttachmentDisplay";
 import { UPLOADS_BASE } from "../../lib/uploadsBase";
 import { avatarColorClass } from "./avatarColors";
 import { getInitials } from "../../lib/getInitials";
-import { CATEGORY_CONFIG, subtaskProgress, formatShortDateTime, type CardFieldVisibility } from "./cardFields";
+import { getChecklistProgress } from "../../lib/checklistProgress";
+import { ChecklistProgressBar, DueProgressBar } from "../../components/progress";
+import { CATEGORY_CONFIG, formatShortDateTime, type CardFieldVisibility } from "./cardFields";
 import type { Task } from "../../api/task";
 
 interface TaskCardProps {
@@ -50,7 +51,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
   const priority = PRIORITY_MAP[task.priority];
   const coverPhoto = coverPhotoFor(task.attachments);
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
-  const subtasks = subtaskProgress(task);
+  const { doneItems, totalItems, progress } = getChecklistProgress(task.checklists ?? []);
 
   const showDoneBadge = fields.status && task.status === 'done';
   const showReviewBadge = fields.status && task.status === 'pending_verification' && !isVerifier;
@@ -127,6 +128,18 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
         </p>
       )}
 
+      {/* Progress — checklist completion when there's a checklist to track (governed by the
+          "Subtasks" field toggle), otherwise how much of the created-to-due-date window has
+          elapsed (governed by "Due date" instead, since there's no checklist to speak of). Same
+          shared component Tickets use, so the two card types read identically. */}
+      {fields.subtasks && progress !== null ? (
+        <ChecklistProgressBar done={doneItems} total={totalItems} />
+      ) : (
+        fields.dueDate && task.dueDate && task.status !== 'done' && (
+          <DueProgressBar createdAt={task.createdAt} dueDate={task.dueDate} />
+        )
+      )}
+
       {fields.raisedBy && raisedByName && (
         <div className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
           <UserCog size={12} strokeWidth={2.5} className="text-text-light shrink-0" />
@@ -136,7 +149,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
         </div>
       )}
 
-      {(fields.department || fields.priority || fields.category || fields.subtasks) && (
+      {(fields.department || fields.priority || fields.category) && (
         <div className="flex flex-wrap items-center gap-1.5">
           {fields.department && departmentName && (
             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${departmentTagClass(departmentName)}`}>
@@ -160,13 +173,6 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
               </span>
             );
           })()}
-
-          {fields.subtasks && subtasks && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-hover text-text-secondary">
-              <ListChecks size={12} strokeWidth={2.5} />
-              {subtasks.done}/{subtasks.total}
-            </span>
-          )}
 
           {fields.status && <TaskScoreBadge status={task.status} variant="sm" />}
         </div>

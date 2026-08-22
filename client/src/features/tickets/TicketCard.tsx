@@ -1,4 +1,4 @@
-import { Clock, AlertCircle, CheckSquare, User } from 'lucide-react';
+import { Clock, AlertCircle, User } from 'lucide-react';
 import type { Ticket } from '../../api/ticket';
 import { getChecklistProgress } from '../../lib/checklistProgress';
 import { getTicketStatusLabel } from '../../lib/ticketStatusLabel';
@@ -6,6 +6,7 @@ import { getInitials } from '../../lib/getInitials';
 import { avatarColorClass } from '../tasks/avatarColors';
 import { useAuth } from '../../context/AuthContext';
 import { STATUS_CONFIG, PRIORITY_CONFIG } from './ticketDisplay';
+import { ChecklistProgressBar, DueProgressBar } from '../../components/progress';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -50,18 +51,14 @@ export const TicketCard = ({ ticket, onClick, departmentName, index = 0 }: Ticke
         </p>
       )}
 
-      {/* Checklist Progress */}
-      {progress !== null && (
-        <div className="flex items-center gap-2">
-          <CheckSquare size={12} className="text-text-light shrink-0" />
-          <div className="flex-1 h-1.5 bg-surface-hover rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary-500 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <span className="text-[10px] font-medium tabular-nums text-text-muted shrink-0">{doneItems}/{totalItems}</span>
-        </div>
+      {/* Progress — checklist completion when there's a checklist to track, otherwise how much of
+          the created-to-TAT-deadline window has elapsed. */}
+      {progress !== null ? (
+        <ChecklistProgressBar done={doneItems} total={totalItems} />
+      ) : (
+        ticket.tatDueAt && ticket.status !== 'CLOSED' && (
+          <DueProgressBar createdAt={ticket.createdAt} dueDate={ticket.tatDueAt} />
+        )
       )}
 
       {/* Footer: Status/Priority/Due Chips + Assignee */}

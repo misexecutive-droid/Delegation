@@ -5,4 +5,5 @@ export { Sidebar }  from "./Sidebar"
 export { SidebarNavButton } from './SidebarNavButton';
 export { SidebarSubNavButton } from './SidebarSubNavButton';
 export { HeaderSearchInput } from './HeaderSearchInput';
+export { HeaderSearch } from './HeaderSearch';
 export { BottomNav } from './BottomNav';

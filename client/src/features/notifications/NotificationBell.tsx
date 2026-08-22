@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCheck, BellRing } from 'lucide-react';
+import { Bell, CheckCheck, BellRing, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useNavigate } from 'react-router';
@@ -27,7 +27,7 @@ export const NotificationBell = () => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const { data: notifications = [] } = useNotificationsQuery();
+  const { data: notifications = [], isError } = useNotificationsQuery();
   const markRead = useMarkNotificationReadMutation();
   const markAllRead = useMarkAllNotificationsReadMutation();
   const navigate = useNavigate();
@@ -81,10 +81,15 @@ export const NotificationBell = () => {
       </button>
 
       {open && (
-        <section 
+        <section
           className={cn(
-            "absolute right-0 top-[calc(100%+0.5rem)] z-50",
-            "w-[calc(100vw-2rem)] sm:w-80 sm:-mr-2",
+            // Fixed + both edges pinned on mobile, so the width is whatever's actually left
+            // between them — not `absolute right-0` plus a `100vw`-based width, which overshoots
+            // past the left edge whenever the bell isn't flush against the true viewport edge
+            // (it isn't: the theme toggle sits to its right). Reverts to the original
+            // anchored-under-the-bell placement from sm: up, where the overshoot never occurred.
+            "fixed left-4 right-4 top-[4.5rem] sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+0.5rem)] z-50",
+            "sm:w-80 sm:-mr-2",
             "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden",
             "origin-top-right animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 ease-out flex flex-col max-h-[32rem]"
           )}
@@ -113,7 +118,15 @@ export const NotificationBell = () => {
           </header>
 
           <div className="flex-1 ">
-            {notifications.length === 0 ? (
+            {isError ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="flex items-center justify-center mb-3 text-danger">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Couldn't load notifications</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Failed to connect to the server. Please refresh the page.</p>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                 <div className="flex items-center justify-center mb-3 text-slate-400">
                   <BellRing className="w-6 h-6" />

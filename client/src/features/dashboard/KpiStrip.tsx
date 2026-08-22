@@ -30,9 +30,9 @@ export const KpiStrip = ({ tickets, tasks, isPending }: KpiStripProps) => {
 
   if (isPending) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 md:gap-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-surface p-5 sm:p-6 shadow-sm">
+          <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border/60 dark:border-white/[0.06] bg-surface p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_10px_28px_-14px_rgba(0,0,0,0.65)]">
             {/* Matches the new StatCard top row (Label + Value) */}
             <div className="flex flex-col gap-2">
               <Skeleton className="h-3 w-24 rounded-sm" />
@@ -99,7 +99,7 @@ export const KpiStrip = ({ tickets, tasks, isPending }: KpiStripProps) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 md:gap-5">
       {tiles.map(tile => (
         <StatCard
           key={tile.key}

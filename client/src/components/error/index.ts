@@ -2,3 +2,4 @@ export { default as MyErrorBoundary } from './ErrorBoundary';
 export { default as ErrorFallback } from './ErrorFallback';
 export { default as NotFoundPage } from './NotFoundPage';
 export { ErrorScreen } from './ErrorScreen';
+export { MaintenancePage } from './MaintenancePage';

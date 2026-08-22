@@ -14,6 +14,8 @@ import {
   ShieldQuestion,
   CalendarClock,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Building2,
   BarChart3,
   ListTodo,
@@ -64,8 +66,11 @@ const NAV: NavItem[] = [
   { to: '/checklists', icon: ClipboardCheck, label: 'Checklists', children: CHECKLIST_CHILDREN },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
+
+// Kept out of the scrollable NAV list and rendered in its own small fixed section just above the
+// user's profile card instead — same placement idea as a "Support"/"Settings" footer group.
+const SETTINGS_ITEM: NavItem = { to: '/settings', icon: Settings, label: 'Settings' };
 
 const isChildActive = (child: NavChild, location: { pathname: string; search: string }) =>
   child.to.includes('?')
@@ -77,9 +82,11 @@ interface SidebarProps {
   user: { id: string; name: string; email: string; role?: string } | null;
   logout: () => void;
   onNavigate?: () => void;
+  /** Renders a floating collapse/expand toggle on the desktop sidebar's edge when provided. */
+  onToggleCollapse?: () => void;
 }
 
-export const Sidebar = ({ isOpen, user, logout, onNavigate }: SidebarProps) => {
+export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: SidebarProps) => {
   const location = useLocation();
   const isAdmin = user?.role === 'ADMIN';
   const isPC = user?.role === 'PC';
@@ -162,11 +169,13 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate }: SidebarProps) => {
             className={({ isActive }) =>
               [
                 'group/link flex flex-1 min-w-0 items-center rounded-xl text-[13px] transition-all duration-200 ease-out',
-                'px-3 py-2.5',
+                // The mobile drawer gets a taller touch target (closer to the 44px minimum) than
+                // the desktop sidebar, which stays at its tighter, mouse-driven density.
+                isDrawer ? 'px-3 py-3' : 'px-3 py-2.5',
                 showLabel ? 'justify-start' : 'md:justify-center md:px-0',
                 isActive || hasActiveChild
-                  ? 'bg-primary-50/80 text-primary-700 font-bold shadow-sm ring-1 ring-primary-200/50 dark:bg-primary-900/20 dark:text-primary-300 dark:ring-primary-800/50'
-                  : 'text-text-secondary font-semibold hover:bg-surface-hover hover:text-text',
+                  ? 'bg-primary-50/80 text-primary-700 font-bold border border-slate-300 dark:bg-primary-900/20 dark:text-primary-300 dark:border-slate-600'
+                  : 'text-text-secondary font-semibold border border-transparent hover:bg-surface-hover hover:text-text',
               ].join(' ')
             }
           >
@@ -227,7 +236,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate }: SidebarProps) => {
                     return (
                       <span
                         key={child.to}
-                        className="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-[12px] font-medium text-text-muted/70 cursor-not-allowed select-none"
+                        className={`flex items-center justify-between gap-2 rounded-lg px-3 text-[12px] font-medium text-text-muted/70 cursor-not-allowed select-none ${isDrawer ? 'py-2.5' : 'py-1.5'}`}
                       >
                         {child.label}
                         <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-surface-hover/80 border border-border/60 text-text-muted">
@@ -245,7 +254,8 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate }: SidebarProps) => {
                       to={child.to}
                       onClick={handleNavClick}
                       className={[
-                        'relative rounded-lg px-3 py-1.5 text-[12.5px] transition-all duration-200',
+                        'relative rounded-lg px-3 text-[12.5px] transition-all duration-200',
+                        isDrawer ? 'py-2.5' : 'py-1.5',
                         isActiveChild
                           ? 'bg-primary-50/50 text-primary-700 font-bold dark:bg-primary-500/10 dark:text-primary-300'
                           : 'text-text-secondary font-medium hover:bg-surface-hover hover:text-text',
@@ -292,7 +302,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate }: SidebarProps) => {
           )}
         </div>
 
-        <nav className="flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2">
+        <nav className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 -mr-2">
           {navItems.map((item) => renderNavItem(item, isDrawer))}
 
           {adminNavItems.length > 0 && (
@@ -313,8 +323,23 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate }: SidebarProps) => {
         </nav>
       </div>
 
+      {/* Settings — pulled out of the scrollable NAV list and pinned here instead, right above
+          the profile card, same placement as a "Support" footer group. */}
+      <div className="shrink-0 pt-3 border-t border-border/50">
+        <p
+          className={[
+            'text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 mb-1',
+            'overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out',
+            (isDrawer || isOpen) ? 'max-h-5 opacity-100' : 'max-h-0 opacity-0',
+          ].join(' ')}
+        >
+          Settings
+        </p>
+        {renderNavItem(SETTINGS_ITEM, isDrawer)}
+      </div>
+
       {/* User Footer Profile */}
-      <div className="shrink-0 pt-4 border-t border-border/50 mt-4">
+      <div className="shrink-0 pt-3 mt-1">
         <div
           className={[
             'flex items-center p-2 rounded-xl border border-transparent transition-all duration-300',
@@ -370,10 +395,14 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate }: SidebarProps) => {
       )}
 
       {/* 2. Mobile Drawer — extra top padding (pt-8 instead of the shared py-5) clears the fixed
-          Header bar above it, so "Workspace"/"Dashboard" don't read as glued to its icon row. */}
+          Header bar above it, so "Workspace"/"Dashboard" don't read as glued to its icon row.
+          h-dvh (not h-full + bottom-0) pins this to the actual visible viewport — mobile browsers
+          resize the layout viewport as their address-bar chrome shows/hides, and `h-full`/`100vh`
+          can end up taller than what's really visible, silently pushing the footer profile card
+          (the last item in the column) below the fold with no way to scroll back up to it. */}
       <aside
         className={[
-          'md:hidden fixed top-0 bottom-0 left-0 z-50 w-[280px] max-w-[85vw] h-full flex flex-col px-4 pt-8 pb-5 shadow-2xl border-r border-border/50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+          'md:hidden fixed top-0 left-0 z-50 w-[280px] max-w-[85vw] h-dvh flex flex-col px-4 pt-8 pb-5 shadow-2xl border-r border-border/50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
           isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none',
         ].join(' ')}
         style={{ background: 'var(--color-surface, #1e293b)' }}
@@ -381,16 +410,32 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate }: SidebarProps) => {
         {renderContent(true)}
       </aside>
 
-      {/* 3. Desktop Sidebar */}
-      <aside
-        className={[
-          'hidden md:flex flex-col shrink-0 h-full border-r border-border/50 transition-[width,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden py-5 relative z-20',
-          isOpen ? 'w-[260px] px-4' : 'w-[72px] px-3',
-        ].join(' ')}
-        style={{ background: 'var(--color-surface)' }}
-      >
-        {renderContent(false)}
-      </aside>
+      {/* 3. Desktop Sidebar — wrapped in a plain (non-clipping) relative box so the floating
+          collapse toggle below can sit half outside the aside's own edge without being cut off
+          by the aside's `overflow-hidden` (needed there to hide labels during the width tween). */}
+      <div className="hidden md:block relative shrink-0 h-full z-20">
+        <aside
+          className={[
+            'flex flex-col h-full border-r border-border/50 transition-[width,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden py-5',
+            isOpen ? 'w-[260px] px-4' : 'w-[72px] px-3',
+          ].join(' ')}
+          style={{ background: 'var(--color-surface)' }}
+        >
+          {renderContent(false)}
+        </aside>
+
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            className="absolute top-1/2 -right-3 -translate-y-1/2 z-30 flex size-6 items-center justify-center rounded-full border border-border bg-surface text-text-muted shadow-md transition-all duration-200 cursor-pointer hover:text-primary-600 hover:border-primary-300 hover:shadow-lg active:scale-90"
+          >
+            {isOpen ? <ChevronLeft size={13} strokeWidth={2.5} /> : <ChevronRight size={13} strokeWidth={2.5} />}
+          </button>
+        )}
+      </div>
     </>
   );
 };

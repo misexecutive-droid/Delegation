@@ -231,7 +231,7 @@ export function DateRangePicker({
                 type="time"
                 value={formatTime(value.from)}
                 onChange={(e) => setTime('from', e.target.value)}
-                className="w-full h-10 rounded-md border border-border px-3 text-sm text-text focus:outline-none focus:ring-2 focus:ring-coral-400 focus:border-primary-400"
+                className="w-full h-10 rounded-md border border-border px-3 text-base sm:text-sm text-text focus:outline-none focus:ring-2 focus:ring-coral-400 focus:border-primary-400"
               />
             </div>
             <div className="flex-1 flex flex-col gap-1.5">
@@ -243,7 +243,7 @@ export function DateRangePicker({
                 value={value.to ? formatTime(value.to) : ''}
                 disabled={!value.to}
                 onChange={(e) => setTime('to', e.target.value)}
-                className="w-full h-10 rounded-md border border-border px-3 text-sm text-text focus:outline-none focus:ring-2 focus:ring-coral-400 focus:border-primary-400 disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed"
+                className="w-full h-10 rounded-md border border-border px-3 text-base sm:text-sm text-text focus:outline-none focus:ring-2 focus:ring-coral-400 focus:border-primary-400 disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed"
               />
             </div>
           </div>

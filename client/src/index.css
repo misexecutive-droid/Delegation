@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Mulish:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @variant dark ([data-theme="dark"] &);
@@ -49,8 +49,8 @@
   --color-text-muted: #6f7783;
   --color-text-light: #9aa1ad;
   --color-white: #ffffff;
-  --font-sans: "Mulish", "Calibri", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Jost", "Century Gothic", "Segoe UI", sans-serif;
+  --font-sans: "Montserrat", "Calibri", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Montserrat", "Century Gothic", "Segoe UI", sans-serif;
   --container-width: min(90rem, 100% - 2rem);
   --sidebar-width: 18rem;
   --header-height: 4.5rem;
@@ -145,6 +145,12 @@ input:-webkit-autofill:active {
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-blur: blur(12px);
   color-scheme: light;
+}
+
+/* Stops the browser's own rubber-band/bounce and pull-to-refresh gesture at the page level, so it
+   doesn't fight PullToRefresh's own gesture handling on the scroll containers that opt into it. */
+html, body {
+  overscroll-behavior-y: none;
 }
 
 :root[data-theme="dark"] {

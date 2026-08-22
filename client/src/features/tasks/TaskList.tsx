@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { Wand2, AlertCircle, LayoutList, Kanban, Check, Save, Inbox, X, Plus, Settings2, ChevronDown } from "lucide-react";
-import { Button, Skeleton } from "../../components";
+import { Wand2, AlertCircle, LayoutList, Kanban, Check, Save, Inbox, X, Plus, Settings2, ChevronDown, UserCheck, Send } from "lucide-react";
+import { Button, Skeleton, Fab } from "../../components";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { useTasksQuery, useAssignableUsersQuery } from "./hook";
 import { useDepartmentsQuery } from "../tickets/hook";
@@ -178,6 +178,19 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
     setQuickFilter((prev) => (prev === key ? null : key));
   };
 
+  // Quick ownership tabs — tapping the active one again clears back to "everyone", same
+  // toggle-off behavior as the quick-stat tiles above.
+  const isAssignedToMe = !!user && filters.assigneeIds.length === 1 && filters.assigneeIds[0] === user.id;
+  const isAssignedByMe = !!user && filters.raisedByIds.length === 1 && filters.raisedByIds[0] === user.id;
+  const toggleAssignedToMe = () => {
+    if (!user) return;
+    updateFilters({ assigneeIds: isAssignedToMe ? [] : [user.id] });
+  };
+  const toggleAssignedByMe = () => {
+    if (!user) return;
+    updateFilters({ raisedByIds: isAssignedByMe ? [] : [user.id] });
+  };
+
   const saveFilters = () => {
     try {
       localStorage.setItem(filtersStorageKey(user?.id), JSON.stringify(filters));
@@ -281,46 +294,103 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                 badge and is disabled until that role can actually use it, same pattern as the
                 sidebar's other not-yet-available links. */}
             {!userId && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    className="group gap-2 font-medium shadow-md rounded-full text-xs sm:text-sm px-4 py-2 hover:shadow-lg transition-all duration-200"
-                  >
-                    <Plus size={16} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-90" />
-                    <span>New Delegation</span>
-                    <ChevronDown size={14} className="opacity-70" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 rounded-xl">
-                  <DropdownMenuItem onClick={() => setShowForm(true)} className="gap-2.5 py-2 cursor-pointer">
-                    <Plus size={15} className="text-primary-600" />
-                    <span className="font-medium text-sm">New Delegation</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => isVerifier && setShowSmartModal(true)}
-                    disabled={!isVerifier}
-                    className="gap-2.5 py-2 cursor-pointer justify-between"
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <Wand2 size={15} className="text-primary-600" />
-                      <span className="font-medium text-sm">Smart Task</span>
-                    </span>
-                    {!isVerifier && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-surface-hover border border-border text-text-light">
-                        Soon
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                {/* Desktop: dropdown trigger. Mobile: the Fab below instead — same two actions,
+                    same speed-dial pattern as the Dashboard's To-Do FAB and Tickets' Create FAB. */}
+                <div className="hidden md:block">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        className="group gap-2 font-medium shadow-md rounded-full text-xs sm:text-sm px-4 py-2 hover:shadow-lg transition-all duration-200"
+                      >
+                        <Plus size={16} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-90" />
+                        <span>New Delegation</span>
+                        <ChevronDown size={14} className="opacity-70" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 rounded-xl">
+                      <DropdownMenuItem onClick={() => setShowForm(true)} className="gap-2.5 py-2 cursor-pointer">
+                        <Plus size={15} className="text-primary-600" />
+                        <span className="font-medium text-sm">New Delegation</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => isVerifier && setShowSmartModal(true)}
+                        disabled={!isVerifier}
+                        className="gap-2.5 py-2 cursor-pointer justify-between"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Wand2 size={15} className="text-primary-600" />
+                          <span className="font-medium text-sm">Smart Task</span>
+                        </span>
+                        {!isVerifier && (
+                          <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-surface-hover border border-border text-text-light">
+                            Soon
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <Fab
+                  actions={[
+                    { key: 'new', label: 'New Delegation', icon: Plus, onClick: () => setShowForm(true) },
+                    {
+                      key: 'smart',
+                      label: 'Smart Task',
+                      icon: Wand2,
+                      onClick: () => setShowSmartModal(true),
+                      disabled: !isVerifier,
+                      badge: !isVerifier ? 'Soon' : undefined,
+                    },
+                  ]}
+                />
+              </>
             )}
           </div>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap justify-between bg-surface/50 p-1.5 sm:p-2 rounded-xl border border-border/50">
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Ownership quick tabs — visible to everyone (not gated on isVerifier like the
+                controls below), since "what's assigned to/by me" matters regardless of role. */}
+            {!userId && user && (
+              <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-hover/50 border border-border/40">
+                <button
+                  type="button"
+                  onClick={toggleAssignedToMe}
+                  title="Assigned to me"
+                  aria-label="Assigned to me"
+                  aria-pressed={isAssignedToMe}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+                    isAssignedToMe
+                      ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
+                  }`}
+                >
+                  <UserCheck size={14} />
+                  <span className="hidden md:inline">Assigned to me</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleAssignedByMe}
+                  title="Assigned by me"
+                  aria-label="Assigned by me"
+                  aria-pressed={isAssignedByMe}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+                    isAssignedByMe
+                      ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
+                  }`}
+                >
+                  <Send size={13} />
+                  <span className="hidden md:inline">Assigned by me</span>
+                </button>
+              </div>
+            )}
+
             {isVerifier && (
               <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-hover/50 border border-border/40">
                 {VIEW_TABS.map(tab => (
@@ -354,6 +424,10 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                 currentUserId={user?.id}
                 isAdmin={isVerifier}
                 activeCount={activeChips.length}
+                sort={sort}
+                onSortChange={setSort}
+                fieldVisibility={fieldVisibility}
+                onToggleField={toggleField}
               />
             )}
           </div>
@@ -363,14 +437,16 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
               {sorted.length} result{sorted.length !== 1 ? 's' : ''}
             </span>
 
+            {/* Desktop only — on mobile these fold into the Filters sheet instead (see
+                TaskFiltersPopover's "Sort by" / "Show only" sections) to save toolbar space. */}
             {isVerifier && (
-              <div className="flex items-center gap-1">
+              <div className="hidden md:flex items-center gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="h-9 px-3 gap-1.5 border border-border/60 shadow-sm rounded-lg bg-surface hover:bg-surface-hover transition-colors"
+                      className="h-9 px-3 gap-1.5 border border-border/60 rounded-lg bg-surface hover:bg-surface-hover transition-colors"
                       aria-label={`Sort: ${SORT_LABEL[sort]}`}
                       title={`Sort: ${SORT_LABEL[sort]}`}
                     >
@@ -400,7 +476,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="h-9 px-3 gap-2 border border-border/60 shadow-sm rounded-lg bg-surface hover:bg-surface-hover transition-colors"
+                      className="h-9 px-3 gap-2 border border-border/60 rounded-lg bg-surface hover:bg-surface-hover transition-colors"
                       aria-label="Customize cards"
                       title="Customize cards"
                     >

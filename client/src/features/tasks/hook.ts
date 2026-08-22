@@ -27,12 +27,14 @@ const TASK_KEYS = {
 
 // List tasks — optionally scoped to one specific user's tasks (that scoping is admin-only,
 // enforced server-side in task.service.ts; a non-admin passing a userId here is just ignored).
-export const useTasksQuery = (userId?: string) => {
+// `enabled` lets a caller (e.g. the header's quick search) defer the fetch until it's actually
+// needed, instead of every mount pulling the full list regardless of whether it's used yet.
+export const useTasksQuery = (userId?: string, enabled = true) => {
     const { token } = useAuth();
     return useQuery({
         queryKey: TASK_KEYS.all(userId),
         queryFn:  () => taskApi.getAll(userId),
-        enabled:  !!token,
+        enabled:  !!token && enabled,
         retry: handleQueryRetry,
     });
 };

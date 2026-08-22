@@ -1,16 +1,28 @@
-import { Trash2, Check, ListTodo, CalendarClock } from 'lucide-react';
+import { Trash2, Check, ListTodo, CalendarClock, CalendarX2 } from 'lucide-react';
 import { Loader, Skeleton } from '../../components';
 import { ErrorMessage, EmptyState } from '../admin/adminDisplay';
 import { PRIORITY_MAP } from '../tasks/taskDisplay';
 import { useTodosQuery, useUpdateTodoMutation, useDeleteTodoMutation } from './hook';
+import { isSameDay } from './todoDate';
 import type { Todo } from '../../api/todos';
+
+interface TodoListProps {
+  // When set, only todos due on this exact day are shown (both pending and completed) — used by
+  // the /todo page's day strip. Left undefined for the Dashboard's TodoDrawer, which always shows
+  // the full list.
+  selectedDate?: Date | null;
+}
 
 // Self-contained: fetches and mutates its own data, so it drops in identically on the full
 // /todo page and inside the Dashboard's TodoDrawer with no props to thread through.
-export const TodoList = () => {
-  const { data: todos = [], isPending, isError } = useTodosQuery();
+export const TodoList = ({ selectedDate = null }: TodoListProps) => {
+  const { data: allTodos = [], isPending, isError } = useTodosQuery();
   const updateMut = useUpdateTodoMutation();
   const deleteMut = useDeleteTodoMutation();
+
+  const todos = selectedDate
+    ? allTodos.filter((t) => !!t.dueDate && isSameDay(new Date(t.dueDate), selectedDate))
+    : allTodos;
 
   const toggleComplete = (id: string, completed: boolean) => {
     updateMut.mutate({ id, payload: { completed: !completed } });
@@ -25,10 +37,11 @@ export const TodoList = () => {
     return (
       <div
         key={todo.id}
-        className={`flex items-start gap-3 px-4 py-3 rounded-xl border border-border bg-surface transition-all ${
-          isDeleting ? 'opacity-40 pointer-events-none' : ''
-        }`}
+        className={`relative overflow-hidden flex items-start gap-3 pl-4 pr-3.5 py-3.5 rounded-2xl border bg-surface shadow-sm transition-all duration-200 ${
+          todo.completed ? 'border-border/60 opacity-70' : 'border-border/70 hover:shadow-md hover:-translate-y-0.5'
+        } ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
       >
+        <span className={`absolute inset-y-0 left-0 w-1 ${todo.completed ? 'bg-text-light/30' : priorityMeta.stripe}`} />
         <button
           type="button"
           onClick={() => toggleComplete(todo.id, todo.completed)}
@@ -84,7 +97,13 @@ export const TodoList = () => {
   if (isPending) return <TodoListSkeleton />;
   if (isError) return <ErrorMessage message="Failed to load your to-dos." />;
   if (todos.length === 0) {
-    return (
+    return selectedDate ? (
+      <EmptyState
+        label="Nothing due on this day"
+        description="Pick another day on the strip above, or add a task due here."
+        Icon={CalendarX2}
+      />
+    ) : (
       <EmptyState
         label="Nothing on your list yet"
         description="Add a to-do task for yourself and check it off once it's done."

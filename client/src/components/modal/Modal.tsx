@@ -50,7 +50,9 @@ export const Modal = ({
   <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
     <DialogContent
       showCloseButton={false}
-      className={`w-[95vw] ${SIZE_CLASS[size]} p-0 flex flex-col overflow-hidden rounded max-h-[90vh] ${contentClassName}`}
+      // Full-bleed at the bottom-sheet mobile tier, the original 95vw/rounded centered box from
+      // sm: up — matches the mobile-vs-desktop split on DialogContent itself.
+      className={`w-full sm:w-[95vw] ${SIZE_CLASS[size]} p-0 flex flex-col overflow-hidden rounded-t-2xl rounded-b-none sm:rounded max-h-[90vh] ${contentClassName}`}
     >
       <div className={`flex items-center justify-between gap-3 shrink-0 px-5 py-3.5 border-b border-border/40 ${headerClassName}`}>
         <div className="flex items-center gap-3 min-w-0">
@@ -71,12 +73,21 @@ export const Modal = ({
         )}
       </div>
 
-      <div className={`flex flex-col gap-5 px-5 py-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0 ${bodyClassName}`}>
+      <div
+        className={`flex flex-col gap-5 px-5 py-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0 ${
+          // No footer means the body is the last thing before the device's home-indicator area
+          // when this renders as a mobile bottom sheet, so it needs the safe-area clearance
+          // instead — with a footer present, the footer below already carries it.
+          !footer ? 'pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4' : ''
+        } ${bodyClassName}`}
+      >
         {children}
       </div>
 
       {footer && (
-        <div className={`shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end px-5 py-3.5 bg-surface-hover/40 border-t border-border/40 ${footerClassName}`}>
+        <div
+          className={`shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end px-5 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:pb-3.5 bg-surface-hover/40 border-t border-border/40 ${footerClassName}`}
+        >
           {footer}
         </div>
       )}

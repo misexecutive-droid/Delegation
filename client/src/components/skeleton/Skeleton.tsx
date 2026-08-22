@@ -17,7 +17,10 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         role="status"
         aria-label="Loading"
         className={cn(
-          "animate-pulse rounded-md bg-slate-200 dark:bg-slate-800/80 transition-colors duration-300",
+          // bg-surface-active (not the raw slate-* this used before) tracks the app's own
+          // elevation ramp, which in dark mode is a real step up from bg-surface — the old
+          // slate-800/80 was barely distinguishable from a dark card's background.
+          "animate-pulse rounded-md bg-surface-active transition-colors duration-300",
           className
         )}
         {...props}

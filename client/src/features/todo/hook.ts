@@ -9,12 +9,14 @@ const TODO_KEY = {
     all: ["todos"] as const,
 };
 
-export const useTodosQuery = () => {
+// `enabled` lets a caller (e.g. the header's quick search) defer the fetch until it's actually
+// needed, instead of every mount pulling the full list regardless of whether it's used yet.
+export const useTodosQuery = (enabled = true) => {
     const { token } = useAuth();
     return useQuery({
         queryKey: TODO_KEY.all,
         queryFn: () => todoApi.getAll().then(r => r.data),
-        enabled: !!token,
+        enabled: !!token && enabled,
     });
 };
 

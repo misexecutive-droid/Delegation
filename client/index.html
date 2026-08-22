@@ -4,7 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- viewport-fit=cover is required for env(safe-area-inset-*) to resolve to anything but 0 on
+       notched devices — without it, the safe-area padding already used in BottomNav/TodoDrawer
+       silently does nothing. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>TaskMatrix</title>
 </head>
 

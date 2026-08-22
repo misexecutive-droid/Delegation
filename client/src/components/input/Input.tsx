@@ -63,7 +63,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={!!error}
             aria-describedby={errorId}
             className={cn(
-              "w-full h-10 rounded-md border px-3 text-sm transition-all duration-200",
+              // text-base (16px) below sm: iOS Safari auto-zooms the viewport on focusing any
+              // input smaller than 16px, which text-sm's 14px would otherwise trigger.
+              "w-full h-10 rounded-md border px-3 text-base sm:text-sm transition-all duration-200",
               "bg-surface text-text placeholder:text-text-light",
               "focus:outline-none focus:ring-2",
               "disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed",

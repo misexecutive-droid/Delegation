@@ -64,7 +64,9 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           aria-invalid={isError}
           aria-describedby={messageId}
           className={cn(
-            "w-full px-3 py-2.5 min-h-[100px] text-sm transition-all duration-200 ease-in-out resize-y",
+            // text-base (16px) below sm: iOS Safari auto-zooms the viewport on focusing any
+            // input smaller than 16px, which text-sm's 14px would otherwise trigger.
+            "w-full px-3 py-2.5 min-h-[100px] text-base sm:text-sm transition-all duration-200 ease-in-out resize-y",
             "bg-surface text-text placeholder:text-text-light",
             "border rounded-md outline-none appearance-none",
             "disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed disabled:resize-none",

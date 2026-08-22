@@ -23,12 +23,14 @@ const KEYS = {
   detail: (id: string) => ['tickets', 'detail', id] as const,
 };
 
-export const useTicketsQuery = (page = 1, limit = 20, assigneeId?: string) => {
+// `enabled` lets a caller (e.g. the header's quick search) defer the fetch until it's actually
+// needed, instead of every mount pulling a page of tickets regardless of whether it's used yet.
+export const useTicketsQuery = (page = 1, limit = 20, assigneeId?: string, enabled = true) => {
   const { token } = useAuth();
   return useQuery({
     queryKey: KEYS.all(page, assigneeId),
     queryFn: () => ticketApi.getAll(page, limit, undefined, assigneeId),
-    enabled: !!token,
+    enabled: !!token && enabled,
     retry: handleQueryRetry,
   });
 };

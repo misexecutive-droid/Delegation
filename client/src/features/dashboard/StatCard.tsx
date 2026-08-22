@@ -26,10 +26,10 @@ export const StatCard = ({ label, value, trend, icon: Icon, iconTint, caption, o
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
-      className={`group relative flex flex-col gap-3 rounded-2xl border border-border/60 bg-surface p-5 sm:p-6 transition-all duration-300 ${
-        onClick 
-          ? 'cursor-pointer outline-none shadow-sm hover:border-border hover:shadow-md hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-500/50' 
-          : 'shadow-sm'
+      className={`group relative flex flex-col gap-3 rounded-2xl border border-border/60 bg-surface p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] transition-all duration-300 dark:border-white/[0.06] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_10px_28px_-14px_rgba(0,0,0,0.65)] ${
+        onClick
+          ? 'cursor-pointer outline-none hover:border-border dark:hover:border-primary-400/25 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] active:shadow-sm focus-visible:ring-2 focus-visible:ring-primary-500/50'
+          : ''
       }`}
     >
       {/* Top Row: Label & Icon */}

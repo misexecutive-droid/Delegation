@@ -76,7 +76,7 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => (
             <Link
               key={`${item.kind}-${item.id}`}
               to={item.kind === 'ticket' ? '/tickets' : '/tasks'}
-              className="group/item flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-3 rounded-lg hover:bg-surface-hover/60 transition-colors"
+              className="group/item flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-3 rounded-lg hover:bg-surface-hover/60 active:bg-surface-hover active:scale-[0.98] transition-all duration-150"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Icon Box */}

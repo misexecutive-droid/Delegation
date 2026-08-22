@@ -9,11 +9,11 @@ export interface QuickFilterCounts {
   delayed: number;
 }
 
-const TILES: { key: QuickFilterKey; label: string; icon: LucideIcon; tint: string }[] = [
-  { key: 'pending', label: 'Pending', icon: CircleDashed, tint: 'text-status-todo' },
-  { key: 'completed', label: 'Completed', icon: CheckCircle2, tint: 'text-success' },
-  { key: 'due', label: 'Due', icon: CalendarClock, tint: 'text-warning' },
-  { key: 'delayed', label: 'Delayed', icon: AlertTriangle, tint: 'text-danger' },
+const TILES: { key: QuickFilterKey; label: string; icon: LucideIcon; tint: string; bgTint: string }[] = [
+  { key: 'pending', label: 'Pending', icon: CircleDashed, tint: 'text-status-todo', bgTint: 'bg-status-todo/10' },
+  { key: 'completed', label: 'Completed', icon: CheckCircle2, tint: 'text-success', bgTint: 'bg-success/10' },
+  { key: 'due', label: 'Due', icon: CalendarClock, tint: 'text-warning', bgTint: 'bg-warning/10' },
+  { key: 'delayed', label: 'Delayed', icon: AlertTriangle, tint: 'text-danger', bgTint: 'bg-danger/10' },
 ];
 
 interface TaskQuickStatsProps {
@@ -28,7 +28,7 @@ interface TaskQuickStatsProps {
 // one tap" layer, that popover is the "I need to combine several conditions" layer.
 export const TaskQuickStats = ({ counts, active, onToggle }: TaskQuickStatsProps) => (
   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-    {TILES.map(({ key, label, icon: Icon, tint }) => {
+    {TILES.map(({ key, label, icon: Icon, tint, bgTint }) => {
       const isActive = active === key;
       return (
         <button
@@ -43,20 +43,21 @@ export const TaskQuickStats = ({ counts, active, onToggle }: TaskQuickStatsProps
               : 'border-border/60 bg-surface shadow-sm hover:border-border hover:shadow-md hover:-translate-y-0.5'
           }`}
         >
-          {/* Icon Wrapper: subtle lift and background shift on hover */}
-          <div className={`flex items-center justify-center size-10 md:size-12 rounded-lg shrink-0 transition-all duration-300 ${tint} ${
-            isActive 
-              ? 'bg-background shadow-sm border border-border/40' 
-              : 'bg-surface-hover group-hover:bg-background group-hover:shadow-sm group-hover:border group-hover:border-border/40'
+          {/* Icon Wrapper: a soft status-tinted background (not just a status-colored icon on a
+              neutral tile) so each tile reads at a glance, plus the usual lift/shift on hover */}
+          <div className={`flex items-center justify-center size-10 md:size-12 rounded-lg shrink-0 transition-all duration-300 ${tint} ${bgTint} ${
+            isActive
+              ? 'shadow-sm border border-border/40'
+              : 'group-hover:shadow-sm group-hover:border group-hover:border-border/40'
           }`}>
             <Icon size={20} strokeWidth={2.5} className={isActive ? 'scale-110 transition-transform' : 'transition-transform'} />
           </div>
-          
+
           <div className="min-w-0">
             <p className="text-xl md:text-2xl font-bold tracking-tight text-text leading-none">
               {counts[key]}
             </p>
-            <p className="text-[9px] md:text-xs font-semibold text-text-muted mt-1.5 truncate  tracking-wider">
+            <p className="text-[9px] md:text-xs font-semibold text-text-muted uppercase mt-1.5 truncate tracking-wider">
               {label}
             </p>
           </div>

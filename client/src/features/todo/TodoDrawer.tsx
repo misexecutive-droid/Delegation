@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ListTodo, Plus } from 'lucide-react';
-import { Button } from '../../components';
 import { TodoList } from './TodoList';
 import { CreateTodoModal } from './CreateTodoModal';
 
@@ -58,16 +57,21 @@ export const TodoDrawer = ({ open, onClose }: TodoDrawerProps) => {
           </button>
         </div>
 
-        <div className="px-5 py-4 shrink-0 border-b border-border/60">
-          <Button size="sm" variant="primary" className="w-full gap-1.5" onClick={() => setShowCreate(true)}>
-            <Plus size={14} />
-            Add todo
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4 pb-24">
           <TodoList />
         </div>
+
+        {/* Pinned to the panel's own bottom-right corner (not the button that opens this drawer)
+            so it stays reachable no matter how far the list above it is scrolled. */}
+        <button
+          type="button"
+          onClick={() => setShowCreate(true)}
+          aria-label="Add todo"
+          title="Add todo"
+          className="absolute bottom-5 right-5 z-10 flex items-center justify-center size-12 rounded-full bg-gradient-to-br from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-600/30 transition-transform duration-200 hover:scale-105 active:scale-95 cursor-pointer"
+        >
+          <Plus size={20} strokeWidth={2.5} />
+        </button>
       </aside>
 
       <CreateTodoModal open={showCreate} onClose={() => setShowCreate(false)} />
