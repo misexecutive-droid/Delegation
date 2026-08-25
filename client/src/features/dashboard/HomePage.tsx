@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { BarChart3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTicketsQuery } from '../tickets/hook';
 import { useTasksQuery } from '../tasks/hook';
@@ -7,6 +8,7 @@ import { TASK_SCORE } from '../tasks/taskDisplay';
 import { DashboardHeader } from './DashboardHeader';
 import { DashboardOverview } from './DashboardOverview';
 import { MonthlyTargetCard, type FooterStat } from './MonthlyTargetCard';
+import { MonthlyActivityChart } from './MonthlyActivityChart';
 import { RecentActivity } from './RecentActivity';
 import { UpcomingEvents } from './UpcomingEvents';
 import { type FeedItem, type CompliancePeriod, PERIOD_LABEL, periodStartDate, shiftPeriod, pointDelta } from './dashboardDisplay';
@@ -91,6 +93,23 @@ export const HomePage = () => {
       <DashboardHeader userName={user?.name} onOpenTodo={() => setShowTodoDrawer(true)} />
 
       <DashboardOverview isPending={isPending} tickets={tickets} tasks={tasks} />
+
+      <div className="rounded-2xl border border-border/60 dark:border-white/[0.06] bg-surface p-5 sm:p-6 lg:p-7">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-800/50 text-primary-600 dark:text-primary-400 shadow-sm">
+            <BarChart3 size={20} strokeWidth={2.5} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-text tracking-tight leading-tight">Activity Overview</h3>
+            <p className="text-xs font-medium text-text-muted mt-0.5 capitalize tracking-wide">Last 6 months</p>
+          </div>
+        </div>
+        {isPending ? (
+          <div className="h-[200px] flex items-center justify-center text-sm text-text-muted">Loading…</div>
+        ) : (
+          <MonthlyActivityChart tasks={tasks} tickets={tickets} />
+        )}
+      </div>
 
       <MonthlyTargetCard
         percent={targetPercent}

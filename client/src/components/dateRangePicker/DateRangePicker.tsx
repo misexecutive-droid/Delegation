@@ -144,9 +144,13 @@ export function DateRangePicker({
         )}
       </button>
 
+      {/* modal={false} — same reason as DatePicker: this can open from inside another Modal
+          (e.g. a report/export form), and two nested modal Dialogs fighting over the body
+          scroll-lock is what leaves the outer form unresponsive after picking a range. */}
       <Modal
         open={open}
         onClose={() => setOpen(false)}
+        modal={false}
         icon={<CalendarIcon className="w-5 h-5" />}
         title="Select date range"
         size="sm"

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { ListChecks, TicketCheck, Clock, CheckCircle2, AlertTriangle, type LucideIcon } from 'lucide-react';
 import { Skeleton } from '../../components';
 import { StatCard } from './StatCard';
 import { lastMonths, countInMonth, seriesInMonths, trendFrom } from './dashboardDisplay';
@@ -19,7 +20,10 @@ interface Tile {
   sparkline: number[];
   trend: { direction: 'up' | 'down'; label: string };
   caption: string;
+  icon: LucideIcon;
+  iconTint?: string;
   onClick?: () => void;
+  highlight?: boolean;
 }
 
 export const KpiStrip = ({ tickets, tasks, isPending }: KpiStripProps) => {
@@ -67,33 +71,45 @@ export const KpiStrip = ({ tickets, tasks, isPending }: KpiStripProps) => {
   // records behind it, not a dead end or a separate popup duplicating that page's own UI.
   const tiles: Tile[] = [
     {
-      key: 'openTickets', label: 'Open Tickets', value: openTickets.length,
-      sparkline: seriesInMonths(openTickets.map(t => t.createdAt), months),
-      ...trendForDates(openTickets.map(t => t.createdAt)),
-      onClick: () => navigate('/tickets'),
-    },
-    {
+      // Leads the row as the highlighted "hero" tile — the single most central metric for this
+      // app, called out with a solid brand-gradient card instead of blending in with the rest.
       key: 'openTasks', label: 'Open Delegations', value: openTasks.length,
       sparkline: seriesInMonths(openTasks.map(t => t.createdAt), months),
       ...trendForDates(openTasks.map(t => t.createdAt)),
+      icon: ListChecks,
       onClick: () => navigate('/tasks'),
+      highlight: true,
+    },
+    {
+      key: 'openTickets', label: 'Open Tickets', value: openTickets.length,
+      sparkline: seriesInMonths(openTickets.map(t => t.createdAt), months),
+      ...trendForDates(openTickets.map(t => t.createdAt)),
+      icon: TicketCheck,
+      iconTint: 'text-primary-600 dark:text-primary-400',
+      onClick: () => navigate('/tickets'),
     },
     {
       key: 'pending', label: 'Pending', value: pendingTasks.length,
       sparkline: seriesInMonths(pendingTasks.map(t => t.createdAt), months),
       ...trendForDates(pendingTasks.map(t => t.createdAt)),
+      icon: Clock,
+      iconTint: 'text-amber-600 dark:text-amber-400',
       onClick: () => navigate('/tasks?status=todo'),
     },
     {
       key: 'completed', label: 'Completed', value: completedTasks.length,
       sparkline: seriesInMonths(completedTasks.map(t => t.createdAt), months),
       ...trendForDates(completedTasks.map(t => t.createdAt)),
+      icon: CheckCircle2,
+      iconTint: 'text-emerald-600 dark:text-emerald-400',
       onClick: () => navigate('/tasks?status=done'),
     },
     {
       key: 'due', label: 'Due', value: dueTasks.length,
       sparkline: seriesInMonths(dueTasks.map(t => t.createdAt), months),
       ...trendForDates(dueTasks.map(t => t.createdAt)),
+      icon: AlertTriangle,
+      iconTint: 'text-danger',
       onClick: () => navigate('/tasks'),
     },
   ];
@@ -108,7 +124,10 @@ export const KpiStrip = ({ tickets, tasks, isPending }: KpiStripProps) => {
           trend={tile.trend}
           caption={tile.caption}
           sparkline={tile.sparkline}
+          icon={tile.icon}
+          iconTint={tile.iconTint}
           onClick={tile.onClick}
+          highlight={tile.highlight}
         />
       ))}
     </div>

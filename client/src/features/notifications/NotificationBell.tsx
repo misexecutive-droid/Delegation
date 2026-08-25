@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Bell, CheckCheck, BellRing, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router';
 import type { Notification } from '@/api/notifications';
 import { useNotificationsQuery, useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation } from './hooks';
 import { useNotificationSocket } from './useNotificationSocket';
+import { useClickOutside } from '@/lib/useClickOutside';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -35,16 +36,7 @@ export const NotificationBell = () => {
   useNotificationSocket();
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
+  useClickOutside(containerRef, () => setOpen(false), open);
 
   const handleClick = (n: Notification) => {
     if (!n.isRead) markRead.mutate(n.id);

@@ -1,25 +1,36 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { Plus, AlertCircle, Inbox, RotateCcw, Building2, User, FileDown, X, LayoutGrid, UserPen, UserCheck } from 'lucide-react';
-import { Button, PageNav, Fab } from '../../components';
+import { Plus, AlertCircle, Inbox, RotateCcw, Building2, User, FileDown, X, LayoutGrid, UserPen, UserCheck, LayoutList, Kanban, Check } from 'lucide-react';
+import { Button, PageNav, Fab, ViewToggle, type ViewTab } from '../../components';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
-import { useTicketsQuery, useDepartmentsQuery } from './hook';
+import { useTicketsQuery, useDepartmentsQuery, useAssignableUsersQuery, useTicketsBoardQuery } from './hook';
 import { TicketForm } from './TicketForm';
 import { TicketDetail } from './TicketDetail';
+import { TicketBoard } from './TicketBoard';
 import { ExportDialog } from '../reports';
-import { TicketSearchInput, TicketStatusFilterDropdown } from './list/TicketListControls';
+import { TicketSearchInput } from './list/TicketListControls';
 import { TicketListSkeleton } from './list/TicketListSkeleton';
 import { TicketGroupedList } from './list/TicketGroupedList';
 import { TicketQuickStats, type TicketQuickFilterKey, type TicketQuickFilterCounts } from './list/TicketQuickStats';
+import { TicketFiltersPopover, type TicketFilters } from './list/TicketFiltersPopover';
+import { SORT_LABEL, SORT_ICON, SORT_COMPARATORS, type TicketSortKey } from './list/ticketSort';
 import {
-  STATUS_FILTER_PREDICATES,
   SCOPE_FILTER_PREDICATES,
   SCOPE_FILTERS,
   type ScopeFilter,
-  type FilterStatus,
 } from './list/ticketFilters';
 import { groupByDepartment, groupByAssignee } from './list/ticketGrouping';
 import type { Ticket } from '../../api/ticket';
+
+type TicketView = 'list' | 'board';
+
+const VIEW_TABS: ViewTab<TicketView>[] = [
+  { key: 'list', label: 'List', icon: LayoutList },
+  { key: 'board', label: 'Board', icon: Kanban },
+];
+
+const DEFAULT_TICKET_FILTERS: TicketFilters = { status: 'all', priority: [], departmentId: '', assigneeIds: [], raisedByIds: [] };
 
 const SCOPE_ICON: Record<ScopeFilter, typeof LayoutGrid> = {
   ALL: LayoutGrid,
@@ -46,7 +57,10 @@ export const TicketList = () => {
   const { data: departments } = useDepartmentsQuery();
   const departmentNames = new Map((departments ?? []).map(d => [d.id, d.name]));
 
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
+  const isVerifier = user?.role === 'PC' || user?.role === 'ADMIN';
+  const [view, setView] = useState<TicketView>('list');
+  const [filters, setFilters] = useState<TicketFilters>(DEFAULT_TICKET_FILTERS);
+  const [sort, setSort] = useState<TicketSortKey>('tatDueAt');
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('ALL');
   const [search, setSearch] = useState('');
   const [groupBy, setGroupBy] = useState<'department' | 'assignee'>('department');
@@ -56,10 +70,16 @@ export const TicketList = () => {
   const [quickFilter, setQuickFilter] = useState<TicketQuickFilterKey | null>(null);
   const toggleQuickFilter = (key: TicketQuickFilterKey) => setQuickFilter((prev) => (prev === key ? null : key));
 
+  const { data: assignableUsers } = useAssignableUsersQuery();
+  // Board view needs to see effectively all tickets at once to bucket into status columns —
+  // fundamentally different from the list view's 20-per-page pagination above, so it's a
+  // separate fetch, only enabled while the board is actually on screen.
+  const { data: boardData, isPending: boardPending, isError: boardError } = useTicketsBoardQuery(view === 'board');
+  const boardTickets = boardData ?? [];
+
   const scopeFiltered = user
     ? tickets.filter(t => SCOPE_FILTER_PREDICATES[scopeFilter](t, user.id))
     : tickets;
-  const statusFiltered = scopeFiltered.filter(STATUS_FILTER_PREDICATES[statusFilter]);
 
   // Quick-stat tiles — "Delayed" mirrors the server-computed ticket.isOverdue (excluding CLOSED,
   // same as the badge shown on each card); "Due" is everything else that still has an open TAT
@@ -79,24 +99,40 @@ export const TicketList = () => {
     delayed: scopeFiltered.filter(quickFilterPredicates.delayed).length,
   };
 
-  const query = search.trim().toLowerCase();
-  const searched = query
-    ? statusFiltered.filter(t =>
-      t.title.toLowerCase().includes(query) ||
-      (t.description ?? '').toLowerCase().includes(query),
-    )
-    : statusFiltered;
-  const filtered = quickFilter ? searched.filter(quickFilterPredicates[quickFilter]) : searched;
+  // Shared filter/sort pipeline, reused for both the paginated list view (`tickets`, 20/page)
+  // and the unpaginated board view (`boardTickets`) so Filters/Sort/quick-filter/search behave
+  // identically regardless of which view is on screen — board filtering stays independent of the
+  // list view's server-side pagination params.
+  const applyPipeline = (list: Ticket[]) => {
+    const scoped = user ? list.filter(t => SCOPE_FILTER_PREDICATES[scopeFilter](t, user.id)) : list;
+    const statusFiltered = filters.status === 'all' ? scoped : scoped.filter(t => t.status === filters.status);
+    const priorityFiltered = filters.priority.length === 0 ? statusFiltered : statusFiltered.filter(t => filters.priority.includes(t.priority));
+    const departmentFiltered = filters.departmentId ? priorityFiltered.filter(t => t.departmentId === filters.departmentId) : priorityFiltered;
+    const assigneeFiltered = filters.assigneeIds.length === 0 ? departmentFiltered : departmentFiltered.filter(t => !!t.assigneeId && filters.assigneeIds.includes(t.assigneeId));
+    const raisedByFiltered = filters.raisedByIds.length === 0 ? assigneeFiltered : assigneeFiltered.filter(t => filters.raisedByIds.includes(t.userId));
+    const query = search.trim().toLowerCase();
+    const searched = query
+      ? raisedByFiltered.filter(t =>
+        t.title.toLowerCase().includes(query) ||
+        (t.description ?? '').toLowerCase().includes(query),
+      )
+      : raisedByFiltered;
+    const quickFiltered = quickFilter ? searched.filter(quickFilterPredicates[quickFilter]) : searched;
+    return [...quickFiltered].sort(SORT_COMPARATORS[sort]);
+  };
+
+  const sorted = applyPipeline(tickets);
+  const boardSorted = applyPipeline(boardTickets);
 
   // Lookup map instead of a ternary — each grouping mode has its own builder function, so
   // adding a third grouping mode later is one more entry, not another branch.
   const GROUP_BUILDERS: Record<'department' | 'assignee', () => { key: string; label: string; tickets: Ticket[] }[]> = {
-    department: () => groupByDepartment(filtered, departmentNames).map(g => ({
+    department: () => groupByDepartment(sorted, departmentNames).map(g => ({
       key: g.departmentId ?? '__none__',
       label: g.departmentName,
       tickets: g.tickets,
     })),
-    assignee: () => groupByAssignee(filtered).map(g => ({
+    assignee: () => groupByAssignee(sorted).map(g => ({
       key: g.assigneeId ?? '__unassigned__',
       label: g.assigneeName,
       tickets: g.tickets,
@@ -104,50 +140,78 @@ export const TicketList = () => {
   };
   const groups = GROUP_BUILDERS[groupBy]();
 
-  const hasActiveFilters = search.length > 0 || statusFilter !== 'ALL' || scopeFilter !== 'ALL' || quickFilter !== null;
+  const activeCount =
+    (filters.status !== 'all' ? 1 : 0) +
+    (filters.priority.length > 0 ? 1 : 0) +
+    (filters.departmentId ? 1 : 0) +
+    (filters.assigneeIds.length > 0 ? 1 : 0) +
+    (filters.raisedByIds.length > 0 ? 1 : 0);
+
+  const hasActiveFilters = search.length > 0 || activeCount > 0 || scopeFilter !== 'ALL' || quickFilter !== null;
 
   const handleResetFilters = () => {
     setSearch('');
-    setStatusFilter('ALL');
+    setFilters(DEFAULT_TICKET_FILTERS);
     setScopeFilter('ALL');
     setQuickFilter(null);
     setPage(1);
   };
 
   return (
-    <div className="flex flex-col gap-5 max-w-[1400px] mx-auto w-full pb-10">
+    <div className="flex flex-col gap-6 mx-auto w-full max-w-[1400px] transition-all duration-300">
 
       {/* Page Header + Controls */}
-      <div className="flex flex-col gap-4 pb-4 border-b border-border/40">
+      <div className="flex flex-col gap-4">
         {/* Top row — title/count on the left, primary action on the right */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-lg sm:text-xl font-display font-semibold text-text tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold text-text tracking-tight">
               Support Tickets
             </h1>
-            <p className="text-xs sm:text-sm text-text-muted font-display mt-0.5 flex items-center gap-1.5">
+            <p className="text-xs sm:text-sm font-medium text-text-muted mt-0.5 flex items-center gap-1.5">
               <span>{meta?.total ?? 0} total record{meta?.total !== 1 ? 's' : ''}</span>
-              {statusFilter !== 'ALL' && (
-                <span className="text-primary-500 font-medium">({filtered.length} matching filter)</span>
+              {activeCount > 0 && (
+                <span className="text-primary-500 font-medium">({sorted.length} matching filter)</span>
               )}
             </p>
           </div>
 
-          {/* Desktop: inline circular button. Mobile: the Fab below instead — same size/color/
-              position as the Dashboard's To-Do FAB and Delegation's New Delegation FAB. */}
+          {/* Desktop: inline pill button, matching Delegation's "New Delegation" trigger.
+              Mobile: the Fab below instead — same size/color/position as the Dashboard's To-Do
+              FAB and Delegation's New Delegation FAB. */}
           <Button
             variant="primary"
             size="sm"
-            className="group hidden md:flex size-10 sm:size-11 rounded-full p-0 shadow-md hover:shadow-lg transition-all duration-300 justify-center items-center"
+            className="group hidden md:inline-flex gap-2 font-medium shadow-md rounded-full text-xs sm:text-sm px-4 py-2 hover:shadow-lg transition-all duration-200"
             onClick={() => setShowForm(true)}
-            aria-label="Create Ticket"
-            title="Create Ticket"
           >
-            <Plus size={18} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-90" />
+            <Plus size={16} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-90" />
+            <span>Create Ticket</span>
           </Button>
 
           <Fab actions={[{ key: 'create', label: 'Create Ticket', icon: Plus, onClick: () => setShowForm(true) }]} />
         </div>
+
+        {/* Quick-stat tiles — same position (right below the title, above the toolbar) as the
+            Delegation page's stat row; click any one to instantly narrow the list to just that
+            category, click again to go back. */}
+        <TicketQuickStats counts={quickCounts} active={quickFilter} onToggle={toggleQuickFilter} />
+
+        {quickFilter && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-xs font-display font-semibold rounded-full bg-primary-50 text-primary-700 border border-primary-200">
+              Showing: {quickFilter.charAt(0).toUpperCase() + quickFilter.slice(1)}
+              <button
+                type="button"
+                onClick={() => setQuickFilter(null)}
+                aria-label="Clear quick filter"
+                className="p-0.5 rounded-full hover:bg-primary-100 transition-colors cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          </div>
+        )}
 
         {/* Controls Bar — icon-sized controls (scope, group-by, status, export) share one row;
             search gets its own full-width row below since it actually needs room to type into. */}
@@ -177,43 +241,88 @@ export const TicketList = () => {
               })}
             </div>
 
-            {/* Group By Toggle */}
-            <div className="flex items-center gap-0.5 p-1 rounded-lg bg-surface-hover/50 border border-border/40">
-              <button
-                type="button"
-                onClick={() => setGroupBy('department')}
-                title="Group by department"
-                aria-label="Group by department"
-                aria-pressed={groupBy === 'department'}
-                className={`flex items-center justify-center p-2 rounded-md transition-all duration-200 cursor-pointer ${
-                  groupBy === 'department'
-                    ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
-                }`}
-              >
-                <Building2 size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setGroupBy('assignee')}
-                title="Group by person"
-                aria-label="Group by person"
-                aria-pressed={groupBy === 'assignee'}
-                className={`flex items-center justify-center p-2 rounded-md transition-all duration-200 cursor-pointer ${
-                  groupBy === 'assignee'
-                    ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
-                }`}
-              >
-                <User size={14} />
-              </button>
-            </div>
+            {/* View Toggle */}
+            <ViewToggle tabs={VIEW_TABS} value={view} onChange={setView} />
 
-            {/* Status filter sits with the other icon-sized controls, right next to Group By */}
-            <TicketStatusFilterDropdown
-              statusFilter={statusFilter}
-              onStatusFilterChange={key => { setStatusFilter(key); setPage(1); }}
+            {/* Group By Toggle — list view only, Board view already groups by status via columns */}
+            {view === 'list' && (
+              <div className="flex items-center gap-0.5 p-1 rounded-lg bg-surface-hover/50 border border-border/40">
+                <button
+                  type="button"
+                  onClick={() => setGroupBy('department')}
+                  title="Group by department"
+                  aria-label="Group by department"
+                  aria-pressed={groupBy === 'department'}
+                  className={`flex items-center justify-center p-2 rounded-md transition-all duration-200 cursor-pointer ${
+                    groupBy === 'department'
+                      ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
+                  }`}
+                >
+                  <Building2 size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGroupBy('assignee')}
+                  title="Group by person"
+                  aria-label="Group by person"
+                  aria-pressed={groupBy === 'assignee'}
+                  className={`flex items-center justify-center p-2 rounded-md transition-all duration-200 cursor-pointer ${
+                    groupBy === 'assignee'
+                      ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
+                  }`}
+                >
+                  <User size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* Filters popover — replaces the old single-status dropdown with Status/Priority/
+                Department/Assignee/Raised By, shared shell with the Delegation page's Filters */}
+            <TicketFiltersPopover
+              filters={filters}
+              onChange={(patch) => { setFilters(prev => ({ ...prev, ...patch })); setPage(1); }}
+              onClearAll={() => { setFilters(DEFAULT_TICKET_FILTERS); setPage(1); }}
+              departments={departments}
+              assignableUsers={assignableUsers}
+              activeCount={activeCount}
+              sort={sort}
+              onSortChange={setSort}
             />
+
+            {/* Sort — desktop only, mobile folds this into the Filters sheet instead */}
+            <div className="hidden md:flex items-center gap-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 px-3 gap-1.5 border border-border/60 rounded-lg bg-surface hover:bg-surface-hover transition-colors"
+                    aria-label={`Sort: ${SORT_LABEL[sort]}`}
+                    title={`Sort: ${SORT_LABEL[sort]}`}
+                  >
+                    {(() => {
+                      const SortIcon = SORT_ICON[sort];
+                      return <SortIcon size={14} className="text-text-muted" />;
+                    })()}
+                    <span className="text-xs font-medium hidden md:inline">{SORT_LABEL[sort]}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                  {(Object.keys(SORT_LABEL) as TicketSortKey[]).map(key => {
+                    const Icon = SORT_ICON[key];
+                    return (
+                      <DropdownMenuItem key={key} onClick={() => setSort(key)} className="gap-2.5 py-2 cursor-pointer">
+                        <Icon size={14} className="text-text-muted" />
+                        <span className="font-medium text-sm">{SORT_LABEL[key]}</span>
+                        {sort === key && <Check size={14} className="ml-auto text-primary-600" />}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             {/* Export — admin/PC only, and hidden on mobile entirely (not just icon-only): a
                 background-report download isn't a mobile-first action, and dropping it here
@@ -251,31 +360,11 @@ export const TicketList = () => {
         )}
       </div>
 
-      {/* Quick-stat tiles — click any one to instantly narrow the list to just that category;
-          click again (or use the chip in TicketListControls area below) to go back. */}
-      <TicketQuickStats counts={quickCounts} active={quickFilter} onToggle={toggleQuickFilter} />
-
-      {quickFilter && (
-        <div className="-mt-1 flex items-center gap-2 flex-wrap">
-          <span className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-xs font-display font-semibold rounded-full bg-primary-50 text-primary-700 border border-primary-200">
-            Showing: {quickFilter.charAt(0).toUpperCase() + quickFilter.slice(1)}
-            <button
-              type="button"
-              onClick={() => setQuickFilter(null)}
-              aria-label="Clear quick filter"
-              className="p-0.5 rounded-full hover:bg-primary-100 transition-colors cursor-pointer"
-            >
-              <X size={12} />
-            </button>
-          </span>
-        </div>
-      )}
-
       {/* Loading Skeletons */}
-      {isPending && <TicketListSkeleton />}
+      {((view === 'list' && isPending) || (view === 'board' && boardPending)) && <TicketListSkeleton />}
 
       {/* Error State */}
-      {isError && (
+      {((view === 'list' && isError) || (view === 'board' && boardError)) && (
         <div className="flex items-center gap-2.5 p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs font-display">
           <AlertCircle size={16} className="shrink-0" />
           <span>Failed to load tickets. Please check your network connection and try again.</span>
@@ -283,7 +372,8 @@ export const TicketList = () => {
       )}
 
       {/* Empty State */}
-      {!isPending && !isError && filtered.length === 0 && (
+      {((view === 'list' && !isPending && !isError && sorted.length === 0) ||
+        (view === 'board' && !boardPending && !boardError && boardSorted.length === 0)) && (
         <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-border/70 rounded-xl bg-surface/30 text-center">
           <div className="mb-3 text-text-muted">
             <Inbox size={26} />
@@ -310,7 +400,7 @@ export const TicketList = () => {
       )}
 
       {/* Ticket List Grouped by Department or Person */}
-      {!isPending && !isError && filtered.length > 0 && (
+      {view === 'list' && !isPending && !isError && sorted.length > 0 && (
         <TicketGroupedList
           groups={groups}
           groupBy={groupBy}
@@ -319,8 +409,18 @@ export const TicketList = () => {
         />
       )}
 
-      {/* Pagination Footer */}
-      {meta && meta.totalPages > 1 && (
+      {/* Ticket Board */}
+      {view === 'board' && !boardPending && !boardError && boardSorted.length > 0 && (
+        <TicketBoard
+          tickets={boardSorted}
+          departmentNames={departmentNames}
+          isVerifier={isVerifier}
+          onOpen={setSelected}
+        />
+      )}
+
+      {/* Pagination Footer — list view only, Board view isn't paginated */}
+      {view === 'list' && meta && meta.totalPages > 1 && (
         <div className="pt-4 border-t border-border/40 flex justify-center">
           <PageNav page={page} totalPages={meta.totalPages} onPageChange={setPage} />
         </div>

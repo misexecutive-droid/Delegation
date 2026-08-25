@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   Repeat,
 } from 'lucide-react';
-import { Button } from '../../components';
+import { Button, GradientIconTile } from '../../components';
 import { useTicketsByStatusQuery, useVerifyTicketMutation } from '../tickets/hook';
 import { useTasksByStatusQuery, useVerifyTaskMutation } from '../tasks/hook';
 import { usePendingVerificationChecklistInstancesQuery, useVerifyChecklistInstanceMutation } from '../checklist/hook';
@@ -187,9 +187,7 @@ export const VerificationQueue = () => {
     <div className="flex flex-col gap-8 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="size-12 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shrink-0 shadow-md shadow-primary-500/20 border border-primary-400/20">
-          <ShieldCheck size={22} className="text-white" />
-        </div>
+        <GradientIconTile icon={ShieldCheck} size="lg" />
         <div>
           <h1 className="text-2xl font-display font-semibold text-text tracking-tight">Verification Queue</h1>
           <p className="text-sm text-text-muted mt-0.5">

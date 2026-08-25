@@ -1,0 +1,1 @@
+export { GradientIconTile } from './GradientIconTile';

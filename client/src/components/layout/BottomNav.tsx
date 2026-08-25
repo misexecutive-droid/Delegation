@@ -13,7 +13,9 @@ const NAV_ITEMS = [
   { to: '/tasks', label: 'Tasks', icon: CheckSquare, exact: false },
   { to: '/tickets', label: 'Tickets', icon: TicketCheck, exact: false },
   { to: '/todo', label: 'To-Do', icon: ListTodo, exact: false },
-  { to: '/checklists', label: 'Checklists', icon: ClipboardCheck, exact: false },
+  // Disabled, not just unlisted — matches the Sidebar's "Soon" treatment for the same feature
+  // instead of silently dropping the tab, so the layout/spacing of the bar stays unchanged.
+  { to: '/checklists', label: 'Checklists', icon: ClipboardCheck, exact: false, soon: true },
 ];
 
 const INDICATOR_SPRING = { type: 'spring', stiffness: 420, damping: 32 } as const;
@@ -33,10 +35,26 @@ export const BottomNav = () => {
       aria-label="Mobile navigation bar"
     >
       <div className="h-16 max-w-lg mx-auto px-1.5 flex items-center justify-around">
-        {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => {
+        {NAV_ITEMS.map(({ to, label, icon: Icon, exact, soon }) => {
           const isActive = exact
             ? location.pathname === to
             : location.pathname.startsWith(to);
+
+          if (soon) {
+            return (
+              <span
+                key={to}
+                title={`${label} — coming soon`}
+                className="flex flex-col items-center justify-center flex-1 h-full pt-1.5 pb-1.5 cursor-not-allowed select-none opacity-40"
+              >
+                <div className="relative flex items-center justify-center w-12 h-[30px]">
+                  <Icon size={18} strokeWidth={2} className="text-text-muted" />
+                  <span className="absolute top-0 right-2.5 size-1.5 rounded-full bg-text-light" aria-hidden="true" />
+                </div>
+                <span className="text-[10px] leading-tight mt-1 font-medium text-text-muted">{label}</span>
+              </span>
+            );
+          }
 
           return (
             <NavLink

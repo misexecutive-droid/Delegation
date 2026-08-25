@@ -3,7 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Settings as SettingsIcon, CheckSquare } from 'lucide-react';
-import { Input, Button, Form, Skeleton } from '../../components';
+import { Input, Button, Form, Skeleton, GradientIconTile } from '../../components';
 import { useSettingsQuery, useUpdateSettingsMutation } from './hook';
 
 const IMAGE_TYPE_OPTIONS = [
@@ -61,9 +61,7 @@ export const SettingsPage = () => {
   return (
     <div className="flex flex-col gap-6 max-w-lg">
       <div className="flex items-center gap-3">
-        <div className="size-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shrink-0 shadow-sm shadow-primary-600/20">
-          <SettingsIcon size={18} className="text-white" />
-        </div>
+        <GradientIconTile icon={SettingsIcon} />
         <div>
           <h1 className="text-xl font-display font-semibold text-text">Settings</h1>
           <p className="text-sm text-text-muted mt-0.5">

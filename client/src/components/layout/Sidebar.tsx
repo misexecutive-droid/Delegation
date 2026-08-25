@@ -33,6 +33,8 @@ interface NavItem {
   icon: typeof LayoutDashboard;
   label: string;
   children?: NavChild[];
+  /** Renders as a disabled, "Soon"-badged row instead of a working link. */
+  soon?: boolean;
 }
 
 const CHECKLIST_CHILDREN: NavChild[] = [
@@ -63,7 +65,7 @@ const NAV: NavItem[] = [
   { to: '/tickets', icon: TicketCheck, label: 'Tickets' },
   { to: '/todo', icon: ListTodo, label: 'To-Do' },
   { to: '/events', icon: CalendarClock, label: 'Events' },
-  { to: '/checklists', icon: ClipboardCheck, label: 'Checklists', children: CHECKLIST_CHILDREN },
+  { to: '/checklists', icon: ClipboardCheck, label: 'Checklists', children: CHECKLIST_CHILDREN, soon: true },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
 ];
@@ -148,7 +150,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
     }
   };
 
-  const renderNavItem = ({ to, icon: Icon, label, children }: NavItem, isDrawer: boolean) => {
+  const renderNavItem = ({ to, icon: Icon, label, children, soon }: NavItem, isDrawer: boolean) => {
     const hasActiveChild = children?.some((child) => !child.soon && isChildActive(child, location)) ?? false;
     const hasChildren = !!children?.length;
     // Was `isDrawer || expandedKeys.has(to)` — that forced every group open inside the mobile
@@ -157,6 +159,44 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
     // dropping the isDrawer override just makes the arrow actually toggle in both contexts.
     const isExpanded = expandedKeys.has(to);
     const showLabel = isDrawer || isOpen;
+
+    if (soon) {
+      return (
+        <span
+          key={to}
+          title={!showLabel ? `${label} — coming soon` : undefined}
+          className={[
+            'flex items-center rounded-xl text-[13px] font-semibold text-text-muted/60 cursor-not-allowed select-none',
+            isDrawer ? 'px-3 py-3' : 'px-3 py-2.5',
+            showLabel ? 'justify-between' : 'md:justify-center md:px-0',
+          ].join(' ')}
+        >
+          <span className="flex items-center min-w-0">
+            <span
+              className={[
+                'flex items-center justify-center shrink-0 rounded-lg bg-surface-hover/40 text-text-light',
+                isDrawer ? 'size-8' : 'size-7',
+              ].join(' ')}
+            >
+              <Icon size={16} strokeWidth={1.75} />
+            </span>
+            <span
+              className={[
+                'truncate leading-none min-w-0 transition-all duration-300 ease-in-out',
+                showLabel ? 'max-w-[10rem] opacity-100 ml-3' : 'max-w-0 opacity-0 ml-0',
+              ].join(' ')}
+            >
+              {label}
+            </span>
+          </span>
+          {showLabel && (
+            <span className="shrink-0 ml-2 text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-border/60 text-text-muted">
+              Soon
+            </span>
+          )}
+        </span>
+      );
+    }
 
     return (
       <div key={to}>
@@ -168,32 +208,44 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
             onClick={handleNavClick}
             className={({ isActive }) =>
               [
-                'group/link flex flex-1 min-w-0 items-center rounded-xl text-[13px] transition-all duration-200 ease-out',
+                'group/link relative flex flex-1 min-w-0 items-center rounded-xl text-[13px] transition-colors duration-200 ease-out',
                 // The mobile drawer gets a taller touch target (closer to the 44px minimum) than
                 // the desktop sidebar, which stays at its tighter, mouse-driven density.
                 isDrawer ? 'px-3 py-3' : 'px-3 py-2.5',
                 showLabel ? 'justify-start' : 'md:justify-center md:px-0',
                 isActive || hasActiveChild
-                  ? 'bg-primary-50/80 text-primary-700 font-bold border border-slate-300 dark:bg-primary-900/20 dark:text-primary-300 dark:border-slate-600'
-                  : 'text-text-secondary font-semibold border border-transparent hover:bg-surface-hover hover:text-text',
+                  ? 'text-primary-700 font-bold dark:text-primary-300'
+                  : 'text-text-secondary font-semibold hover:bg-surface-hover hover:text-text',
               ].join(' ')
             }
           >
             {({ isActive }) => (
               <>
-                <Icon
-                  size={18}
-                  strokeWidth={isActive || hasActiveChild ? 2.5 : 2}
-                  className={[
-                    'shrink-0 transition-transform duration-300',
-                    isActive || hasActiveChild 
-                      ? 'text-primary-600 dark:text-primary-400 scale-105' 
-                      : 'text-text-muted group-hover/link:text-text-secondary group-hover/link:scale-105',
-                  ].join(' ')}
-                />
+                {(isActive || hasActiveChild) && (
+                  <motion.span
+                    layoutId={`sidebar-active-pill-${isDrawer ? 'drawer' : 'desktop'}`}
+                    className="absolute inset-0 rounded-xl bg-primary-50/80 border border-slate-300 dark:bg-primary-900/20 dark:border-slate-600"
+                    transition={{ type: 'spring', stiffness: 500, damping: 40, mass: 0.5 }}
+                  />
+                )}
                 <span
                   className={[
-                    'truncate leading-none transition-all duration-300 ease-in-out',
+                    'relative z-10 flex items-center justify-center shrink-0 rounded-lg transition-all duration-300',
+                    isDrawer ? 'size-8' : 'size-7',
+                    isActive || hasActiveChild
+                      ? 'bg-primary-600 text-white shadow-sm shadow-primary-600/25 dark:bg-primary-500'
+                      : 'bg-surface-hover/60 text-text-muted group-hover/link:bg-surface-active group-hover/link:text-text-secondary',
+                  ].join(' ')}
+                >
+                  <Icon
+                    size={16}
+                    strokeWidth={isActive || hasActiveChild ? 2.25 : 1.75}
+                    className="transition-transform duration-300 group-hover/link:scale-105"
+                  />
+                </span>
+                <span
+                  className={[
+                    'relative z-10 truncate leading-none min-w-0 transition-all duration-300 ease-in-out',
                     showLabel ? 'max-w-[10rem] opacity-100 ml-3' : 'max-w-0 opacity-0 ml-0',
                   ].join(' ')}
                 >
@@ -239,7 +291,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                         className={`flex items-center justify-between gap-2 rounded-lg px-3 text-[12px] font-medium text-text-muted/70 cursor-not-allowed select-none ${isDrawer ? 'py-2.5' : 'py-1.5'}`}
                       >
                         {child.label}
-                        <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-surface-hover/80 border border-border/60 text-text-muted">
+                        <span className="text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-border/60 text-text-muted">
                           Soon
                         </span>
                       </span>
@@ -283,7 +335,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
         <div className="flex items-center justify-between px-3 mb-4 shrink-0">
           <p
             className={[
-              'text-[10px] font-bold text-text-muted uppercase tracking-widest',
+              'text-[11px] font-bold text-text-muted capitalize tracking-wide',
               'overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out',
               (isDrawer || isOpen) ? 'max-h-5 opacity-100' : 'max-h-0 opacity-0',
             ].join(' ')}
@@ -307,16 +359,22 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
 
           {adminNavItems.length > 0 && (
             <>
+              <div
+                className={[
+                  'border-t border-border/60 transition-all duration-300 ease-in-out',
+                  (isDrawer || isOpen) ? 'mt-4 mb-3 mx-1' : 'mt-3 mb-2 mx-2',
+                ].join(' ')}
+                aria-hidden="true"
+              />
               <p
                 className={[
-                  'text-[10px] font-bold text-text-muted uppercase tracking-widest px-3',
+                  'text-[11px] font-bold text-text-muted capitalize tracking-wide px-3',
                   'overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out',
-                  (isDrawer || isOpen) ? 'max-h-5 opacity-100 mt-6 mb-3' : 'max-h-0 opacity-0 mt-3 mb-0',
+                  (isDrawer || isOpen) ? 'max-h-5 opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0',
                 ].join(' ')}
               >
                 Admin
               </p>
-              {(!isDrawer && !isOpen) && <div className="border-t border-border/60 my-2 mx-1" aria-hidden="true" />}
               {adminNavItems.map((item) => renderNavItem(item, isDrawer))}
             </>
           )}
@@ -328,7 +386,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
       <div className="shrink-0 pt-3 border-t border-border/50">
         <p
           className={[
-            'text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 mb-1',
+            'text-[11px] font-bold text-text-muted capitalize tracking-wide px-3 mb-1',
             'overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out',
             (isDrawer || isOpen) ? 'max-h-5 opacity-100' : 'max-h-0 opacity-0',
           ].join(' ')}

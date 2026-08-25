@@ -8,6 +8,7 @@ import { coverPhotoFor } from "./taskAttachmentDisplay";
 import { UPLOADS_BASE } from "../../lib/uploadsBase";
 import { TaskSourceBadge } from "./TaskSourceBadge";
 import { CATEGORY_CONFIG, subtaskProgress, formatShortDateTime, type CardFieldVisibility } from "./cardFields";
+import { PriorityChip } from "./PriorityChip";
 import type { Task } from '../../api/task';
 
 interface TaskRowProps {
@@ -168,10 +169,10 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
                     )}
 
                     {fields.priority && (
-                        <span className={`flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded shrink-0 ${priority.className}`}>
-                            <span className={`size-1.5 rounded-full shrink-0 ${priority.accent}`} />
-                            {priority.label}
-                        </span>
+                        <PriorityChip
+                            priority={task.priority}
+                            className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded shrink-0"
+                        />
                     )}
 
                     <DropdownMenu>

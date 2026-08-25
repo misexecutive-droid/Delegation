@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, AlertCircle, Trash2, ListChecks, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Skeleton } from '../../../../components';
+import { Skeleton, GradientIconTile } from '../../../../components';
 import { Badge } from '@/components/ui/badge';
 import {
   useChecklistDefinitionQuery,
@@ -348,9 +348,7 @@ export const ChecklistBuilder = () => {
     <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shrink-0 shadow-sm shadow-primary-600/20">
-            <ListChecks size={18} className="text-white" />
-          </div>
+          <GradientIconTile icon={ListChecks} />
           <div>
             <h1 className="font-display text-xl font-bold text-text leading-tight">
               {isEditing ? `Editing: ${existing?.name}` : 'New Checklist'}

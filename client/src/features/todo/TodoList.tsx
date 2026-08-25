@@ -1,9 +1,11 @@
-import { Trash2, Check, ListTodo, CalendarClock, CalendarX2 } from 'lucide-react';
+import { Trash2, Check, ListTodo, CalendarClock, CalendarX2, FilterX } from 'lucide-react';
 import { Loader, Skeleton } from '../../components';
 import { ErrorMessage, EmptyState } from '../admin/adminDisplay';
 import { PRIORITY_MAP } from '../tasks/taskDisplay';
 import { useTodosQuery, useUpdateTodoMutation, useDeleteTodoMutation } from './hook';
-import { isSameDay } from './todoDate';
+import { isSameDay, relativeDayLabel } from './todoDate';
+import { TODO_QUICK_FILTER_PREDICATES } from './todoQuickFilters';
+import type { TodoQuickFilterKey } from './TodoQuickStats';
 import type { Todo } from '../../api/todos';
 
 interface TodoListProps {
@@ -11,18 +13,22 @@ interface TodoListProps {
   // the /todo page's day strip. Left undefined for the Dashboard's TodoDrawer, which always shows
   // the full list.
   selectedDate?: Date | null;
+  // Same Pending/Completed/Due/Delayed quick filter as the Delegation/Tickets pages — set by
+  // clicking a TodoQuickStats tile. Left undefined for the Dashboard's TodoDrawer.
+  quickFilter?: TodoQuickFilterKey | null;
 }
 
 // Self-contained: fetches and mutates its own data, so it drops in identically on the full
 // /todo page and inside the Dashboard's TodoDrawer with no props to thread through.
-export const TodoList = ({ selectedDate = null }: TodoListProps) => {
+export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListProps) => {
   const { data: allTodos = [], isPending, isError } = useTodosQuery();
   const updateMut = useUpdateTodoMutation();
   const deleteMut = useDeleteTodoMutation();
 
-  const todos = selectedDate
+  const dateFiltered = selectedDate
     ? allTodos.filter((t) => !!t.dueDate && isSameDay(new Date(t.dueDate), selectedDate))
     : allTodos;
+  const todos = quickFilter ? dateFiltered.filter(TODO_QUICK_FILTER_PREDICATES[quickFilter]) : dateFiltered;
 
   const toggleComplete = (id: string, completed: boolean) => {
     updateMut.mutate({ id, payload: { completed: !completed } });
@@ -37,31 +43,34 @@ export const TodoList = ({ selectedDate = null }: TodoListProps) => {
     return (
       <div
         key={todo.id}
-        className={`relative overflow-hidden flex items-start gap-3 pl-4 pr-3.5 py-3.5 rounded-2xl border bg-surface shadow-sm transition-all duration-200 ${
-          todo.completed ? 'border-border/60 opacity-70' : 'border-border/70 hover:shadow-md hover:-translate-y-0.5'
+        className={`group relative flex items-center gap-3.5 rounded-2xl border p-3.5 sm:p-4 transition-all duration-200 ${
+          todo.completed
+            ? 'border-border/50 bg-surface-hover/30 opacity-70'
+            : `border-border/60 ${priorityMeta.accent}/5 hover:shadow-md hover:-translate-y-0.5 hover:border-border`
         } ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
       >
-        <span className={`absolute inset-y-0 left-0 w-1 ${todo.completed ? 'bg-text-light/30' : priorityMeta.stripe}`} />
+        {/* Doubles as the priority cue (soft-tinted when open) and the "mark done" control (solid
+            fill once completed) — same soft-chip language used for icons across the app. */}
         <button
           type="button"
           onClick={() => toggleComplete(todo.id, todo.completed)}
           disabled={isToggling}
           aria-pressed={todo.completed}
           aria-label={todo.completed ? 'Mark as not done' : 'Mark as done'}
-          className={`mt-0.5 shrink-0 size-5 rounded-md border-2 flex items-center justify-center transition-colors duration-200 cursor-pointer disabled:cursor-wait ${
-            todo.completed ? 'bg-primary-600 border-primary-600' : 'border-border-hover hover:border-primary-400'
+          className={`shrink-0 flex items-center justify-center size-11 rounded-xl transition-all duration-200 cursor-pointer disabled:cursor-wait ${
+            todo.completed ? 'bg-primary-600 text-white shadow-sm shadow-primary-600/25' : priorityMeta.className
           }`}
         >
           {isToggling ? (
-            <Loader size="sm" variant="slate" className="w-3 h-3" />
+            <Loader size="sm" variant="slate" className="w-4 h-4" />
           ) : (
-            todo.completed && <Check size={12} className="text-white" strokeWidth={3} />
+            <Check size={18} strokeWidth={2.5} className={todo.completed ? '' : 'opacity-30'} />
           )}
         </button>
 
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
           <p
-            className={`text-sm font-display truncate transition-colors duration-200 ${
+            className={`text-sm sm:text-[15px] font-display font-semibold truncate transition-colors duration-200 ${
               todo.completed ? 'text-text-light line-through' : 'text-text'
             }`}
           >
@@ -69,14 +78,16 @@ export const TodoList = ({ selectedDate = null }: TodoListProps) => {
           </p>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] font-display font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${priorityMeta.className}`}>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-display font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${priorityMeta.className}`}>
               {priorityMeta.label}
             </span>
-            {todo.dueDate && (
-              <span className={`flex items-center gap-1 text-[11px] font-display ${overdue ? 'text-danger font-semibold' : 'text-text-muted'}`}>
+            {todo.dueDate ? (
+              <span className={`inline-flex items-center gap-1 text-[11px] font-display font-semibold ${overdue ? 'text-danger' : 'text-text-muted'}`}>
                 <CalendarClock size={11} />
-                {new Date(todo.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                {relativeDayLabel(new Date(todo.dueDate))}
               </span>
+            ) : (
+              <span className="text-[11px] font-display font-semibold text-text-light">No due date</span>
             )}
           </div>
         </div>
@@ -86,7 +97,7 @@ export const TodoList = ({ selectedDate = null }: TodoListProps) => {
           onClick={() => deleteMut.mutate(todo.id)}
           disabled={isDeleting}
           aria-label="Delete todo"
-          className="mt-0.5 shrink-0 p-1.5 text-text-light hover:text-danger hover:bg-danger/10 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+          className="shrink-0 p-2 rounded-lg text-text-light/70 hover:text-danger hover:bg-danger/10 transition-all duration-200 cursor-pointer disabled:opacity-50"
         >
           {isDeleting ? <Loader size="sm" variant="rose" className="w-3.5 h-3.5" /> : <Trash2 size={14} />}
         </button>
@@ -97,6 +108,15 @@ export const TodoList = ({ selectedDate = null }: TodoListProps) => {
   if (isPending) return <TodoListSkeleton />;
   if (isError) return <ErrorMessage message="Failed to load your to-dos." />;
   if (todos.length === 0) {
+    if (quickFilter) {
+      return (
+        <EmptyState
+          label="No matches for this filter"
+          description="Nothing due on this day matches the selected tile — try another one, or clear it above."
+          Icon={FilterX}
+        />
+      );
+    }
     return selectedDate ? (
       <EmptyState
         label="Nothing due on this day"
@@ -136,9 +156,12 @@ export const TodoList = ({ selectedDate = null }: TodoListProps) => {
 const TodoListSkeleton = () => (
   <div className="flex flex-col gap-2">
     {Array.from({ length: 4 }).map((_, i) => (
-      <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-surface">
-        <Skeleton className="size-5 rounded-md shrink-0" />
-        <Skeleton className="h-4 flex-1" />
+      <div key={i} className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border border-border/60 bg-surface">
+        <Skeleton className="size-11 rounded-xl shrink-0" />
+        <div className="flex-1 flex flex-col gap-2">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-3 w-1/3" />
+        </div>
         <Skeleton className="size-7 rounded-md shrink-0" />
       </div>
     ))}

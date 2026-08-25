@@ -18,8 +18,8 @@ export const UpcomingEvents = ({ events, isPending }: UpcomingEventsProps) => (
     {/* Header */}
     <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-5 border-b border-border/40 bg-surface/50 backdrop-blur-sm">
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg border border-border/50 bg-surface-hover flex items-center justify-center">
-          <CalendarClock size={18} className="text-primary-500" />
+        <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-800/50 text-primary-600 dark:text-primary-400 shadow-sm flex items-center justify-center">
+          <CalendarClock size={18} strokeWidth={2.5} />
         </div>
         <div>
           <h2 className="text-lg font-display font-semibold text-text tracking-tight">Upcoming Events</h2>
@@ -74,7 +74,7 @@ export const UpcomingEvents = ({ events, isPending }: UpcomingEventsProps) => (
                   <div className={`flex items-center justify-center shrink-0 ${EVENT_TYPE_ICON_TINTS[e.type]}`}>
                     <Icon size={14} />
                   </div>
-                  
+
                   {/* Title */}
                   <p className="text-sm font-display font-medium text-text truncate">
                     {e.title}
@@ -86,7 +86,7 @@ export const UpcomingEvents = ({ events, isPending }: UpcomingEventsProps) => (
                   <span className={`inline-flex items-center justify-center text-[11px] font-display font-semibold px-2.5 py-1 rounded-full ${EVENT_TYPE_COLORS[e.type]}`}>
                     {EVENT_TYPE_LABELS[e.type]}
                   </span>
-                  
+
                   <span className="text-xs text-text-muted font-display font-medium min-w-[50px] text-right">
                     {new Date(e.eventDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>

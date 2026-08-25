@@ -88,6 +88,22 @@ export const useTicketsByStatusQuery = (status: TicketStatus, limit = 100) => {
   });
 };
 
+// Powers the Tickets Board view — unlike the list view's 20-per-page pagination, a board needs
+// to see effectively all tickets at once to bucket them correctly into status columns. Known v1
+// limitation: more than BOARD_LIMIT open tickets means the board undercounts rather than
+// paginating further — acceptable for now, a one-line constant bump if it becomes a real issue.
+const BOARD_LIMIT = 500;
+
+export const useTicketsBoardQuery = (enabled = true) => {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: ['tickets', 'board'],
+    queryFn: () => ticketApi.getAll(1, BOARD_LIMIT).then(r => r.data),
+    enabled: !!token && enabled,
+    retry: handleQueryRetry,
+  });
+};
+
 export const useVerifyTicketMutation = () =>
   useEntityMutation({
     mutationFn: ({ id, payload }: { id: string; payload: VerifyTicketPayload }) =>

@@ -1,7 +1,4 @@
-import { useMemo } from 'react';
-import { Search, X, Filter, ChevronDown } from 'lucide-react';
-import { Dropdown, type DropdownAction } from '../../../components';
-import { STATUS_FILTERS, type FilterStatus } from './ticketFilters';
+import { Search, X } from 'lucide-react';
 
 interface TicketSearchInputProps {
   value: string;
@@ -36,45 +33,3 @@ export const TicketSearchInput = ({ value, onChange }: TicketSearchInputProps) =
     )}
   </div>
 );
-
-interface TicketStatusFilterDropdownProps {
-  statusFilter: FilterStatus;
-  onStatusFilterChange: (key: FilterStatus) => void;
-}
-
-export const TicketStatusFilterDropdown = ({ statusFilter, onStatusFilterChange }: TicketStatusFilterDropdownProps) => {
-  const statusFilterActions: DropdownAction[] = useMemo(
-    () =>
-      STATUS_FILTERS.map((f) => ({
-        label: f.label,
-        onClick: () => onStatusFilterChange(f.key),
-      })),
-    [onStatusFilterChange]
-  );
-
-  const activeFilterLabel =
-    STATUS_FILTERS.find((f) => f.key === statusFilter)?.label ?? 'All Tickets';
-
-  return (
-    <Dropdown
-      align="end"
-      items={statusFilterActions}
-      trigger={
-        <button
-          type="button"
-          title={activeFilterLabel}
-          aria-label={`Status filter: ${activeFilterLabel}`}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-display font-medium rounded-full transition-all cursor-pointer whitespace-nowrap border shrink-0 ${
-            statusFilter !== 'ALL'
-              ? 'bg-primary-500/10 text-primary-500 border-primary-500/30 font-semibold'
-              : 'bg-surface-hover/60 text-text-secondary border-border/40 hover:bg-surface-hover hover:text-text'
-          }`}
-        >
-          <Filter size={13} />
-          <span className="hidden md:inline">{activeFilterLabel}</span>
-          <ChevronDown size={12} />
-        </button>
-      }
-    />
-  );
-};

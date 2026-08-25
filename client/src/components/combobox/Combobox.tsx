@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Loader } from '../loaders/Loader';
+import { useClickOutside } from '../../lib/useClickOutside';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -87,18 +88,10 @@ export const Combobox = ({
   // the cursor just settles on the new last item instead of needing a synced side effect.
   const safeHighlightedIndex = Math.min(highlightedIndex, Math.max(filtered.length - 1, 0));
 
-  // A real subscription to an external system (DOM click events) — not a state-sync-from-props
-  // case, so this one legitimately belongs in an Effect.
-  useEffect(() => {
-    const onClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery(selected?.label ?? '');
-      }
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [selected]);
+  useClickOutside(containerRef, () => {
+    setOpen(false);
+    setQuery(selected?.label ?? '');
+  }, open);
 
   const openList = () => {
     setOpen(true);

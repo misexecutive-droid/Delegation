@@ -1,5 +1,5 @@
 import { AlertCircle, ClipboardCheck } from 'lucide-react';
-import { Skeleton } from '../../../components';
+import { Skeleton, GradientIconTile } from '../../../components';
 import { useMyChecklistInstancesQuery } from '../hook';
 import { ChecklistInstanceCard } from './ChecklistInstanceCard';
 import { RECURRENCE_LABEL } from '../checklistDisplay';
@@ -18,9 +18,7 @@ export const MyChecklists = () => {
   return (
     <div className="flex flex-col gap-6 max-w-5xl">
       <div className="flex items-center gap-3">
-        <div className="size-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shrink-0 shadow-sm shadow-primary-600/20">
-          <ClipboardCheck size={18} className="text-white" />
-        </div>
+        <GradientIconTile icon={ClipboardCheck} />
         <div>
           <h1 className="text-xl font-mono font-semibold text-text">My Checklists</h1>
           <p className="text-sm text-text-muted mt-0.5">

@@ -22,6 +22,7 @@ import { avatarColorClass } from "./avatarColors";
 import { getInitials } from "../../lib/getInitials";
 import { getChecklistProgress } from "../../lib/checklistProgress";
 import { ChecklistProgressBar, DueProgressBar } from "../../components/progress";
+import { PriorityChip } from "./PriorityChip";
 import { CATEGORY_CONFIG, formatShortDateTime, type CardFieldVisibility } from "./cardFields";
 import type { Task } from "../../api/task";
 
@@ -157,12 +158,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
             </span>
           )}
 
-          {fields.priority && priority && (
-            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${priority.className}`}>
-              <span className={`size-1.5 rounded-full shrink-0 ${priority.accent}`} />
-              {priority.label}
-            </span>
-          )}
+          {fields.priority && priority && <PriorityChip priority={task.priority} />}
 
           {fields.category && (() => {
             const cat = CATEGORY_CONFIG[task.category];

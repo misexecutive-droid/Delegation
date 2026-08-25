@@ -1,8 +1,9 @@
 import { Clock, User, ListChecks, CalendarPlus, History } from 'lucide-react';
-import { PRIORITY_MAP, STATUS_CONFIG } from './taskDisplay';
+import { STATUS_CONFIG } from './taskDisplay';
 import { TaskScoreBadge } from './TaskScoreBadge';
 import { departmentTagClass } from './departmentTagColors';
 import { CATEGORY_CONFIG, subtaskProgress, formatShortDate, formatShortDateTime, type CardFieldVisibility } from './cardFields';
+import { PriorityChip } from './PriorityChip';
 import type { Task } from '../../api/task';
 
 interface TaskTableProps {
@@ -48,7 +49,6 @@ export const TaskTable = ({ tasks, assigneeNames, departmentNames, onOpen, field
           </thead>
           <tbody className="divide-y divide-border">
             {tasks.map((task) => {
-              const priority = PRIORITY_MAP[task.priority];
               const status = STATUS_CONFIG[task.status];
               const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
               const assigneeName = task.assigneeId ? assigneeNames.get(task.assigneeId) : undefined;
@@ -132,10 +132,10 @@ export const TaskTable = ({ tasks, assigneeNames, departmentNames, onOpen, field
                       case 'priority':
                         return (
                           <td key={c.key} className="px-4 py-2.5 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${priority.className}`}>
-                              <span className={`size-1.5 rounded-full shrink-0 ${priority.accent}`} />
-                              {priority.label}
-                            </span>
+                            <PriorityChip
+                              priority={task.priority}
+                              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                            />
                           </td>
                         );
                       case 'category': {

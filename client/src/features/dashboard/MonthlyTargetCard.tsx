@@ -36,7 +36,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
     const circ = 2 * Math.PI * radius;
     const track = (240 / 360) * circ;
     const fill = (Math.min(Math.max(percent, 0), 100) / 100) * track;
-    
+
     return {
       circumference: circ,
       trackLength: track,
@@ -46,7 +46,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
 
   return (
     <div className="relative group rounded-2xl border border-border/60 bg-surface p-5 sm:p-6 lg:p-7 flex flex-col gap-2 hover:border-border hover:shadow-md transition-all duration-300 overflow-hidden">
-      
+
       {/* Decorative Background Glow - Adjusted for Light/Dark modes */}
       <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-500/15 dark:bg-primary-500/10 rounded-full blur-[60px] pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-60" />
 
@@ -58,7 +58,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
           </div>
           <div>
             <h3 className="text-lg font-bold text-text tracking-tight leading-tight">Target</h3>
-            <p className="text-xs font-medium text-text-muted mt-0.5 uppercase tracking-wider">Checklist completion</p>
+            <p className="text-xs font-medium text-text-muted mt-0.5 capitalize tracking-wide">Checklist completion</p>
           </div>
         </div>
 
@@ -83,7 +83,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
 
       {/* Body Layout Split */}
       <div className="relative z-10 flex flex-col lg:flex-row items-center gap-6 lg:gap-10 mt-6">
-        
+
         {/* SVG Gauge Element */}
         <div className="relative h-[220px] w-[220px] shrink-0 flex items-center justify-center">
           <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-sm">
@@ -94,7 +94,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
                 <stop offset="100%" stopColor="var(--color-primary-400, #60a5fa)" />
               </linearGradient>
             </defs>
-            
+
             {/* Background Track */}
             <circle
               cx="50"
@@ -108,7 +108,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
               strokeDasharray={`${trackLength} ${circumference}`}
               transform="rotate(150 50 50)"
             />
-            
+
             {/* Foreground Progress Arc */}
             {percent > 0 && (
               <circle
@@ -154,7 +154,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
                   key={stat.label}
                   className="flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-1.5 p-4 rounded-xl bg-surface-hover/30 border border-border/40 hover:bg-surface-hover/70 hover:border-border/80 transition-all duration-200"
                 >
-                  <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">{stat.label}</span>
+                  <span className="text-xs font-semibold text-text-muted capitalize tracking-wide">{stat.label}</span>
                   <span className="inline-flex items-center gap-1.5 text-xl font-bold text-text">
                     {stat.value}
                     <TrendIcon size={16} strokeWidth={3} className={trendClassName} />

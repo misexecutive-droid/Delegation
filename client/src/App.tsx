@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router';
-import { FolderKanban, Calendar } from 'lucide-react';
+import { FolderKanban, Calendar, ClipboardCheck } from 'lucide-react';
 import { ComingSoon } from './components/comingSoon';
 import { useAuth } from './context/AuthContext';
 import { LoginForm } from './features/auth/LoginForm';
@@ -30,8 +30,6 @@ const TicketList = lazy(() => import('./features/tickets/TicketList').then(m => 
 const TaskList = lazy(() => import('./features/tasks/TaskList').then(m => ({ default: m.TaskList })));
 const TodoPage = lazy(() => import('./features/todo/TodoPage').then(m => ({ default: m.TodoPage })));
 const EventList = lazy(() => import('./features/events/EventList').then(m => ({ default: m.EventList })));
-const MyChecklists = lazy(() => import('./features/checklist/instance/MyChecklists').then(m => ({ default: m.MyChecklists })));
-const ChecklistInstanceDetail = lazy(() => import('./features/checklist/instance/ChecklistInstanceDetail').then(m => ({ default: m.ChecklistInstanceDetail })));
 const OrgOverview = lazy(() => import('./features/admin/analytics').then(m => ({ default: m.OrgOverview })));
 const VerificationQueue = lazy(() => import('./features/verification').then(m => ({ default: m.VerificationQueue })));
 const AdminTaskList = lazy(() => import('./features/admin/AdminTaskList').then(m => ({ default: m.AdminTaskList })));
@@ -139,8 +137,18 @@ const router = createBrowserRouter([
           { path: '/tasks', element: <TaskList /> },
           { path: '/todo', element: <TodoPage /> },
           { path: '/events', element: <EventList /> },
-          { path: '/checklists', element: <MyChecklists /> },
-          { path: '/checklists/:instanceId', element: <ChecklistInstanceDetail /> },
+          {
+            path: '/checklists',
+            element: (
+              <ComingSoon
+                icon={ClipboardCheck}
+                title="Checklists"
+                description="Running your team's checklists is being reworked — check back once the updated experience is ready."
+                features={['Step-by-step guided runs', 'Photo capture per step', 'Completion history']}
+              />
+            ),
+          },
+          { path: '/checklists/:instanceId', element: <Navigate to="/checklists" replace /> },
           { path: '/dashboard', element: <Navigate to="/" replace /> },
           {
             element: <AnalyticsRoute />,

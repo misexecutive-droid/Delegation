@@ -153,6 +153,17 @@ html, body {
   overscroll-behavior-y: none;
 }
 
+/* Montserrat everywhere by default. Until now it only reached the page via scattered `font-sans`/
+   `font-display` utility classes on individual elements — anything without one of those (plenty of
+   spans/divs/inputs across the app) silently fell back to the browser's default sans-serif. Setting
+   it once on body means every element inherits it, including content Radix portals straight onto
+   body (dialogs, dropdowns, tooltips) that live outside the app's own component tree. The
+   `font-sans`/`font-display` utility classes still work exactly as before — they already point at
+   the same Montserrat-first stack, so this doesn't change anything already using them. */
+body {
+  font-family: var(--font-sans);
+}
+
 :root[data-theme="dark"] {
   --color-background: #0b1220;
   --color-surface: #121a2c;

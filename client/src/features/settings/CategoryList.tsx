@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from "react";
 import { Plus, Trash2, Pencil, Tag, Loader2, Building2, Users } from "lucide-react";
-import { Button, Skeleton } from "../../components";
+import { Button, Skeleton, GradientIconTile } from "../../components";
 import { useCategoriesQuery, useDeleteCategoryMutation, useUpdateCategoryMutation } from "./hook";
 import { ErrorMessage, EmptyState } from '../admin/adminDisplay';
 import type { Category } from "../../api/categories";
@@ -115,9 +115,7 @@ export const CategoryList = () => {
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shrink-0 shadow-sm shadow-primary-600/20">
-            <Tag size={18} className="text-white" />
-          </div>
+          <GradientIconTile icon={Tag} />
           <div>
             <h1 className="text-xl font-display font-semibold text-text">Categories</h1>
             <p className="text-sm text-text-muted mt-0.5">

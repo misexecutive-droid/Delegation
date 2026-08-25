@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ListTodo, Plus } from 'lucide-react';
+import { GradientIconTile } from '../../components';
 import { TodoList } from './TodoList';
 import { CreateTodoModal } from './CreateTodoModal';
 
@@ -39,9 +40,7 @@ export const TodoDrawer = ({ open, onClose }: TodoDrawerProps) => {
       >
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="size-9 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shrink-0 shadow-sm shadow-primary-600/20">
-              <ListTodo size={16} className="text-white" />
-            </div>
+            <GradientIconTile icon={ListTodo} size="sm" />
             <div className="min-w-0">
               <h2 className="text-sm font-display font-semibold text-text truncate">Your To-Do List</h2>
               <p className="text-xs text-text-muted truncate">Personal tasks, just for you</p>

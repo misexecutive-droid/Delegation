@@ -5,6 +5,7 @@ import { HeaderSearchInput } from './HeaderSearchInput';
 import { useTasksQuery } from '../../features/tasks/hook';
 import { useTicketsQuery } from '../../features/tickets/hook';
 import { useTodosQuery } from '../../features/todo/hook';
+import { useClickOutside } from '../../lib/useClickOutside';
 
 const MIN_QUERY_LENGTH = 2;
 const MAX_PER_GROUP = 4;
@@ -45,14 +46,7 @@ export const HeaderSearch = () => {
   const ticketsQuery = useTicketsQuery(1, 20, undefined, isSearching);
   const todosQuery = useTodosQuery(isSearching);
 
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
+  useClickOutside(containerRef, () => setOpen(false), open);
 
   const groups: ResultGroup[] = isSearching
     ? [

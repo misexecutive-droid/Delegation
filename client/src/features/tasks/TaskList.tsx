@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { Wand2, AlertCircle, LayoutList, Kanban, Check, Save, Inbox, X, Plus, Settings2, ChevronDown, UserCheck, Send } from "lucide-react";
-import { Button, Skeleton, Fab } from "../../components";
+import { Wand2, AlertCircle, LayoutList, Kanban, Check, Save, Inbox, X, Plus, Settings2, ChevronDown, UserCheck, Send, FileDown } from "lucide-react";
+import { Button, Skeleton, Fab, ViewToggle, type ViewTab } from "../../components";
+import { ExportDialog } from "../reports";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { useTasksQuery, useAssignableUsersQuery } from "./hook";
 import { useDepartmentsQuery } from "../tickets/hook";
@@ -48,7 +49,7 @@ interface TaskListProps {
 
 type TaskView = 'list' | 'board';
 
-const VIEW_TABS: { key: TaskView; label: string; icon: typeof LayoutList }[] = [
+const VIEW_TABS: ViewTab<TaskView>[] = [
   { key: 'list', label: 'List', icon: LayoutList },
   { key: 'board', label: 'Board', icon: Kanban },
 ];
@@ -88,6 +89,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
   const [searchParams, setSearchParams] = useSearchParams();
   const [showSmartModal, setShowSmartModal] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [selected, setSelected] = useState<Task | null>(null);
   
   const { data: tasks, isPending, isError } = useTasksQuery(userId);
@@ -221,7 +223,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
     : assigneeFiltered.filter(t => filters.raisedByIds.includes(t.userId));
   const statusFiltered = filters.status === 'all' ? raisedByFiltered : raisedByFiltered.filter(t => t.status === filters.status);
 
-  const isOverdue = (t: Task) => !!t.dueDate && t.status !== 'done' && new Date(t.dueDate).getTime() < Date.now();
+  const isOverdue = (t: Task) => !!t.dueDate && t.status !== 'done' && new Date(t.dueDate).getTime() < new Date().getTime();
   const quickFilterPredicates: Record<QuickFilterKey, (t: Task) => boolean> = {
     pending: (t) => t.status !== 'done',
     completed: (t) => t.status === 'done',
@@ -352,6 +354,12 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
           </div>
         </div>
 
+        {/* Quick-stat tiles — sit above the view/filter toolbar so the at-a-glance counts read
+            before the controls that act on them. */}
+        {!hideHeader && (
+          <TaskQuickStats counts={quickCounts} active={quickFilter} onToggle={toggleQuickFilter} />
+        )}
+
         <div className="flex items-center gap-3 flex-wrap justify-between bg-surface/50 p-1.5 sm:p-2 rounded-xl border border-border/50">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Ownership quick tabs — visible to everyone (not gated on isVerifier like the
@@ -392,29 +400,6 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
             )}
 
             {isVerifier && (
-              <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-hover/50 border border-border/40">
-                {VIEW_TABS.map(tab => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setView(tab.key)}
-                    title={`${tab.label} view`}
-                    aria-label={`${tab.label} view`}
-                    aria-pressed={view === tab.key}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
-                      view === tab.key
-                        ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
-                        : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
-                    }`}
-                  >
-                    <tab.icon size={14} />
-                    <span className="hidden md:inline">{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {isVerifier && (
               <TaskFiltersPopover
                 filters={filters}
                 onChange={updateFilters}
@@ -429,6 +414,10 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                 fieldVisibility={fieldVisibility}
                 onToggleField={toggleField}
               />
+            )}
+
+            {isVerifier && (
+              <ViewToggle tabs={VIEW_TABS} value={view} onChange={setView} />
             )}
           </div>
 
@@ -502,14 +491,25 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                 </DropdownMenu>
               </div>
             )}
+
+            {/* Export — admin/PC only, and hidden on mobile entirely: a background-report
+                download isn't a mobile-first action, matching the same gating on Tickets. */}
+            {isVerifier && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="hidden sm:inline-flex h-9 px-3 gap-1.5 border border-border/60 shadow-sm rounded-lg bg-surface hover:bg-surface-hover transition-colors"
+                onClick={() => setShowExport(true)}
+                aria-label="Export delegations"
+                title="Export delegations"
+              >
+                <FileDown size={14} className="text-text-muted" />
+                <span className="text-xs font-medium hidden md:inline">Export</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Quick-stat tiles */}
-      {!hideHeader && (
-        <TaskQuickStats counts={quickCounts} active={quickFilter} onToggle={toggleQuickFilter} />
-      )}
 
       {/* Active filter chips */}
       {activeChips.length > 0 && (
@@ -674,6 +674,14 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
         />
       )}
       {showSmartModal && <SmartTaskModal onClose={() => setShowSmartModal(false)} />}
+      {showExport && (
+        <ExportDialog
+          reportModule="tasks"
+          title="Export Delegations"
+          description="Every delegation created in the selected period — status, priority, department, and assignee."
+          onClose={() => setShowExport(false)}
+        />
+      )}
       {selected && (
         <TaskDetail
           key={selected.id}

@@ -115,8 +115,13 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
 
             {pageLabel && (
               <>
-                <span className="hidden lg:block h-5 w-px bg-border/60" aria-hidden="true" />
-                <span className="hidden lg:inline-flex items-center rounded-full bg-primary-50/80 dark:bg-primary-900/20 px-3 py-1 text-xs font-bold text-primary-700 dark:text-primary-300 ring-1 ring-primary-200/50 dark:ring-primary-800/50 whitespace-nowrap">
+                <span className="hidden sm:block h-5 w-px bg-border/60 shrink-0" aria-hidden="true" />
+                {/* Visible at every width, not just desktop — on a phone the drawer's active-item
+                    highlight scrolls out of view, and several routes (Admin, Calendar, Verification
+                    Queue…) aren't in the bottom nav at all, so this is the only persistent "you are
+                    here" cue on small screens. Capped width + truncate keeps long labels
+                    (e.g. "Verification Queue") from pushing the bell/avatar off the row. */}
+                <span className="inline-flex items-center rounded-full bg-primary-50/80 dark:bg-primary-900/20 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold text-primary-700 dark:text-primary-300 ring-1 ring-primary-200/50 dark:ring-primary-800/50 whitespace-nowrap truncate max-w-[5.5rem] sm:max-w-[9rem] lg:max-w-none">
                   {pageLabel}
                 </span>
               </>
@@ -156,32 +161,32 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
               </button>
             </div>
 
-            {/* User Dropdown Profile (Desktop) */}
+            {/* User Dropdown Profile — shown at every width now; on phones it collapses to just the
+                avatar + online dot + chevron (name/role stay hidden below lg via the inner span),
+                so there's always some visible sign of who's logged in, not only on desktop. */}
             {user && (
-              <div className="hidden sm:block">
-                <Dropdown
-                  items={accountActions}
-                  trigger={
-                    <button
-                      title={user.name}
-                      className="flex items-center gap-2.5 h-10 pl-1 pr-3 rounded-full bg-surface border border-border/60 shadow-sm text-text-secondary cursor-pointer transition-all duration-200 hover:bg-surface-hover hover:border-border hover:shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 group"
-                    >
-                      <span className="relative flex items-center justify-center size-8 rounded-full bg-primary-600 text-white font-bold text-[11px] shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                        {initials || <User size={14} strokeWidth={2.5} />}
-                        {/* Minimal online indicator */}
-                        <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-success border-2 border-surface" aria-hidden="true" />
-                      </span>
-                      <span className="hidden lg:flex flex-col items-start min-w-0 leading-tight py-0.5">
-                        <span className="max-w-[120px] truncate text-[13px] font-bold text-text">{user.name}</span>
-                        {user.role && (
-                          <span className="max-w-[120px] truncate text-[11px] font-medium text-text-muted mt-0.5">{titleCase(user.role)}</span>
-                        )}
-                      </span>
-                      <ChevronDown size={14} className="text-text-muted shrink-0 ml-1 group-hover:text-text transition-colors" strokeWidth={2.5} />
-                    </button>
-                  }
-                />
-              </div>
+              <Dropdown
+                items={accountActions}
+                trigger={
+                  <button
+                    title={user.name}
+                    className="flex items-center gap-2.5 h-10 pl-1 pr-2 sm:pr-3 rounded-full bg-surface border border-border/60 shadow-sm text-text-secondary cursor-pointer transition-all duration-200 hover:bg-surface-hover hover:border-border hover:shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 group"
+                  >
+                    <span className="relative flex items-center justify-center size-8 rounded-full bg-primary-600 text-white font-bold text-[11px] shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                      {initials || <User size={14} strokeWidth={2.5} />}
+                      {/* Minimal online indicator */}
+                      <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-success border-2 border-surface" aria-hidden="true" />
+                    </span>
+                    <span className="hidden lg:flex flex-col items-start min-w-0 leading-tight py-0.5">
+                      <span className="max-w-[120px] truncate text-[13px] font-bold text-text">{user.name}</span>
+                      {user.role && (
+                        <span className="max-w-[120px] truncate text-[11px] font-medium text-text-muted mt-0.5">{titleCase(user.role)}</span>
+                      )}
+                    </span>
+                    <ChevronDown size={14} className="hidden sm:inline text-text-muted shrink-0 ml-1 group-hover:text-text transition-colors" strokeWidth={2.5} />
+                  </button>
+                }
+              />
             )}
           </div>
         </div>
