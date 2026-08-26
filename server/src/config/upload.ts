@@ -32,6 +32,10 @@ const CHECKLIST_INSTANCE_SUBMISSION_UPLOAD_DIR = path.resolve("uploads", "checkl
 // folder since these aren't gated by the same image-only rules.
 const TASK_ATTACHMENT_UPLOAD_DIR = path.resolve("uploads", "task-attachments")
 
+// A user's profile picture (see users module) — one file per user, its own folder so it's never
+// confused with task/ticket evidence photos.
+const AVATAR_UPLOAD_DIR = path.resolve("uploads", "avatars")
+
 // Files attached to a single Task comment/activity message (see taskComments module) — kept in
 // its own folder rather than reusing task-attachments/ so a comment's files are never confused
 // with the task's own top-level attachment list.
@@ -61,6 +65,9 @@ if (!fs.existsSync(TASK_ATTACHMENT_UPLOAD_DIR)) {
 }
 if (!fs.existsSync(TASK_COMMENT_ATTACHMENT_UPLOAD_DIR)) {
     fs.mkdirSync(TASK_COMMENT_ATTACHMENT_UPLOAD_DIR, { recursive: true })
+}
+if (!fs.existsSync(AVATAR_UPLOAD_DIR)) {
+    fs.mkdirSync(AVATAR_UPLOAD_DIR, { recursive: true })
 }
 
 const storage = multer.diskStorage({
@@ -110,6 +117,15 @@ const checklistInstanceSubmissionStorage = multer.diskStorage({
 
 const taskAttachmentStorage = multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, TASK_ATTACHMENT_UPLOAD_DIR),
+    filename: (_req, file, cb) => {
+        const randomName = crypto.randomBytes(16).toString("hex");
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `${randomName}${ext}`)
+    },
+})
+
+const avatarStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, AVATAR_UPLOAD_DIR),
     filename: (_req, file, cb) => {
         const randomName = crypto.randomBytes(16).toString("hex");
         const ext = path.extname(file.originalname).toLowerCase();
@@ -177,6 +193,11 @@ export const checklistInstanceImageUpload = (req : Request , res : Response , ne
 
 export const checklistInstanceItemSubmissionImageUpload = (req : Request , res : Response , next : NextFunction) =>
     buildImageUpload(checklistInstanceSubmissionStorage, CHECKLIST_VIDEO_MIME_TYPES).array("images", settingsService.getCached().maxUploadFiles)(req,res,next)
+
+// One file, not an array — a profile picture replaces the previous one rather than adding to a
+// pool. Still image-only/size-limited via the same admin-editable settings as the rest.
+export const avatarUpload = (req : Request , res : Response , next : NextFunction) =>
+    buildImageUpload(avatarStorage).single("avatar")(req,res,next)
 
 // Task-level attachments accept documents/spreadsheets/video too, not just images — the
 // admin-editable `allowedImageTypes` setting (and buildImageUpload above) is scoped to the

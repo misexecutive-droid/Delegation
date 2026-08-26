@@ -1,7 +1,8 @@
 import type { Request , Response} from 'express'
 import { userService } from './user.service.js'
 import { asyncHandler } from '../../utils/asyncHandler.js'
-import { createUserSchema, updateUserSchema } from './user.validation.js'
+import { AppError } from '../../utils/AppError.js'
+import { createUserSchema, updateUserSchema, listUsersQuerySchema, resetUserPasswordSchema } from './user.validation.js'
 
 // Controllers are the layer that talks directly to Express (reads the request, sends the
 // response). They don't contain business logic themselves - they just call into the
@@ -10,12 +11,15 @@ import { createUserSchema, updateUserSchema } from './user.validation.js'
 export const userController = {
     // `asyncHandler` is a wrapper that catches any errors thrown inside these async functions
     // and passes them to Express's error-handling middleware, so we don't need try/catch here.
-    list : asyncHandler ( async (_req : Request , res : Response) => {
-        // `_req` is prefixed with an underscore because it isn't used - we don't need anything
-        // from the request to list all users, so this is just a convention to signal "unused param".
-        const users = await userService.list()
-        // Respond with a consistent shape: { success, data } so the frontend always knows what to expect.
-        res.json({ success : true , data : users})
+    list : asyncHandler ( async (req : Request , res : Response) => {
+        // page/limit are both optional (see listUsersQuerySchema) - when neither is sent, this
+        // parses to undefined/undefined and userService.list() returns the full roster, so the
+        // response shape below is byte-for-byte what it always was for existing callers.
+        const { page, limit } = listUsersQuerySchema.parse(req.query);
+        const result = await userService.list(page, limit)
+        // Respond with a consistent shape: { success, data } (plus `meta` when paginated) so the
+        // frontend always knows what to expect.
+        res.json({ success : true , ...result})
     }),
 
     getOne : asyncHandler(async (req : Request , res : Response) => {
@@ -43,6 +47,30 @@ export const userController = {
         // (the logged-in admin's id).
         const input = updateUserSchema.parse(req.body);
         const user = await userService.update(req.params.id , input , req.user!.sub);
+        res.json({ success : true , data : user})
+    }),
+
+    resetPassword : asyncHandler(async (req : Request , res : Response) => {
+        // Admin/PC sets this user's password directly - see user.service.ts's resetPassword for
+        // why this is a separate action from `update` (password changes are deliberately excluded
+        // from the general update endpoint).
+        const { password } = resetUserPasswordSchema.parse(req.body);
+        await userService.resetPassword(req.params.id, password, req.user!.sub);
+        res.json({ success : true , data : { reset : true } })
+    }),
+
+    uploadAvatar : asyncHandler(async (req : Request , res : Response) => {
+        // `avatarUpload` (multer) has already run as route middleware by the time we get here -
+        // req.file is the saved-to-disk file, or undefined if none was sent / it was rejected by
+        // the type/size filter.
+        if (!req.file) throw AppError.badRequest('No image file provided');
+        const url = `/uploads/avatars/${req.file.filename}`;
+        const user = await userService.setAvatar(req.params.id, url, req.user!.sub);
+        res.json({ success : true , data : user})
+    }),
+
+    removeAvatar : asyncHandler(async (req : Request , res : Response) => {
+        const user = await userService.removeAvatar(req.params.id, req.user!.sub);
         res.json({ success : true , data : user})
     }),
 

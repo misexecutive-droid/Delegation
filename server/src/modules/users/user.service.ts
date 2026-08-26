@@ -1,6 +1,8 @@
+import path from "node:path";
+import fs from "node:fs";
 import { db } from "../../config/db.js";
-import { users } from "../../db/schema/core.js";
-import { eq, and, or, desc, asc } from "drizzle-orm";
+import { users, refreshTokens } from "../../db/schema/core.js";
+import { eq, and, or, desc, asc, sql, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { AppError } from "../../utils/AppError.js";
 import { auditService } from "../audit/audit.service.js";
@@ -28,6 +30,7 @@ const publicUserColumns = {
     isActive: users.isActive,
     rank: users.rank,
     phone: users.phone,
+    avatarUrl: users.avatarUrl,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,
 };
@@ -38,8 +41,23 @@ const getSafeById = async (id: string) => {
 };
 
 export const userService = {
-    async list() {
-        return db.select(publicUserColumns).from(users).orderBy(desc(users.createdAt));
+    // page/limit are optional — pass both to get a paginated slice (the admin directory list),
+    // omit both to get the full roster unchanged (every other caller: OrgStructure's tree, etc.).
+    async list(page?: number, limit?: number) {
+        if (page && limit) {
+            const [rows, totalRows] = await Promise.all([
+                db.select(publicUserColumns).from(users).orderBy(desc(users.createdAt)).offset((page - 1) * limit).limit(limit),
+                db.select({ count: sql<number>`count(*)` }).from(users),
+            ]);
+            const total = Number(totalRows[0]?.count ?? 0);
+            return {
+                data: rows,
+                meta: { page, limit, total, totalPages: Math.ceil(total / limit), hasNext: page * limit < total },
+            };
+        }
+
+        const data = await db.select(publicUserColumns).from(users).orderBy(desc(users.createdAt));
+        return { data };
     },
 
     async getById(id: string) {
@@ -132,6 +150,88 @@ export const userService = {
         });
 
         return user;
+    },
+
+    // Admin-initiated reset: an ADMIN/PC sets this user's password directly (e.g. they're locked
+    // out), as opposed to auth.service.ts's self-service "email me a reset link" flow. Never logs
+    // the new password itself - only the fact that a reset happened.
+    async resetPassword(id: string, newPassword: string, actorId: string) {
+        const user = await getSafeById(id);
+        assertFound(user);
+
+        const passwordHash = await hashPassword(newPassword);
+        await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, id));
+
+        // Same reasoning as the self-service reset: kick out any existing sessions, since this is
+        // exactly the moment a stolen refresh token should stop working too.
+        await db.update(refreshTokens)
+            .set({ revokedAt: new Date(), updatedAt: new Date() })
+            .where(and(eq(refreshTokens.userId, id), isNull(refreshTokens.revokedAt)));
+
+        await auditService.record({
+            entityType: "User",
+            entityId: id,
+            action: "PASSWORD_RESET",
+            actorId,
+            before: { email: user.email },
+        });
+    },
+
+    // Replaces this user's profile picture. Best-effort deletes the previous file from disk (same
+    // approach as taskImage.service.ts's remove()) so replacing a photo doesn't leave orphans.
+    async setAvatar(id: string, url: string, actorId: string) {
+        const user = await getSafeById(id);
+        assertFound(user);
+
+        if (user.avatarUrl) {
+            const oldPath = path.resolve(process.cwd(), "uploads", "avatars", path.basename(user.avatarUrl));
+            fs.unlink(oldPath, (err) => {
+                if (err) console.error("Failed to delete old avatar file from disk:", err);
+            });
+        }
+
+        await db.update(users).set({ avatarUrl: url, updatedAt: new Date() }).where(eq(users.id, id));
+
+        const updated = await getSafeById(id);
+        assertFound(updated);
+
+        await auditService.record({
+            entityType: "User",
+            entityId: id,
+            action: "UPDATE",
+            actorId,
+            before: { avatarUrl: user.avatarUrl },
+            after: { avatarUrl: url },
+        });
+
+        return updated;
+    },
+
+    async removeAvatar(id: string, actorId: string) {
+        const user = await getSafeById(id);
+        assertFound(user);
+        if (!user.avatarUrl) return user;
+
+        const oldPath = path.resolve(process.cwd(), "uploads", "avatars", path.basename(user.avatarUrl));
+        fs.unlink(oldPath, (err) => {
+            if (err) console.error("Failed to delete avatar file from disk:", err);
+        });
+
+        await db.update(users).set({ avatarUrl: null, updatedAt: new Date() }).where(eq(users.id, id));
+
+        const updated = await getSafeById(id);
+        assertFound(updated);
+
+        await auditService.record({
+            entityType: "User",
+            entityId: id,
+            action: "UPDATE",
+            actorId,
+            before: { avatarUrl: user.avatarUrl },
+            after: { avatarUrl: null },
+        });
+
+        return updated;
     },
 
     async listAssignable(user: AccessTokenPayload, departmentId?: string, storeId?: string) {

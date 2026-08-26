@@ -15,3 +15,11 @@ export const updateDepartmentSchema = createDepartmentSchema.omit({ storeId: tru
 
 export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>
 export type UpdateDepartmentInput = z.infer<typeof updateDepartmentSchema>
+
+// Both optional — see user.validation.ts's listUsersQuerySchema for why: the admin directory
+// list page passes page+limit, every other caller (dropdowns, org structure) passes neither and
+// must keep getting the full list back.
+export const listDepartmentsQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+})

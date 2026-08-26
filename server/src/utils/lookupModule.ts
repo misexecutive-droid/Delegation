@@ -1,6 +1,7 @@
 import { Router } from "express"
+import { z } from "zod"
 import type { AnyMySqlColumn, MySqlTableWithColumns } from "drizzle-orm/mysql-core"
-import { asc, eq } from "drizzle-orm"
+import { asc, eq, sql } from "drizzle-orm"
 // Middleware that checks the user is logged in (authenticate) and that they have a
 // specific role, like "ADMIN" (requireRole).
 import { authenticate, requireRole } from "../middleware/auth/auth.js"
@@ -27,14 +28,38 @@ import { db } from "../config/db.js"
 // constrain the generic to just those two required columns via an intersection type.
 type LookupTable = MySqlTableWithColumns<any> & { id: AnyMySqlColumn; name: AnyMySqlColumn }
 
+// Both optional — see user.validation.ts's listUsersQuerySchema for the same reasoning: the
+// admin directory's Stores tab passes page+limit, every other caller (dropdowns, org structure)
+// passes neither and must keep getting the full list back, unchanged.
+const listQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+})
+
 export const createLookupRouter = (table: LookupTable) => {
     // Create a fresh, isolated set of routes. This gets "mounted" onto a path like
     // `/api/stores` or `/api/departments` wherever this function is used.
     const router = Router()
 
-    // GET / -> list all items of this lookup type.
+    // GET / -> list items of this lookup type, optionally paginated.
     // Anyone who is authenticated (logged in) can view the list - no special role needed.
-    router.get("/", authenticate, asyncHandler(async (_req, res) => {
+    router.get("/", authenticate, asyncHandler(async (req, res) => {
+        const { page, limit } = listQuerySchema.parse(req.query)
+
+        if (page && limit) {
+            const [items, totalRows] = await Promise.all([
+                db.select().from(table).orderBy(asc(table.name)).offset((page - 1) * limit).limit(limit),
+                db.select({ count: sql<number>`count(*)` }).from(table),
+            ])
+            const total = Number(totalRows[0]?.count ?? 0)
+            res.json({
+                success: true,
+                data: items,
+                meta: { page, limit, total, totalPages: Math.ceil(total / limit), hasNext: page * limit < total },
+            })
+            return
+        }
+
         // Fetch every row for this table, sorted alphabetically by `name`.
         const items = await db.select().from(table).orderBy(asc(table.name));
         // Send a consistent JSON shape: { success, data } so the frontend always knows

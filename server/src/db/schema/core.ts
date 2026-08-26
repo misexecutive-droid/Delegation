@@ -89,6 +89,10 @@ export const users = mysqlTable(
     // on insert if not provided (min 1, max 6 — not enforced at the DB level).
     rank: int('rank'),
     phone: varchar('phone', { length: 191 }),
+    // Relative path under /uploads, same convention as TaskImage.url (task.ts) — e.g.
+    // "/uploads/avatars/<hex>.jpg". Null until the user (or an admin) uploads one; the client
+    // falls back to an initials avatar.
+    avatarUrl: varchar('avatarUrl', { length: 2048 }),
     createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
     updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
   },

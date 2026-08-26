@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { userController } from "./user.controller.js"
 import { authenticate, requireRole } from "../../middleware/auth/auth.js"
+import { avatarUpload } from "../../config/upload.js"
 
 // This creates a mini "mini app" of routes that we'll mount under something like /api/users
 // in the main app. Keeping routes in their own file per module keeps things organized.
@@ -28,5 +29,11 @@ userRouter.get("/:id", userController.getOne)
 userRouter.post("/", userController.create)
 // PATCH /:id -> partially update a user (e.g. change role, deactivate, etc.) (admin/PC only)
 userRouter.patch("/:id", userController.update)
+// POST /:id/reset-password -> admin/PC sets this user's password directly (admin/PC only)
+userRouter.post("/:id/reset-password", userController.resetPassword)
+// POST /:id/avatar -> upload/replace this user's profile picture (admin/PC only)
+userRouter.post("/:id/avatar", avatarUpload, userController.uploadAvatar)
+// DELETE /:id/avatar -> remove this user's profile picture (admin/PC only)
+userRouter.delete("/:id/avatar", userController.removeAvatar)
 // DELETE /:id -> permanently remove a user (admin/PC only)
 userRouter.delete("/:id", userController.remove)

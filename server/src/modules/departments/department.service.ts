@@ -1,6 +1,6 @@
 import { db } from "../../config/db.js";
 import { departments } from "../../db/schema/core.js";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { AppError } from "../../utils/AppError.js";
 import type { CreateDepartmentInput, UpdateDepartmentInput } from "./department.validation.js";
@@ -12,8 +12,23 @@ const getByIdOrThrow = async (id: string) => {
 };
 
 export const departmentService = {
-    async list() {
-        return db.select().from(departments).orderBy(asc(departments.name));
+    // page/limit are optional — pass both for a paginated slice (the admin directory list), omit
+    // both for the full list unchanged (dropdowns, org structure, etc.).
+    async list(page?: number, limit?: number) {
+        if (page && limit) {
+            const [rows, totalRows] = await Promise.all([
+                db.select().from(departments).orderBy(asc(departments.name)).offset((page - 1) * limit).limit(limit),
+                db.select({ count: sql<number>`count(*)` }).from(departments),
+            ]);
+            const total = Number(totalRows[0]?.count ?? 0);
+            return {
+                data: rows,
+                meta: { page, limit, total, totalPages: Math.ceil(total / limit), hasNext: page * limit < total },
+            };
+        }
+
+        const data = await db.select().from(departments).orderBy(asc(departments.name));
+        return { data };
     },
 
     async getById(id: string) {

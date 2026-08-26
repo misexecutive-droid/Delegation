@@ -25,3 +25,18 @@ export const updateUserSchema = createUserSchema.omit({ password: true, departme
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+
+// Admin-initiated password reset (not the self-service email-token flow in auth.service.ts) —
+// an ADMIN/PC sets a user's password directly, e.g. when someone's locked out.
+export const resetUserPasswordSchema = z.object({
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+// Both optional (unlike ticket.validation.ts's paginatioinSchema): the admin directory list page
+// passes page+limit to get a paginated slice, but every other caller of GET /users (OrgStructure's
+// tree, assignable-user pickers relying on the full roster, etc.) calls it with neither and must
+// keep getting the complete unpaginated array back, unchanged.
+export const listUsersQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+});

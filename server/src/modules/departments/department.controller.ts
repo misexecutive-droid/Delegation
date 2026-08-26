@@ -1,14 +1,17 @@
 import { type Request , type Response } from "express";
 import { departmentService } from "./department.service.js";
-import { createDepartmentSchema , updateDepartmentSchema } from "./department.validation.js";
+import { createDepartmentSchema , updateDepartmentSchema, listDepartmentsQuerySchema } from "./department.validation.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
 export const departmentController = {
 
     // GET /departments -> any authenticated user can list departmetns (e.g. to pick one on a ticket. )
-    list : asyncHandler( async (_req : Request , res : Response) => {
-        const departments = await departmentService.list()
-        res.json({ success : true , data : departments})
+    // page/limit are both optional - when neither is sent this responds with the exact same
+    // { success, data } shape as before (see listDepartmentsQuerySchema / departmentService.list).
+    list : asyncHandler( async (req : Request , res : Response) => {
+        const { page, limit } = listDepartmentsQuerySchema.parse(req.query)
+        const result = await departmentService.list(page, limit)
+        res.json({ success : true , ...result})
     }),
 
     // GET /departments/:id -> any auth
