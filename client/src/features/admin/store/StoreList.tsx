@@ -1,17 +1,22 @@
 import { useState, useMemo } from 'react';
 import { Plus, Store as StoreIcon, AlertCircle, Inbox } from 'lucide-react';
-import { Skeleton } from '../../../components';
-import { useStoresQuery } from '../../tickets/hook';
+import { Skeleton, PageNav } from '../../../components';
+import { useStoresPageQuery } from '../../tickets/hook';
 import { useUsersQuery, useUpdateStoreMutation, useDeleteStoreMutation } from '../hook';
 import { StoreCard } from './StoreCard';
 import { StoreForm } from './StoreForm';
 import type { Store } from '../../../api/stores';
 
+const PAGE_SIZE = 24;
+
 export const StoreList = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { data: stores = [], isPending, isError } = useStoresQuery();
+  const { data: storesPage, isPending, isError } = useStoresPageQuery(page, PAGE_SIZE);
+  const stores = storesPage?.data ?? [];
+  const meta = storesPage?.meta;
   const { data: users } = useUsersQuery();
   const updateMut = useUpdateStoreMutation();
   const deleteMut = useDeleteStoreMutation();
@@ -39,12 +44,12 @@ export const StoreList = () => {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-text-muted">
-          {stores.length} store{stores.length !== 1 ? 's' : ''} configured — checklists deploy to one or more of these.
+          {meta?.total ?? stores.length} store{(meta?.total ?? stores.length) !== 1 ? 's' : ''} configured — checklists deploy to one or more of these.
         </p>
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="press-feedback inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold uppercase tracking-wide text-white rounded-xl shadow-sm bg-gradient-to-b from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+          className="press-feedback inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
         >
           <Plus className="w-3.5 h-3.5" />
           New store
@@ -84,7 +89,7 @@ export const StoreList = () => {
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="press-feedback inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold uppercase tracking-wide rounded-xl shadow-sm bg-surface text-text-secondary border border-border transition-all duration-300 hover:bg-surface-hover hover:text-primary-600 hover:border-primary-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            className="press-feedback inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold rounded-xl shadow-sm bg-surface text-text-secondary border border-border transition-all duration-300 hover:bg-surface-hover hover:text-primary-600 hover:border-primary-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
             <StoreIcon className="w-3.5 h-3.5" />
             Create store
@@ -107,6 +112,10 @@ export const StoreList = () => {
             />
           ))}
         </div>
+      )}
+
+      {meta && meta.totalPages > 1 && (
+        <PageNav page={page} totalPages={meta.totalPages} onPageChange={setPage} className="pt-1" />
       )}
 
       {activeModal && <StoreForm onClose={closeForm} store={editingStore ?? undefined} />}

@@ -32,8 +32,6 @@ export const Dashboard = () => {
         />
 
         <main className="flex-1 min-w-0 relative">
-
-         
           <div className="pointer-events-none fixed inset-0 overflow-hidden z-0 flex items-center justify-center">
             <div className="absolute top-[-10%] right-[-5%] w-[45rem] h-[45rem] rounded-full bg-primary-500/10 dark:bg-primary-400/5 blur-[120px]" />
             <div className="absolute bottom-[-10%] left-[-5%] w-[40rem] h-[40rem] rounded-full bg-primary-400/10 dark:bg-primary-500/5 blur-[120px]" />
@@ -72,7 +70,7 @@ export const Dashboard = () => {
         <Footer />
       </div>
 
-      <BottomNav />
+      <BottomNav />x
     </div>
   );
 };

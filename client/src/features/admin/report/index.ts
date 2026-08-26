@@ -1,1 +1,0 @@
-export { TatReport } from './TatReport';

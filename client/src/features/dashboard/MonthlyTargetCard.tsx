@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
 import { ArrowDown, ArrowUp, Target } from 'lucide-react';
+import { RadialGauge } from '../../components/radialGauge';
 import type { CompliancePeriod, Trend } from './dashboardDisplay';
 
 export interface FooterStat {
@@ -29,20 +29,6 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
   const changeClassName = change.direction === 'up'
     ? 'bg-success/10 text-success border-success/20'
     : 'bg-danger/10 text-danger border-danger/20';
-
-  // Calculate SVG arc properties for a 240-degree gauge (leaving a 120-degree gap at the bottom)
-  const { trackLength, fillLength, circumference } = useMemo(() => {
-    const radius = 40;
-    const circ = 2 * Math.PI * radius;
-    const track = (240 / 360) * circ;
-    const fill = (Math.min(Math.max(percent, 0), 100) / 100) * track;
-
-    return {
-      circumference: circ,
-      trackLength: track,
-      fillLength: fill
-    };
-  }, [percent]);
 
   return (
     <div className="relative group rounded-2xl border border-border/60 bg-surface p-5 sm:p-6 lg:p-7 flex flex-col gap-2 hover:border-border hover:shadow-md transition-all duration-300 overflow-hidden">
@@ -84,59 +70,16 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
       {/* Body Layout Split */}
       <div className="relative z-10 flex flex-col lg:flex-row items-center gap-6 lg:gap-10 mt-6">
 
-        {/* SVG Gauge Element */}
-        <div className="relative h-[220px] w-[220px] shrink-0 flex items-center justify-center">
-          <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-sm">
-            <defs>
-              {/* Premium Gradient for the Progress Arc */}
-              <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="var(--color-primary-600, #2563eb)" />
-                <stop offset="100%" stopColor="var(--color-primary-400, #60a5fa)" />
-              </linearGradient>
-            </defs>
-
-            {/* Background Track */}
-            <circle
-              cx="50"
-              cy="50"
-              r="40"
-              fill="none"
-              stroke="currentColor"
-              className="text-surface-hover dark:text-surface-hover/50"
-              strokeWidth="7"
-              strokeLinecap="round"
-              strokeDasharray={`${trackLength} ${circumference}`}
-              transform="rotate(150 50 50)"
-            />
-
-            {/* Foreground Progress Arc */}
-            {percent > 0 && (
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="none"
-                stroke="url(#gaugeGradient)"
-                strokeWidth="7"
-                strokeLinecap="round"
-                strokeDasharray={`${fillLength} ${circumference}`}
-                transform="rotate(150 50 50)"
-                className="transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
-              />
-            )}
-          </svg>
-
-          {/* Central Chart Info */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 pt-6">
-            <span className="text-5xl font-bold bg-gradient-to-br from-text to-text-muted bg-clip-text text-transparent tracking-tight">
-              {percent}<span className="text-3xl">%</span>
-            </span>
-            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold border shadow-sm ${changeClassName}`}>
-              <ChangeIcon size={12} strokeWidth={3} />
-              {change.label}
-            </span>
-          </div>
-        </div>
+        {/* Gauge */}
+        <RadialGauge percent={percent} size={220}>
+          <span className="text-5xl font-bold bg-gradient-to-br from-text to-text-muted bg-clip-text text-transparent tracking-tight">
+            {percent}<span className="text-3xl">%</span>
+          </span>
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold border shadow-sm ${changeClassName}`}>
+            <ChangeIcon size={12} strokeWidth={3} />
+            {change.label}
+          </span>
+        </RadialGauge>
 
         {/* Right Details Column */}
         <div className="flex-1 w-full flex flex-col gap-5">

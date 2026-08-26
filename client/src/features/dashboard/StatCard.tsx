@@ -18,6 +18,11 @@ interface StatCardProps {
   /** Renders as a solid brand-gradient "hero" tile instead of the plain surface card — for calling
    *  out one headline metric among a row of otherwise-equal stat tiles. */
   highlight?: boolean;
+  /** Only meaningful alongside `highlight` — swaps the plain two-stop gradient for the richer
+   *  black-to-blue diagonal + circle/line accents used by the admin header and sidebar, so the
+   *  Admin Overview's hero tile reads as part of that same chrome. Opt-in so the main dashboard's
+   *  own hero tile (KpiStrip) is untouched. */
+  decorative?: boolean;
 }
 
 const TREND_STYLE = {
@@ -40,6 +45,7 @@ export const StatCard = ({
   caption,
   onClick,
   highlight = false,
+  decorative = false,
 }: StatCardProps) => {
   const TrendIcon = trend?.direction === 'up' ? ArrowUpRight : ArrowDownRight;
 
@@ -51,7 +57,9 @@ export const StatCard = ({
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
       className={`group relative flex flex-col gap-3 rounded-2xl p-5 sm:p-6 transition-all duration-300 ${
         highlight
-          ? 'bg-gradient-to-br from-primary-600 to-primary-500 shadow-md shadow-primary-600/25'
+          ? decorative
+            ? 'bg-gradient-to-br from-slate-950 via-primary-800 to-primary-600 shadow-md shadow-primary-900/30 overflow-hidden'
+            : 'bg-gradient-to-br from-primary-600 to-primary-500 shadow-md shadow-primary-600/25'
           : 'border border-border/60 bg-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] dark:border-white/[0.06] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_10px_28px_-14px_rgba(0,0,0,0.65)]'
       } ${
         onClick
@@ -61,6 +69,15 @@ export const StatCard = ({
           : ''
       }`}
     >
+      {highlight && decorative && (
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <span className="absolute -top-8 -right-6 size-24 rounded-full border border-white/15" />
+          <span className="absolute -bottom-10 -left-6 size-20 rounded-full border border-white/10" />
+          <span className="absolute top-1/2 right-3 -translate-y-1/2 size-14 rounded-full bg-white/10 blur-xl" />
+          <span className="absolute top-0 right-12 w-px h-full bg-white/10 -skew-x-12" />
+        </div>
+      )}
+
       {/* Top Row: Label & Icon */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">

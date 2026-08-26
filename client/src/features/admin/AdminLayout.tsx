@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -10,16 +10,17 @@ import {
   ClipboardList,
   FileDown,
   Network,
-  ChevronDown
+  CheckSquare,
+  LogOut,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 import { useAuth } from "../../context/AuthContext";
-import { Header, BottomNav } from "../../components/layout";
-import { Breadcrumbs } from "../../components/breadcrumbs";
+import { BottomNav } from "../../components/layout";
 import { RouteFallback } from "../../components/skeleton";
-import { OrbitDecoration } from "../../components/orbitDecoration";
+import { AdminHeader } from "./AdminHeader";
+import { AdminChromeAccents } from "./AdminChromeAccents";
 
 /** Utility for intelligent Tailwind class merging */
 function cn(...inputs: ClassValue[]) {
@@ -27,79 +28,58 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // --- Navigation Config ---
-interface AdminNavChild {
-  to: string;
-  label: string;
-}
-
 interface AdminNavItem {
   to: string;
   icon: typeof LayoutDashboard;
   label: string;
   end: boolean;
-  children?: AdminNavChild[];
 }
 
 const NAV: AdminNavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview & Analytics', end: true },
   { to: '/admin/directory', icon: Contact, label: 'Directory', end: false },
   { to: '/admin/org-structure', icon: Network, label: 'Org Structure', end: false },
-  {
-    to: '/admin/checklist-templates',
-    icon: ListChecks,
-    label: 'Checklists',
-    end: false,
-    children: [
-      { to: '/admin/checklist-templates', label: 'Delegation Templates' },
-      { to: '/admin/scheduled-checklists', label: 'Templates' },
-      { to: '/admin/scheduled-checklists/builder', label: 'Builder' },
-    ],
-  },
+  { to: '/admin/checklist-templates', icon: ListChecks, label: 'Checklists', end: false },
   { to: '/admin/tickets', icon: TicketCheck, label: 'Tickets', end: false },
   { to: '/tasks/team', icon: ClipboardList, label: 'Team Delegations', end: false },
   { to: '/admin/reports', icon: FileDown, label: 'Reports', end: false },
   { to: '/admin/settings', icon: Settings, label: 'Settings', end: false },
 ];
 
+// The sidebar is intentionally a fixed navy "chrome" — like the reference layout's colored rail —
+// rather than a theme-reactive surface, so these classes have no dark: variants of their own.
+const NAV_LINK_BASE =
+  "group relative flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 active:scale-[0.98]";
+const NAV_LINK_ACTIVE = "bg-white text-primary-700 shadow-sm";
+const NAV_LINK_INACTIVE = "text-white/65 hover:bg-white/10 hover:text-white";
+const NAV_ICON_ACTIVE = "text-primary-700";
+const NAV_ICON_INACTIVE = "text-white/50 group-hover:text-white/80";
+const LOGOUT_BUTTON = "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white/65 hover:bg-white/10 hover:text-white transition-all duration-200 cursor-pointer";
+
 export const AdminLayout = () => {
-  const { user } = useAuth();
+  const { logout } = useAuth();
   const location = useLocation();
-  
+
   const [sidebarOpen, setSidebarOpen] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
   );
 
-  // Groups with children start expanded (matches the reference design's always-open groups) —
-  // the arrow just lets you fold ones you don't need.
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(
-    () => new Set(NAV.filter((item) => item.children?.length).map((item) => item.to))
-  );
+  // `sidebarOpen` doubles as "desktop expanded/collapsed" and "mobile drawer open/closed" — it's
+  // only seeded from viewport width once, above, so resizing across the 768px breakpoint without
+  // a reload (e.g. desktop -> mobile) would otherwise leave a stale value: the mobile drawer could
+  // render already open (with its backdrop) just because it was "open" as a desktop sidebar.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handleChange = (e: MediaQueryListEvent) => setSidebarOpen(e.matches);
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
+  }, []);
 
-  const toggleExpanded = (key: string) => {
-    setExpandedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  // Longest matching `to` wins, so a child route (e.g. /admin/scheduled-checklists) resolves to
-  // its own breadcrumb label instead of falling through to the default when it's no longer a
-  // top-level NAV entry.
-  const currentNav = NAV.flatMap((n) => [
-    { to: n.to, label: n.label, end: n.end },
-    ...(n.children ?? []).map((c) => ({ to: c.to, label: `${n.label} · ${c.label}`, end: false })),
-  ])
+  // Longest matching `to` wins, so a more specific route resolves to its own label instead of
+  // falling through to a shorter prefix match.
+  const currentNav = NAV
     .filter((n) => (n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)))
     .sort((a, b) => b.to.length - a.to.length)[0];
-  
-  const initials = (user?.name || "Admin")
-    .split(" ")
-    .map(w => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   const handleNavClick = () => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -109,8 +89,8 @@ export const AdminLayout = () => {
 
   return (
     <div className="flex flex-col h-svh overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans">
-      <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
-      
+      <AdminHeader onToggleSidebar={() => setSidebarOpen(v => !v)} pageLabel={currentNav?.label ?? 'Overview'} />
+
       <div className="flex flex-1 min-h-0 relative">
         {/* Mobile Backdrop Overlay */}
         <AnimatePresence>
@@ -130,240 +110,154 @@ export const AdminLayout = () => {
         {/* 1. Mobile Drawer */}
         <aside
           className={cn(
-            "md:hidden fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[80vw] h-full flex flex-col border-r border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md px-4 py-6 shadow-2xl transition-transform duration-300 ease-in-out",
+            "md:hidden fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[80vw] h-full flex flex-col rounded-r-3xl bg-gradient-to-b from-slate-950 via-primary-800 to-primary-600 px-4 pt-8 pb-6 shadow-2xl transition-transform duration-300 ease-in-out",
             sidebarOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
           )}
         >
-          <OrbitDecoration corner="top-right" tone="primary" className="w-44 h-44 -top-10 -right-14" />
-          <OrbitDecoration corner="bottom-left" tone="coral" className="w-24 h-24 -bottom-8 -left-8" />
+          <AdminChromeAccents scale="tall" />
 
-          {/* User Profile Area */}
-          <div className="flex items-center gap-3 pb-6 mb-4 border-b border-slate-100 dark:border-slate-800/60">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary-700 text-white text-sm font-bold shrink-0 shadow-md ring-2 ring-white dark:ring-slate-900">
-              {initials}
+          {/* Brand — the header's own user dropdown already shows who's signed in and offers
+              sign-out, so the sidebar's top slot is the app brand instead of a duplicate profile. */}
+          <div className="flex items-center gap-3 pb-6 mb-4 border-b border-white/10">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/15 shrink-0">
+              <CheckSquare size={18} className="text-white" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                {user?.name || "Administrator"}
+              <span className="text-sm font-bold text-white truncate">
+                TaskMatrix
               </span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-                Workspace Admin
+              <span className="text-xs font-medium text-white/60 truncate">
+                Admin
               </span>
             </div>
           </div>
 
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 px-2">
+          <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3 px-2">
             Navigation
           </p>
 
           {/* Navigation Links */}
-          <nav className="flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-1">
-            {NAV.map(({ to, icon: Icon, label, end, children }) => {
-              const hasChildren = !!children?.length;
-              const hasActiveChild = children?.some((c) => location.pathname.startsWith(c.to)) ?? false;
-              const isExpanded = expandedKeys.has(to);
-
-              return (
-                <div key={to}>
-                  <div className="flex items-center gap-1">
-                    <NavLink
-                      to={to}
-                      end={end}
-                      onClick={handleNavClick}
-                      className={({ isActive }) => cn(
-                        "group relative flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-300 ease-in-out",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
-                        "active:scale-[0.98]",
-                        (isActive || hasActiveChild)
-                          ? "bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-400"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
-                      )}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <Icon
-                            className={cn(
-                              "w-[17px] h-[17px] shrink-0 transition-all duration-300 group-hover:scale-110",
-                              (isActive || hasActiveChild)
-                                ? "text-primary-700 dark:text-primary-400"
-                                : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
-                            )}
-                            strokeWidth={(isActive || hasActiveChild) ? 2 : 1.75}
-                          />
-                          <span className="truncate">
-                            {label}
-                          </span>
-                        </>
-                      )}
-                    </NavLink>
-
-                    {hasChildren && (
-                      <button
-                        type="button"
-                        onClick={() => toggleExpanded(to)}
-                        aria-label={isExpanded ? `Collapse ${label}` : `Expand ${label}`}
-                        aria-expanded={isExpanded}
-                        className="shrink-0 p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/50 dark:hover:text-slate-300 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                      >
-                        <ChevronDown
-                          className={cn("w-3.5 h-3.5 transition-transform duration-200", isExpanded ? "rotate-180" : "rotate-0")}
-                          strokeWidth={2.5}
-                        />
-                      </button>
-                    )}
-                  </div>
-
-                  {hasChildren && isExpanded && (
-                    <div className="flex flex-col gap-0.5 mt-0.5 mb-1 ml-[1.65rem] pl-3 border-l border-slate-200 dark:border-slate-800">
-                      {children!.map((child) => (
-                        <NavLink
-                          key={child.to}
-                          to={child.to}
-                          onClick={handleNavClick}
-                          className={({ isActive }) => cn(
-                            "rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium transition-colors duration-200",
-                            isActive
-                              ? "bg-primary-50 text-primary-700 font-semibold dark:bg-primary-500/15 dark:text-primary-400"
-                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
-                          )}
-                        >
-                          {child.label}
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <nav className="flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-1 flex-1">
+            {NAV.map(({ to, icon: Icon, label, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={handleNavClick}
+                className={({ isActive }) => cn(NAV_LINK_BASE, isActive ? NAV_LINK_ACTIVE : NAV_LINK_INACTIVE)}
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon
+                      className={cn("w-[17px] h-[17px] shrink-0 transition-all duration-300 group-hover:scale-110", isActive ? NAV_ICON_ACTIVE : NAV_ICON_INACTIVE)}
+                      strokeWidth={isActive ? 2 : 1.75}
+                    />
+                    <span className="truncate">
+                      {label}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            ))}
           </nav>
+
+          {/* Log Out — pinned below the (scrollable) nav list, separated by its own divider */}
+          <div className="pt-4 mt-2 border-t border-white/10 shrink-0">
+            <button type="button" onClick={logout} className={LOGOUT_BUTTON}>
+              <LogOut className="w-[17px] h-[17px] shrink-0" strokeWidth={1.75} />
+              <span className="truncate">Log out</span>
+            </button>
+          </div>
         </aside>
 
-        {/* 2. Desktop Sidebar */}
+        {/* 2. Desktop Sidebar — a floating rounded card set off from the page background, filled
+            with the app's primary color per the reference layout's dark rail concept. */}
         <aside
           className={cn(
-            "hidden md:flex flex-col shrink-0 border-r border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md",
+            "hidden md:flex relative flex-col shrink-0 m-3 rounded-2xl bg-gradient-to-b from-slate-950 via-primary-800 to-primary-600 shadow-lg shadow-primary-900/20",
             "transition-all duration-300 ease-in-out overflow-hidden py-6",
             sidebarOpen ? "w-64 px-4" : "w-[84px] px-3"
           )}
         >
-          <OrbitDecoration corner="top-right" tone="primary" className="w-44 h-44 -top-10 -right-14" />
-          <OrbitDecoration corner="bottom-left" tone="coral" className="w-24 h-24 -bottom-8 -left-8" />
+          <AdminChromeAccents scale="tall" />
 
-          {/* User Profile Area */}
+          {/* Brand — the header's own user dropdown already shows who's signed in and offers
+              sign-out, so the sidebar's top slot is the app brand instead of a duplicate profile. */}
           <div className={cn(
-            "flex items-center gap-3 pb-6 mb-4 border-b border-slate-100 dark:border-slate-800/60 transition-all duration-300",
+            "flex items-center gap-3 pb-6 mb-4 border-b border-white/10 transition-all duration-300",
             !sidebarOpen && "justify-center"
           )}>
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary-700 text-white text-sm font-bold shrink-0 shadow-md ring-2 ring-white dark:ring-slate-900 transition-transform hover:scale-105">
-              {initials}
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/15 shrink-0 transition-transform hover:scale-105">
+              <CheckSquare size={18} className="text-white" strokeWidth={2.5} />
             </div>
             <div className={cn("flex flex-col min-w-0 transition-opacity duration-300", !sidebarOpen && "hidden opacity-0")}>
-              <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                {user?.name || "Administrator"}
+              <span className="text-sm font-bold text-white truncate">
+                TaskMatrix
               </span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-                Workspace Admin
+              <span className="text-xs font-medium text-white/60 truncate">
+                Admin
               </span>
             </div>
           </div>
 
           <p className={cn(
-            "text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 px-2 transition-opacity duration-300",
+            "text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3 px-2 transition-opacity duration-300",
             !sidebarOpen && "hidden opacity-0"
           )}>
             Navigation
           </p>
 
           {/* Navigation Links */}
-          <nav className="flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-1">
-            {NAV.map(({ to, icon: Icon, label, end, children }) => {
-              const hasChildren = !!children?.length;
-              const hasActiveChild = children?.some((c) => location.pathname.startsWith(c.to)) ?? false;
-              const isExpanded = expandedKeys.has(to);
+          <nav className="flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-1 flex-1">
+            {NAV.map(({ to, icon: Icon, label, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={handleNavClick}
+                className={({ isActive }) => cn(
+                  NAV_LINK_BASE,
+                  "focus-visible:ring-offset-1 focus-visible:ring-offset-primary-700",
+                  !sidebarOpen && "justify-center px-0",
+                  isActive ? NAV_LINK_ACTIVE : NAV_LINK_INACTIVE
+                )}
+                title={!sidebarOpen ? label : undefined}
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon
+                      className={cn("w-[17px] h-[17px] shrink-0 transition-all duration-300 group-hover:scale-110", isActive ? NAV_ICON_ACTIVE : NAV_ICON_INACTIVE)}
+                      strokeWidth={isActive ? 2 : 1.75}
+                    />
+                    <span className={cn(
+                      "truncate transition-opacity duration-300",
+                      !sidebarOpen && "hidden opacity-0"
+                    )}>
+                      {label}
+                    </span>
 
-              return (
-                <div key={to}>
-                  <div className="flex items-center gap-1">
-                    <NavLink
-                      to={to}
-                      end={end}
-                      onClick={handleNavClick}
-                      className={({ isActive }) => cn(
-                        "group relative flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-300 ease-in-out",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-950",
-                        "active:scale-[0.98]",
-                        !sidebarOpen && "justify-center px-0",
-                        (isActive || hasActiveChild)
-                          ? "bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-400"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
-                      )}
-                      title={!sidebarOpen ? label : undefined}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <Icon
-                            className={cn(
-                              "w-[17px] h-[17px] shrink-0 transition-all duration-300 group-hover:scale-110",
-                              (isActive || hasActiveChild)
-                                ? "text-primary-700 dark:text-primary-400"
-                                : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
-                            )}
-                            strokeWidth={(isActive || hasActiveChild) ? 2 : 1.75}
-                          />
-                          <span className={cn(
-                            "truncate transition-opacity duration-300",
-                            !sidebarOpen && "hidden opacity-0"
-                          )}>
-                            {label}
-                          </span>
-
-                          {/* Active Indicator Pip (Visible only when sidebar is collapsed) */}
-                          {!sidebarOpen && (isActive || hasActiveChild) && (
-                            <span className="hidden md:block absolute left-1 w-1 h-1/2 bg-primary-700 dark:bg-primary-400 rounded-full" />
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-
-                    {hasChildren && sidebarOpen && (
-                      <button
-                        type="button"
-                        onClick={() => toggleExpanded(to)}
-                        aria-label={isExpanded ? `Collapse ${label}` : `Expand ${label}`}
-                        aria-expanded={isExpanded}
-                        className="shrink-0 p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/50 dark:hover:text-slate-300 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                      >
-                        <ChevronDown
-                          className={cn("w-3.5 h-3.5 transition-transform duration-200", isExpanded ? "rotate-180" : "rotate-0")}
-                          strokeWidth={2.5}
-                        />
-                      </button>
+                    {/* Active Indicator Pip (Visible only when sidebar is collapsed) */}
+                    {!sidebarOpen && isActive && (
+                      <span className="hidden md:block absolute left-1 w-1 h-1/2 bg-white rounded-full" />
                     )}
-                  </div>
-
-                  {hasChildren && sidebarOpen && isExpanded && (
-                    <div className="flex flex-col gap-0.5 mt-0.5 mb-1 ml-[1.65rem] pl-3 border-l border-slate-200 dark:border-slate-800">
-                      {children!.map((child) => (
-                        <NavLink
-                          key={child.to}
-                          to={child.to}
-                          onClick={handleNavClick}
-                          className={({ isActive }) => cn(
-                            "rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium transition-colors duration-200",
-                            isActive
-                              ? "bg-primary-50 text-primary-700 font-semibold dark:bg-primary-500/15 dark:text-primary-400"
-                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
-                          )}
-                        >
-                          {child.label}
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                  </>
+                )}
+              </NavLink>
+            ))}
           </nav>
+
+          {/* Log Out — pinned below the (scrollable) nav list, separated by its own divider */}
+          <div className="pt-4 mt-2 border-t border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={logout}
+              title={!sidebarOpen ? "Log out" : undefined}
+              className={cn(LOGOUT_BUTTON, !sidebarOpen && "justify-center px-0")}
+            >
+              <LogOut className="w-[17px] h-[17px] shrink-0" strokeWidth={1.75} />
+              <span className={cn("truncate", !sidebarOpen && "hidden opacity-0")}>Log out</span>
+            </button>
+          </div>
         </aside>
 
         {/* Main Content Area */}
@@ -371,15 +265,7 @@ export const AdminLayout = () => {
           {/* pb-44 clears BottomNav plus any page's floating Fab (e.g. Tickets' Create FAB),
               which floats ~56px above the nav — see Dashboard.tsx's identical comment. */}
           <div className="max-w-7xl mx-auto w-full p-3 sm:p-5 lg:p-8 pb-44 md:pb-8">
-            
-            <Breadcrumbs
-              items={[
-                { label: 'Admin', to: '/admin' }, 
-                { label: currentNav?.label ?? 'Overview' }
-              ]}
-              className="mb-4 sm:mb-6"
-            />
-            
+
             {/* Route Transitions */}
             <AnimatePresence mode="wait">
               <motion.div
@@ -395,10 +281,10 @@ export const AdminLayout = () => {
                 </Suspense>
               </motion.div>
             </AnimatePresence>
-            
+
           </div>
         </main>
-        
+
       </div>
 
       {/* Mobile Bottom Navigation */}

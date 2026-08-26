@@ -4,7 +4,7 @@ import { QuickActionButton } from './QuickActionButton';
 const ACTIONS = [
   { to: '/admin/directory', icon: Contact, label: 'Directory', description: 'Users, departments & stores' },
   { to: '/admin/org-structure', icon: Network, label: 'Org Structure', description: 'See the reporting ladder' },
-  { to: '/admin/scheduled-checklists/builder', icon: ListChecks, label: 'Checklist Builder', description: 'Create a template' },
+  { to: '/admin/checklist-templates', icon: ListChecks, label: 'Checklist Builder', description: 'Create a template' },
   { to: '/admin/tickets', icon: TicketCheck, label: 'Tickets', description: 'View open issues' },
   { to: '/admin/reports', icon: FileDown, label: 'Reports', description: 'Export data' },
 ] as const;

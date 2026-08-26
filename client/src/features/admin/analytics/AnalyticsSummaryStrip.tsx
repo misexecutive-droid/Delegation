@@ -1,21 +1,14 @@
 import { ClipboardCheck, ShieldCheck, AlertTriangle, Camera } from 'lucide-react';
 import { StatCard, pointDelta } from '../../dashboard';
 import { useTaskComplianceReportQuery, useTicketTatReportQuery, useChecklistInstanceComplianceReportQuery } from './useAnalyticsQueries';
-import { latestWithTrend } from './analyticsDisplay';
+import { latestWithTrend, slaMetRate } from './analyticsDisplay';
 import type { GroupBy } from './GroupByControl';
-import type { TatReportRow } from '../../../api/ticket';
 
 interface AnalyticsSummaryStripProps {
   groupBy: GroupBy;
   from?: string;
   to?: string;
 }
-
-// SLA-met % isn't a field the API returns directly — derive it from a TAT bucket's
-// overdueCount/createdCount so "on-time completion" reads as a real on-time rate, not
-// the close-rate throughput ratio TicketKpiSection uses for a different purpose.
-const slaMetRate = (row?: TatReportRow) =>
-  row && row.createdCount > 0 ? Math.round((1 - row.overdueCount / row.createdCount) * 100) : null;
 
 export const AnalyticsSummaryStrip = ({ groupBy, from, to }: AnalyticsSummaryStripProps) => {
   const { data: taskRows } = useTaskComplianceReportQuery(groupBy, from, to);
@@ -42,19 +35,22 @@ export const AnalyticsSummaryStrip = ({ groupBy, from, to }: AnalyticsSummaryStr
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Leads the row as the highlighted "hero" tile — the single most central org-wide metric —
+          same convention as the dashboard's own KpiStrip.tsx. */}
+      <StatCard
+        icon={ShieldCheck}
+        label="On-time completion"
+        value={slaMetValue != null ? `${slaMetValue}%` : '—'}
+        trend={slaMetTrend}
+        highlight
+        decorative
+      />
       <StatCard
         icon={ClipboardCheck}
         iconTint="text-primary-600 dark:text-primary-400"
         label="Checklist completion"
         value={checklistCompletion.value != null ? `${checklistCompletion.value}%` : '—'}
         trend={checklistCompletion.trend}
-      />
-      <StatCard
-        icon={ShieldCheck}
-        iconTint="text-indigo-600 dark:text-indigo-400"
-        label="On-time completion"
-        value={slaMetValue != null ? `${slaMetValue}%` : '—'}
-        trend={slaMetTrend}
       />
       <StatCard
         icon={AlertTriangle}

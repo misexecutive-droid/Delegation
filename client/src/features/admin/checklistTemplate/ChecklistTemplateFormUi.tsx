@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import {
   Plus,
   ListChecks,
@@ -7,20 +7,20 @@ import {
   Layers,
   AlertCircle,
   Info,
-  X,
+  User,
+  Image as ImageIcon,
+  Camera,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Input, ChecklistItemDraftRow, emptyChecklistItemDraft, type ChecklistItemDraft } from '../../../components';
+import { Input, Modal, ChecklistItemDraftRow, emptyChecklistItemDraft, moveDraftItem, type ChecklistItemDraft } from '../../../components';
 import { useAssignableUsersQuery } from '../../tickets/hook';
 import type { ChecklistTemplateTarget, CreateChecklistTemplateItemPayload } from '../../../api/checklistTemplates';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { Stepper } from './Stepper';
 
 const NO_DEPARTMENT = '__none__';
+const STEP_LABELS = ['Basics', 'Procedure', 'Review'];
 
 export interface ChecklistTemplateFormPayload {
   name: string;
@@ -38,6 +38,7 @@ interface FormUIProps {
 }
 
 export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSubmit, onClose }: FormUIProps) => {
+  const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [appliesTo, setAppliesTo] = useState<ChecklistTemplateTarget>('TASK');
   const [departmentId, setDepartmentId] = useState('');
@@ -45,6 +46,8 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const { data: assignableUsers } = useAssignableUsersQuery(departmentId || undefined);
+  const departmentName = departments.find(d => d.id === departmentId)?.name ?? 'Global (no department)';
+  const definedSteps = itemDrafts.filter(d => d.label.trim());
 
   const updateDraft = useCallback((i: number, patch: Partial<ChecklistItemDraft>) => {
     setItemDrafts(drafts => drafts.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
@@ -55,197 +58,256 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
     setItemDrafts(drafts => drafts.map(d => ({ ...d, assigneeId: '' })));
   };
 
+  const goNext = () => {
+    if (step === 0) {
+      if (!name.trim()) {
+        setValidationError('Please provide a name for this template.');
+        return;
+      }
+      setValidationError(null);
+    }
+    setStep(s => Math.min(s + 1, STEP_LABELS.length - 1));
+  };
+
+  const goBack = () => setStep(s => Math.max(s - 1, 0));
+
   const handleSave = () => {
     if (!name.trim()) {
       setValidationError('Please provide a name for this template.');
+      setStep(0);
       return;
     }
-    setValidationError(null);
 
-    const cleanedItems = itemDrafts
-      .filter(d => d.label.trim())
-      .map((d, index) => ({
-        label: d.label.trim(),
-        order: index,
-        requiredImageCount: Number(d.requiredImageCount) || 0,
-        maxImageCount: d.maxImageCount ? Number(d.maxImageCount) : undefined,
-        requiresLivePhoto: d.requiresLivePhoto,
-        defaultAssigneeId: d.assigneeId || undefined,
-      }));
+    const cleanedItems = definedSteps.map((d, index) => ({
+      label: d.label.trim(),
+      order: index,
+      requiredImageCount: Number(d.requiredImageCount) || 0,
+      maxImageCount: d.maxImageCount ? Number(d.maxImageCount) : undefined,
+      requiresLivePhoto: d.requiresLivePhoto,
+      defaultAssigneeId: d.assigneeId || undefined,
+    }));
 
     onSubmit({ name, appliesTo, departmentId, items: cleanedItems });
   };
 
+  const footer = (
+    <>
+      {step === 0 ? (
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSaving}
+          className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-display font-semibold text-text-secondary bg-surface border border-border rounded-xl hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          Cancel
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={goBack}
+          disabled={isSaving}
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-display font-semibold text-text-secondary bg-surface border border-border rounded-xl hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back
+        </button>
+      )}
+
+      {step < STEP_LABELS.length - 1 ? (
+        <button
+          type="button"
+          onClick={goNext}
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-display font-semibold text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+        >
+          Next
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={handleSave}
+          className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 text-sm font-display font-semibold text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none disabled:transform-none"
+        >
+          {isSaving ? 'Creating...' : 'Create Template'}
+        </button>
+      )}
+    </>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
-      <div 
-        role="dialog" 
-        aria-modal="true"
-        className="w-full max-w-2xl bg-white dark:bg-slate-950 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200/60 dark:border-slate-800/60 font-sans animate-in fade-in zoom-in-95 duration-200"
-      >
-        {/* Header */}
-        <header className="relative p-6 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-b from-slate-50/80 to-white dark:from-slate-900 dark:to-slate-950">
-          <button 
-            onClick={onClose}
-            className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          
-          <div className="flex items-start gap-4">
-            <div className="flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-              <ListChecks className="w-6 h-6" />
+    <Modal
+      open
+      onClose={() => !isSaving && onClose()}
+      icon={<ListChecks className="w-5 h-5" />}
+      title="Create Standard Procedure"
+      description="A reusable set of steps you attach to one task or ticket at a time. For automated scheduling, use Recurring Checklists instead."
+      footer={footer}
+      size="2xl"
+    >
+      <Stepper steps={STEP_LABELS} current={step} onStepClick={setStep} />
+
+      {step === 0 && (
+        <>
+          <Input
+            id="name"
+            label="Template Name"
+            value={name}
+            onChange={e => { setName(e.target.value); setValidationError(null); }}
+            placeholder="e.g., Daily Store Opening, Restroom Cleaning..."
+            error={validationError ?? undefined}
+            autoFocus
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+                <Layers className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
+                Applies To
+              </label>
+              <Select value={appliesTo} onValueChange={v => setAppliesTo(v as ChecklistTemplateTarget)}>
+                <SelectTrigger className="w-full h-11 px-3 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TASK">Delegations</SelectItem>
+                  <SelectItem value="TICKET">Tickets</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="space-y-1.5 pr-8">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Create Standard Procedure
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                A reusable set of steps you attach to one task or ticket at a time. For automated scheduling, use Recurring Checklists instead.
-              </p>
+
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+                <Building2 className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
+                Owning Department
+              </label>
+              <Select value={departmentId || NO_DEPARTMENT} onValueChange={handleDepartmentChange}>
+                <SelectTrigger className="w-full h-11 px-3 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all">
+                  <SelectValue placeholder="Global (No Department)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_DEPARTMENT}>Global (No Department)</SelectItem>
+                  {departments.map(d => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </header>
+        </>
+      )}
 
-        {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-          
-          {/* Basic Info */}
-          <section className="p-5 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800/60 space-y-5">
-            <Input
-              id="name"
-              label="Template Name"
-              value={name}
-              onChange={e => { setName(e.target.value); setValidationError(null); }}
-              placeholder="e.g., Daily Store Opening, Restroom Cleaning..."
-              error={validationError ?? undefined}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-slate-400" />
-                  Applies To
-                </label>
-                <Select value={appliesTo} onValueChange={v => setAppliesTo(v as ChecklistTemplateTarget)}>
-                  <SelectTrigger className="w-full h-11 px-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="TASK">Delegations</SelectItem>
-                    <SelectItem value="TICKET">Tickets</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-slate-400" />
-                  Owning Department
-                </label>
-                <Select value={departmentId || NO_DEPARTMENT} onValueChange={handleDepartmentChange}>
-                  <SelectTrigger className="w-full h-11 px-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
-                    <SelectValue placeholder="Global (No Department)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_DEPARTMENT}>Global (No Department)</SelectItem>
-                    {departments.map(d => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      {step === 1 && (
+        <div className="space-y-3">
+          <div className="flex items-end justify-between">
+            <div>
+              <h3 className="text-sm font-display font-bold text-text">Procedure Steps</h3>
+              <p className="text-xs font-display text-text-muted mt-1">Define the individual steps required to complete this procedure.</p>
             </div>
-          </section>
+            <span className="text-xs font-display font-medium text-text-secondary bg-surface-hover px-2.5 py-1 rounded-md border border-border">
+              {itemDrafts.length} {itemDrafts.length === 1 ? 'Step' : 'Steps'}
+            </span>
+          </div>
 
-          {/* Procedure Steps */}
-          <section className="space-y-4">
-            <div className="flex items-end justify-between px-1">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Procedure Steps</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Define the individual steps required to complete this procedure.</p>
-              </div>
-              <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700">
-                {itemDrafts.length} {itemDrafts.length === 1 ? 'Step' : 'Steps'}
-              </span>
-            </div>
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {itemDrafts.map((draft, i) => (
+                <ChecklistItemDraftRow
+                  key={draft.id}
+                  draft={draft}
+                  index={i}
+                  showDueDate={false}
+                  assigneeDisabledReason={!departmentId ? 'Select department first' : undefined}
+                  assignableUsers={assignableUsers}
+                  canRemove={itemDrafts.length > 1}
+                  onChange={patch => updateDraft(i, patch)}
+                  onRemove={() => setItemDrafts(d => d.filter((_, idx) => idx !== i))}
+                  onMoveUp={() => setItemDrafts(d => moveDraftItem(d, i, 'up'))}
+                  onMoveDown={() => setItemDrafts(d => moveDraftItem(d, i, 'down'))}
+                  canMoveUp={i > 0}
+                  canMoveDown={i < itemDrafts.length - 1}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
 
-            <div className="space-y-3">
-              <AnimatePresence mode="popLayout">
-                {itemDrafts.map((draft, i) => (
-                  <ChecklistItemDraftRow
-                    key={draft.id}
-                    draft={draft}
-                    index={i}
-                    showDueDate={false}
-                    assigneeDisabledReason={!departmentId ? 'Select department first' : undefined}
-                    assignableUsers={assignableUsers}
-                    canRemove={itemDrafts.length > 1}
-                    onChange={patch => updateDraft(i, patch)}
-                    onRemove={() => setItemDrafts(d => d.filter((_, idx) => idx !== i))}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
+          <button
+            type="button"
+            onClick={() => setItemDrafts(d => [...d, emptyChecklistItemDraft()])}
+            className="w-full py-4 mt-2 border-2 border-dashed border-border rounded-xl text-text-muted font-display font-medium text-sm transition-all duration-300 ease-in-out hover:border-primary-500/40 hover:bg-primary-500/5 hover:text-primary-600 dark:hover:text-primary-400 flex items-center justify-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+          >
+            <Plus className="w-4 h-4 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110" />
+            Add another step
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setItemDrafts(d => [...d, emptyChecklistItemDraft()])}
-              className={cn(
-                "w-full py-4 mt-2 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl",
-                "text-slate-500 dark:text-slate-400 font-medium text-sm transition-all duration-300 ease-in-out",
-                "hover:border-indigo-500/40 hover:bg-indigo-50/50 hover:text-indigo-600 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400",
-                "flex items-center justify-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
-              )}
-            >
-              <Plus className="w-4 h-4 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110" />
-              Add another step
-            </button>
-          </section>
-
-          {saveError && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/50 rounded-xl text-rose-600 dark:text-rose-400 text-sm font-medium"
-            >
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <span>{saveError}</span>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Footer Actions */}
-        <footer className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center justify-center sm:justify-start gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium w-full sm:w-auto">
-            <Info className="w-4 h-4 text-indigo-500/70" />
+          <div className="flex items-center gap-2 text-xs text-text-muted font-display">
+            <Info className="w-4 h-4 text-primary-500/70" />
             <span>Empty steps are automatically skipped.</span>
           </div>
-          
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
-            >
-              Cancel
-            </button>
-            <button 
-              type="button" 
-              disabled={isSaving}
-              onClick={handleSave} 
-              className={cn(
-                "flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm",
-                "bg-gradient-to-b from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500",
-                "transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950",
-                "disabled:opacity-70 disabled:pointer-events-none disabled:transform-none"
-              )}
-            >
-              {isSaving ? 'Creating...' : 'Create Template'}
-            </button>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-border bg-surface-hover/40 divide-y divide-border/60">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-xs font-display font-semibold text-text-muted uppercase tracking-wider">Name</span>
+              <span className="text-sm font-display font-bold text-text truncate max-w-[60%]">{name || '—'}</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-xs font-display font-semibold text-text-muted uppercase tracking-wider">Applies To</span>
+              <span className="text-sm font-display font-medium text-text">{appliesTo === 'TASK' ? 'Delegations' : 'Tickets'}</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-xs font-display font-semibold text-text-muted uppercase tracking-wider">Department</span>
+              <span className="text-sm font-display font-medium text-text truncate max-w-[60%]">{departmentName}</span>
+            </div>
           </div>
-        </footer>
-      </div>
-    </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-display font-bold text-text">
+              Procedure Steps <span className="text-text-muted font-normal">({definedSteps.length})</span>
+            </h3>
+
+            {definedSteps.length === 0 ? (
+              <p className="text-sm text-text-muted italic px-1">No steps defined — this template will just be a name you can attach later.</p>
+            ) : (
+              <ul className="space-y-2">
+                {definedSteps.map((d, i) => (
+                  <li key={d.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-surface">
+                    <span className="flex shrink-0 items-center justify-center w-6 h-6 mt-0.5 rounded-md bg-primary-50 text-primary-700 text-[11px] font-bold">
+                      {i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text truncate">{d.label}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-hover text-text-secondary text-[11px] font-medium">
+                          <User size={11} /> {assignableUsers?.find(u => u.id === d.assigneeId)?.firstName ?? 'Unassigned'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-hover text-text-secondary text-[11px] font-medium">
+                          <ImageIcon size={11} /> {Number(d.requiredImageCount) || 0}{d.maxImageCount ? `–${d.maxImageCount}` : '+'} photos
+                        </span>
+                        {d.requiresLivePhoto && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-500/10 text-primary-700 dark:text-primary-400 text-[11px] font-medium">
+                            <Camera size={11} /> Live capture
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {saveError && (
+            <div className="flex items-center gap-3 p-4 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm font-display font-medium">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>{saveError}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
   );
 };

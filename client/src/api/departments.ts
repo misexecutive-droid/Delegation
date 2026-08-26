@@ -9,6 +9,11 @@ export type Department = {
 
 export type ApiResponse<T> = { success: boolean; data: T };
 
+export type PaginatedResponse<T> = {
+  success: boolean;
+  data:    T[];
+  meta:    { page: number; limit: number; total: number; totalPages: number; hasNext: boolean };
+};
 
 export type CreateDepartmentPayload = {
   name: string;
@@ -22,7 +27,12 @@ export type UpdateDepartmentPayload = Partial<Omit<CreateDepartmentPayload, "sto
 
 
 export const departmentApi = {
+  // No page/limit -> the full list (used everywhere departments feed a picker or the org tree).
+  // Use getPage for the admin directory's paginated list view.
   getAll: () => apiFetch<ApiResponse<Department[]>>('/departments'),
+
+  getPage: (page = 1, limit = 20) =>
+    apiFetch<PaginatedResponse<Department>>(`/departments?page=${page}&limit=${limit}`),
 
   // POST /departments -- server rejects this with 403 unless you're ADMIN (see lookModule.ts's)
   //  `router.use(authenticate , requireRole("ADMIN"))` line, which run before the POST/PATCH/DELETE routes).

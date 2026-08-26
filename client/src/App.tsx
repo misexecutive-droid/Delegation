@@ -36,15 +36,11 @@ const AdminTaskList = lazy(() => import('./features/admin/AdminTaskList').then(m
 const TeamOverviewPage = lazy(() => import('./features/team/TeamOverviewPage').then(m => ({ default: m.TeamOverviewPage })));
 const SettingsLayout = lazy(() => import('./features/settings/SettingsLayout').then(m => ({ default: m.SettingsLayout })));
 const CategoryList = lazy(() => import('./features/settings/CategoryList').then(m => ({ default: m.CategoryList })));
-const TatReport = lazy(() => import('./features/admin/report').then(m => ({ default: m.TatReport })));
 const DirectoryPage = lazy(() => import('./features/admin/directory').then(m => ({ default: m.DirectoryPage })));
 const OrgStructurePage = lazy(() => import('./features/admin/orgStructure').then(m => ({ default: m.OrgStructurePage })));
-const ChecklistTemplateList = lazy(() => import('./features/admin/checklistTemplate').then(m => ({ default: m.ChecklistTemplateList })));
-const ChecklistTemplatesGrid = lazy(() => import('./features/checklist/definition/ChecklistTemplatesGrid').then(m => ({ default: m.ChecklistTemplatesGrid })));
-const ChecklistBuilder = lazy(() => import('./features/checklist/definition/builder/ChecklistBuilder').then(m => ({ default: m.ChecklistBuilder })));
-const ChecklistDefinitionDetail = lazy(() => import('./features/checklist/definition/ChecklistDefinitionDetail').then(m => ({ default: m.ChecklistDefinitionDetail })));
 const ReportsPage = lazy(() => import('./features/reports').then(m => ({ default: m.ReportsPage })));
 const SettingsPage = lazy(() => import('./features/admin/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const ChecklistTemplateList = lazy(() => import('./features/admin/checklistTemplate').then(m => ({ default: m.ChecklistTemplateList })));
 
 const ProtectedRoute = () => {
   const { token } = useAuth();
@@ -78,6 +74,24 @@ const AnalyticsRoute = () => {
   const { token, user } = useAuth();
   if (!token) return <Navigate to="/login" replace />;
   return user?.role === 'MANAGER' || user?.role === 'SENIOR' ? <Outlet /> : <Navigate to="/" replace />;
+};
+
+// The one deliberate exception to "PC has full parity with ADMIN": Checklist Templates is ADMIN
+// only for now, PC gets the same Coming Soon treatment as every other role sees on the main
+// /checklists page — everyone else is already blocked from /admin/* entirely by AdminRoute above.
+const ChecklistTemplatesRoute = () => {
+  const { user } = useAuth();
+  if (user?.role !== 'ADMIN') {
+    return (
+      <ComingSoon
+        icon={ClipboardCheck}
+        title="Checklist Templates"
+        description="Checklist template management is being rolled out gradually and isn't available for your role yet."
+        features={['Reusable delegation templates', 'Recurring schedule builder', 'Step-by-step template editor']}
+      />
+    );
+  }
+  return <ChecklistTemplateList />;
 };
 
 const router = createBrowserRouter([
@@ -178,17 +192,29 @@ const router = createBrowserRouter([
             children: [
               { path: '/admin', element: <OrgOverview /> },
               { path: '/admin/analytics', element: <Navigate to="/admin" replace /> },
-              { path: '/admin/reports/tasks', element: <TatReport /> },
+              // No page ever linked here — the identical filter/export/task-list experience
+              // already lives at /tasks/team (AdminTaskList), reachable from the sidebar.
+              { path: '/admin/reports/tasks', element: <Navigate to="/tasks/team" replace /> },
               { path: '/admin/directory', element: <DirectoryPage /> },
               { path: '/admin/users', element: <Navigate to="/admin/directory" replace /> },
               { path: '/admin/departments', element: <Navigate to="/admin/directory" replace /> },
               { path: '/admin/stores', element: <Navigate to="/admin/directory" replace /> },
               { path: '/admin/org-structure', element: <OrgStructurePage /> },
-              { path: '/admin/checklist-templates', element: <ChecklistTemplateList /> },
-              { path: '/admin/scheduled-checklists', element: <ChecklistTemplatesGrid /> },
-              { path: '/admin/scheduled-checklists/builder', element: <ChecklistBuilder /> },
-              { path: '/admin/scheduled-checklists/builder/:definitionId', element: <ChecklistBuilder /> },
-              { path: '/admin/scheduled-checklists/:definitionId', element: <ChecklistDefinitionDetail /> },
+              { path: '/admin/checklist-templates', element: <ChecklistTemplatesRoute /> },
+              {
+                path: '/admin/scheduled-checklists',
+                element: (
+                  <ComingSoon
+                    icon={ClipboardCheck}
+                    title="Recurring Checklists"
+                    description="Checklists that repeat automatically on a schedule are still being built — check back once the updated experience is ready. Need a one-off checklist for a single task or ticket? Use Checklist Templates instead."
+                    features={['Recurring schedule builder', 'Automatic checklist generation', 'Schedule calendar view']}
+                  />
+                ),
+              },
+              { path: '/admin/scheduled-checklists/builder', element: <Navigate to="/admin/scheduled-checklists" replace /> },
+              { path: '/admin/scheduled-checklists/builder/:definitionId', element: <Navigate to="/admin/scheduled-checklists" replace /> },
+              { path: '/admin/scheduled-checklists/:definitionId', element: <Navigate to="/admin/scheduled-checklists" replace /> },
               { path: '/admin/tickets', element: <TicketList /> },
               { path: '/admin/reports', element: <ReportsPage /> },
               { path: '/admin/settings', element: <SettingsPage /> },

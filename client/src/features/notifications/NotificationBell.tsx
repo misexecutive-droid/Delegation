@@ -24,7 +24,15 @@ const formatRelativeTime = (dateString: string) => {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-export const NotificationBell = () => {
+interface NotificationBellProps {
+  // 'light' (default) is tuned for the app's own light-surface header. 'dark' swaps the trigger
+  // button to white/opacity variants for use on a fixed-navy chrome (e.g. AdminHeader) — the
+  // popover panel itself is unaffected since it's an absolutely-positioned overlay, not a child
+  // of that chrome's background.
+  tone?: 'light' | 'dark';
+}
+
+export const NotificationBell = ({ tone = 'light' }: NotificationBellProps) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -50,9 +58,13 @@ export const NotificationBell = () => {
         onClick={() => setOpen(v => !v)}
         className={cn(
           "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200",
-          "text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-          open && "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100"
+          tone === 'dark'
+            ? cn("text-white/70 hover:text-white hover:bg-white/10", open && "bg-white/10 text-white")
+            : cn(
+                "text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800",
+                open && "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100"
+              )
         )}
         aria-expanded={open}
         aria-haspopup="true"

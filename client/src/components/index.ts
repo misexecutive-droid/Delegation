@@ -27,7 +27,7 @@ export { ENTITY_CARD_CLASS, EntityIconTile, StatusPill, MetricPill, EntityCardAc
 export { SignalCard } from './signalCard';
 export { ProductCard } from './productCard';
 export { ActiveRangeBadge } from './activeRangeBadge';
-export { ChecklistItemDraftRow, emptyChecklistItemDraft } from './checklistItemDraftRow/ItemDraftRow';
+export { ChecklistItemDraftRow, emptyChecklistItemDraft, moveDraftItem } from './checklistItemDraftRow/ItemDraftRow';
 export type { ChecklistItemDraft } from './checklistItemDraftRow/ItemDraftRow';
 export { OrbitDecoration } from './orbitDecoration';
 export { LightBeams } from './lightBeams';
@@ -40,3 +40,7 @@ export { ViewToggle } from './viewToggle';
 export type { ViewTab } from './viewToggle';
 export { FiltersPopover, PillButton, FilterSection } from './filtersPopover';
 export type { FilterChip } from './filtersPopover';
+export { RadialGauge } from './radialGauge';
+export { PersonRow } from './personRow';
+export { FormLoadError } from './formLoadError';
+export { Avatar, AvatarUpload, AvatarStack } from './avatar';

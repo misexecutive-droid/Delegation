@@ -2,10 +2,18 @@ import { useState, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserPlus, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { Input, Button, Modal, Combobox } from '../../../components';
-import { useCreateUserMutation, useUpdateUserMutation, useDepartmentsQuery } from '../hook';
+import { UserPlus, Eye, EyeOff, AlertCircle, ShieldCheck, Building2, Store, KeyRound } from 'lucide-react';
+import { Input, Button, Modal, Combobox, AvatarUpload } from '../../../components';
+import {
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useDepartmentsQuery,
+  useResetUserPasswordMutation,
+  useUploadUserAvatarMutation,
+  useRemoveUserAvatarMutation,
+} from '../hook';
 import { useStoresQuery } from '../../tickets/hook';
+import { resolveAvatarUrl } from '../../../lib/uploadsBase';
 import type { AdminUser, Role } from '../../../api/admin';
 
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
@@ -59,13 +67,92 @@ interface UserFormProps {
   prefill?: { firstName?: string; lastName?: string; departmentId?: string };
 }
 
+// Deliberately separate from the main react-hook-form flow above — this is its own mutation
+// (POST /users/:id/reset-password), not a field on the profile-update payload, so it shouldn't
+// fire just because the admin clicked "Save changes" on an unrelated edit.
+const ResetPasswordSection = ({ userId }: { userId: string }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const resetMutation = useResetUserPasswordMutation();
+
+  const collapse = () => {
+    setExpanded(false);
+    setPassword('');
+    setError(null);
+  };
+
+  const handleReset = () => {
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    resetMutation.mutate({ id: userId, password }, { onSuccess: collapse });
+  };
+
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="flex items-center gap-1.5 self-start text-xs font-display font-semibold text-text-secondary hover:text-primary-600 dark:hover:text-primary-400 transition-colors pt-3 mt-1 border-t border-border w-full"
+      >
+        <KeyRound className="w-3.5 h-3.5" />
+        Reset password
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2.5 pt-3 mt-1 border-t border-border">
+      <div className="relative">
+        <Input
+          id="reset-password"
+          label="New password"
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Min. 8 characters"
+          icon={KeyRound}
+          value={password}
+          onChange={(e) => { setPassword(e.target.value); setError(null); }}
+          error={error ?? undefined}
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword((v) => !v)}
+          className="absolute right-3 top-[38px] text-text-light hover:text-text-secondary transition-colors cursor-pointer"
+          tabIndex={-1}
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+        >
+          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={collapse} disabled={resetMutation.isPending}>
+          Cancel
+        </Button>
+        <Button type="button" variant="primary" size="sm" onClick={handleReset} isLoading={resetMutation.isPending}>
+          Set new password
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) => {
   const isEditing = Boolean(user);
   const [showPassword, setShowPassword] = useState(false);
+  // Tracked locally (seeded from `user`, then updated straight from each mutation's response)
+  // rather than re-read from `user` on every render — `user` is a snapshot captured when this
+  // modal was opened, so it won't reflect a photo change made a moment ago in this same session.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatarUrl ?? null);
 
   const createMutation = useCreateUserMutation();
   const updateMutation = useUpdateUserMutation();
   const mutation = isEditing ? updateMutation : createMutation;
+  const uploadAvatarMutation = useUploadUserAvatarMutation();
+  const removeAvatarMutation = useRemoveUserAvatarMutation();
 
   const { data: departments, isPending: isDepartmentsLoading } = useDepartmentsQuery();
   const { data: stores, isPending: isStoresLoading } = useStoresQuery();
@@ -116,12 +203,18 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
       return;
     }
 
+    // The zod schema's superRefine (above) already blocks submission without a valid password
+    // when creating — this guard makes that guarantee visible to the type checker too, instead
+    // of asserting past it, so a future edit that loosens the schema fails loudly here rather
+    // than silently sending an undefined password to the API.
+    if (!data.password) return;
+
     createMutation.mutate(
       {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
-        password: data.password!,
+        password: data.password,
         role: data.role,
         departmentId: departmentPayload,
         storeId: storePayload,
@@ -165,6 +258,26 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
     >
       <form id="user-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <fieldset disabled={isPending} className="flex flex-col gap-4 disabled:opacity-60">
+          {isEditing && user && (
+            <AvatarUpload
+              name={`${user.firstName} ${user.lastName ?? ''}`}
+              src={resolveAvatarUrl(avatarUrl)}
+              isUploading={uploadAvatarMutation.isPending}
+              isRemoving={removeAvatarMutation.isPending}
+              onUpload={(file) =>
+                uploadAvatarMutation.mutate(
+                  { id: user.id, file },
+                  { onSuccess: (updated) => setAvatarUrl(updated.avatarUrl) }
+                )
+              }
+              onRemove={() =>
+                removeAvatarMutation.mutate(user.id, {
+                  onSuccess: (updated) => setAvatarUrl(updated.avatarUrl),
+                })
+              }
+            />
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               id="firstName"
@@ -211,7 +324,8 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="role" className="text-sm font-display text-text-secondary">
+            <label htmlFor="role" className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <ShieldCheck className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
               Role
             </label>
             <Controller
@@ -230,7 +344,8 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="departmentId" className="text-sm font-display text-text-secondary">
+            <label htmlFor="departmentId" className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <Building2 className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
               Department
             </label>
             <Controller
@@ -251,7 +366,8 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="storeId" className="text-sm font-display text-text-secondary">
+            <label htmlFor="storeId" className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <Store className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
               Store
             </label>
             <Controller
@@ -277,6 +393,8 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
               </div>
             )}
           </div>
+
+          {isEditing && user && <ResetPasswordSection userId={user.id} />}
         </fieldset>
 
         {mutation.isError && (

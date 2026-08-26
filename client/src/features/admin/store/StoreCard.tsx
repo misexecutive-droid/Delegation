@@ -47,7 +47,7 @@ export const StoreCard = ({ store, memberCount, isUpdating, isDeleting, onToggle
 
     <footer className="flex items-center justify-between pt-2.5 border-t border-border/60 mt-auto">
       <MetricPill icon={Users}>
-        {memberCount} {memberCount === 1 ? 'staff' : 'staff'}
+        {memberCount} {memberCount === 1 ? 'staff member' : 'staff members'}
       </MetricPill>
 
       <EntityCardActions

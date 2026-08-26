@@ -10,6 +10,12 @@ export type Store = {
 
 export type ApiResponse<T> = { success: boolean; data: T };
 
+export type PaginatedResponse<T> = {
+  success: boolean;
+  data:    T[];
+  meta:    { page: number; limit: number; total: number; totalPages: number; hasNext: boolean };
+};
+
 export type CreateStorePayload = {
   name: string;
   code?: string;
@@ -19,7 +25,12 @@ export type CreateStorePayload = {
 export type UpdateStorePayload = Partial<CreateStorePayload> & { isActive?: boolean };
 
 export const storeApi = {
+  // No page/limit -> the full list (used everywhere stores feed a picker or the org tree).
+  // Use getPage for the admin directory's paginated list view.
   getAll: () => apiFetch<ApiResponse<Store[]>>('/stores'),
+
+  getPage: (page = 1, limit = 20) =>
+    apiFetch<PaginatedResponse<Store>>(`/stores?page=${page}&limit=${limit}`),
 
   // POST /stores -- server rejects this with 403 unless you're ADMIN.
   create: (payload: CreateStorePayload) =>

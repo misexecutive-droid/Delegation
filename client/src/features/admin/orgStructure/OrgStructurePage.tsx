@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Network, Search, Maximize2, Minimize2, AlertCircle, Inbox, Store, Layers, Users, TriangleAlert } from 'lucide-react';
 import { Input, OrbitDecoration } from '../../../components';
+import { StatCard } from '../../dashboard';
 import { useDepartmentsQuery, useUsersQuery } from '../hook';
 import { useStoresQuery } from '../../tickets/hook';
 import { StoreSection } from './StoreSection';
@@ -41,8 +42,12 @@ export const OrgStructurePage = () => {
     else next.add(id);
     return next;
   };
-  const toggleStore = (id: string) => setExpandedStores((prev) => toggleInSet(prev, id));
-  const toggleDept = (id: string) => setExpandedDepts((prev) => toggleInSet(prev, id));
+  // Stable references (empty deps — both only use the functional setState form) so StoreSection/
+  // DepartmentSection can be memoized: toggling one store or department no longer hands every
+  // sibling a freshly-created callback prop, which would defeat the memo on every render.
+  const toggleStore = useCallback((id: string) => setExpandedStores((prev) => toggleInSet(prev, id)), []);
+  const toggleDept = useCallback((id: string) => setExpandedDepts((prev) => toggleInSet(prev, id)), []);
+  const isDeptOpen = useCallback((id: string) => expandedDepts.has(id), [expandedDepts]);
 
   const expandAll = () => {
     setExpandedStores(new Set(tree.stores.map((s) => s.store.id)));
@@ -62,13 +67,6 @@ export const OrgStructurePage = () => {
   const unassignedCount = tree.unassignedDepartments.length + tree.unassignedUsers.length;
   const hasAnyResults =
     visibleTree.stores.length > 0 || visibleTree.unassignedDepartments.length > 0 || visibleTree.unassignedUsers.length > 0;
-
-  const stats = [
-    { label: 'Stores', value: stores?.length ?? 0, icon: Store, tone: 'coral' as const },
-    { label: 'Departments', value: departments?.length ?? 0, icon: Layers, tone: 'primary' as const },
-    { label: 'People', value: totalMembers, icon: Users, tone: 'primary' as const },
-    { label: 'Unassigned', value: unassignedCount, icon: TriangleAlert, tone: 'warn' as const },
-  ];
 
   return (
     <div className="relative isolate overflow-hidden flex flex-col gap-5 w-full">
@@ -107,42 +105,31 @@ export const OrgStructurePage = () => {
         </div>
       </header>
 
-      {/* Stat strip */}
-      <div className="flex flex-wrap gap-2.5">
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          const isWarn = stat.tone === 'warn' && stat.value > 0;
-          return (
-            <div
-              key={stat.label}
-              className="group relative overflow-hidden flex items-center gap-2.5 rounded-xl border border-border bg-surface pl-3 pr-4 py-2 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary-200"
-            >
-              <div
-                style={{ animationDelay: `${i * 0.6}s` }}
-                className={`animate-float-blob absolute -right-4 -top-4 w-16 h-16 rounded-full blur-md opacity-[0.14] group-hover:opacity-[0.22] transition-opacity duration-300 ${
-                  isWarn ? 'bg-warning' : stat.tone === 'coral' ? 'bg-coral-500' : 'bg-primary-500'
-                }`}
-              />
-              <div
-                className={`relative flex items-center justify-center w-7 h-7 rounded-lg shrink-0 ${
-                  isWarn
-                    ? 'bg-warning/10 text-warning'
-                    : stat.tone === 'coral'
-                    ? 'bg-coral-500/10 text-coral-600 dark:text-coral-400'
-                    : 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-              </div>
-              <div className="relative">
-                <p className="text-[10px] font-display font-bold text-text-muted leading-tight">{stat.label}</p>
-                <p className={`text-base font-display font-bold leading-tight ${isWarn ? 'text-warning' : 'text-text'}`}>
-                  {stat.value}
-                </p>
-              </div>
-            </div>
-          );
-        })}
+      {/* Stat strip — People leads as the highlighted hero tile, same convention as the
+          Analytics summary strip's on-time-completion tile. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <StatCard icon={Users} label="People" value={totalMembers} caption="Across your org" highlight decorative />
+        <StatCard
+          icon={Store}
+          iconTint="text-coral-600 dark:text-coral-400"
+          label="Stores"
+          value={stores?.length ?? 0}
+          caption={(stores?.length ?? 0) === 1 ? '1 location' : `${stores?.length ?? 0} locations`}
+        />
+        <StatCard
+          icon={Layers}
+          iconTint="text-primary-600 dark:text-primary-400"
+          label="Departments"
+          value={departments?.length ?? 0}
+          caption="Org-wide"
+        />
+        <StatCard
+          icon={TriangleAlert}
+          iconTint={unassignedCount > 0 ? 'text-warning' : 'text-text-muted'}
+          label="Unassigned"
+          value={unassignedCount}
+          caption={unassignedCount > 0 ? 'Needs attention' : 'All set'}
+        />
       </div>
 
       {/* Search */}
@@ -184,8 +171,8 @@ export const OrgStructurePage = () => {
               node={node}
               isOpen={expandedStores.has(node.store.id)}
               forceOpen={forceOpen}
-              onToggle={() => toggleStore(node.store.id)}
-              isDeptOpen={(id) => expandedDepts.has(id)}
+              onToggle={toggleStore}
+              isDeptOpen={isDeptOpen}
               onToggleDept={toggleDept}
             />
           ))}
@@ -201,7 +188,7 @@ export const OrgStructurePage = () => {
                   node={d}
                   isOpen={expandedDepts.has(d.department.id)}
                   forceOpen={forceOpen}
-                  onToggle={() => toggleDept(d.department.id)}
+                  onToggle={toggleDept}
                   showUnassignedStoreHint
                 />
               ))}

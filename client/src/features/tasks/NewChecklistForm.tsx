@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, CheckSquare, Library, AlertCircle } from 'lucide-react';
-import { Button, Input, ChecklistItemDraftRow, emptyChecklistItemDraft, type ChecklistItemDraft } from '../../components';
+import { Button, Input, ChecklistItemDraftRow, emptyChecklistItemDraft, moveDraftItem, type ChecklistItemDraft } from '../../components';
 import {
   useAddTaskChecklistMutation,
   useAssignableUsersQuery,
@@ -152,6 +152,10 @@ export const NewChecklistForm = ({ taskId, onDone }: NewChecklistFormProps) => {
                 canRemove={itemDrafts.length > 1}
                 onChange={patch => updateDraft(i, patch)}
                 onRemove={() => handleRemoveDraft(i)}
+                onMoveUp={() => setItemDrafts(d => moveDraftItem(d, i, 'up'))}
+                onMoveDown={() => setItemDrafts(d => moveDraftItem(d, i, 'down'))}
+                canMoveUp={i > 0}
+                canMoveDown={i < itemDrafts.length - 1}
               />
             ))}
           </div>

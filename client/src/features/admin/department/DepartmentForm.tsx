@@ -1,7 +1,7 @@
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Building2, AlertCircle } from 'lucide-react';
+import { Building2, AlertCircle, Store } from 'lucide-react';
 import { Input, Button, Modal, Combobox } from '../../../components';
 import { useCreateDepartmentMutation, useUpdateDepartmentMutation } from '../hook';
 import { useStoresQuery } from '../../tickets/hook';
@@ -92,7 +92,8 @@ export const DepartmentForm = ({ onClose, department }: DepartmentFormProps) => 
           {/* Home Store — optional. Lets a department head (MANAGER) and a store's Senior
               resolve into each other's scoped reports instead of falling back to org-wide. */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="storeId" className="text-sm font-display text-text-secondary">
+            <label htmlFor="storeId" className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <Store className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
               Store (optional)
             </label>
             <Controller

@@ -104,15 +104,18 @@
 }
 
 /* Chromium forces its own light autofill background (yellow/blue) on remembered email & password
-   fields, ignoring the page's own dark theme entirely — this is the standard workaround: an
-   absurdly long background-color transition means that forced color never actually has time to
-   paint before the real background takes over. */
+   fields, ignoring the page's own dark theme entirely. The actual paint mechanism Chrome uses is
+   a UA-stylesheet inset box-shadow (not background-color) — the background-color transition trick
+   alone doesn't touch it, which is why an autofilled field still shows a pale box while every
+   other input on the same dark-themed form looks correct. Painting our own opaque inset shadow in
+   the surface color covers Chrome's, and needs !important to beat the UA stylesheet's specificity. */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   transition: background-color 9999s ease-in-out 0s, color 9999s ease-in-out 0s;
-  -webkit-text-fill-color: var(--color-text);
+  box-shadow: 0 0 0px 1000px var(--color-surface) inset !important;
+  -webkit-text-fill-color: var(--color-text) !important;
   caret-color: var(--color-text);
 }
 
@@ -143,6 +146,7 @@ input:-webkit-autofill:active {
 :root {
   --bg-body: var(--color-background);
   --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(226, 229, 234, 0.7);
   --glass-blur: blur(12px);
   color-scheme: light;
 }
@@ -176,6 +180,7 @@ body {
   --color-text-muted: #8791a6;
   --color-text-light: #5f6a80;
   --glass-bg: rgba(11, 18, 32, 0.72);
+  --glass-border: rgba(35, 47, 73, 0.7);
   color-scheme: dark;
 }
 

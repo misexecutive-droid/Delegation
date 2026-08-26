@@ -2,18 +2,20 @@ import { useState, useMemo, lazy, Suspense } from 'react';
 import { Plus, AlertCircle, Inbox } from 'lucide-react';
 import type { AdminUser } from '../../../api/admin';
 import {
-  useUsersQuery,
+  useUsersPageQuery,
   useDepartmentsQuery,
   useUpdateUserMutation,
   useDeleteUserMutation,
 } from '../hook';
 import { UserCard } from './UserCard';
-import { Loader } from '../../../components';
+import { Loader, FormLoadError, PageNav } from '../../../components';
+
+const PAGE_SIZE = 24;
 
 // Lazy-loaded modal chunk
 const UserForm = lazy(() =>
   import('./UserForm').then(module => ({ default: module.UserForm })).catch(() => ({
-    default: () => <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 text-white p-6">Mock Form Module Loaded</div>
+    default: FormLoadError,
   }))
 );
 
@@ -49,8 +51,11 @@ const UserGridSkeleton = () => (
 export const UserList = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { data: users = [], isPending, isError } = useUsersQuery();
+  const { data: usersPage, isPending, isError } = useUsersPageQuery(page, PAGE_SIZE);
+  const users = usersPage?.data ?? [];
+  const meta = usersPage?.meta;
   const { data: departments } = useDepartmentsQuery();
   const updateMut = useUpdateUserMutation();
   const deleteMut = useDeleteUserMutation();
@@ -90,7 +95,7 @@ export const UserList = () => {
         </p>
         <button
           onClick={() => setShowForm(true)}
-          className="press-feedback inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold uppercase tracking-wide rounded-xl shadow-sm bg-surface text-text-secondary border border-border transition-all duration-300 hover:bg-surface-hover hover:text-primary-600 hover:border-primary-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          className="press-feedback inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold rounded-xl shadow-sm bg-surface text-text-secondary border border-border transition-all duration-300 hover:bg-surface-hover hover:text-primary-600 hover:border-primary-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         >
           <Plus className="w-3.5 h-3.5" />
           Create user
@@ -122,12 +127,12 @@ export const UserList = () => {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-text-muted">
-          {users.length} {users.length === 1 ? 'user' : 'users'} in organization
+          {meta?.total ?? users.length} {(meta?.total ?? users.length) === 1 ? 'user' : 'users'} in organization
         </p>
 
         <button
           onClick={() => setShowForm(true)}
-          className="press-feedback group inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold uppercase tracking-wide text-white rounded-xl shadow-sm bg-gradient-to-b from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 active:scale-[0.98]"
+          className="press-feedback group inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 active:scale-[0.98]"
         >
           <Plus className="w-3.5 h-3.5 transition-transform duration-300 group-hover:rotate-90" />
           New user
@@ -135,6 +140,10 @@ export const UserList = () => {
       </div>
 
       {renderContent()}
+
+      {meta && meta.totalPages > 1 && (
+        <PageNav page={page} totalPages={meta.totalPages} onPageChange={setPage} className="pt-1" />
+      )}
 
       {activeModal && (
         <Suspense fallback={

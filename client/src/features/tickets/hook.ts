@@ -274,3 +274,15 @@ export const useStoresQuery = () => {
     retry: handleQueryRetry,
   });
 };
+
+// Paginated variant for the admin directory's Stores list — useStoresQuery above (the full list)
+// stays untouched for every other caller (dropdowns, org structure, StoresPerformanceSection, etc.).
+export const useStoresPageQuery = (page = 1, limit = 20) => {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: ['stores', 'page', page, limit] as const,
+    queryFn: () => storeApi.getPage(page, limit),
+    enabled: !!token,
+    retry: handleQueryRetry,
+  });
+};

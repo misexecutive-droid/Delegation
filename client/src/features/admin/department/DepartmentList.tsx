@@ -4,17 +4,19 @@ import { Plus, AlertCircle, Inbox } from "lucide-react";
 import type { Department } from "../../../api/departments";
 import { DepartmentCard } from "./DepartmentCard";
 import {
-  useDepartmentsQuery,
+  useDepartmentsPageQuery,
   useUsersQuery,
   useUpdateDepartmentMutation,
   useDeleteDepartmentMutation,
 } from "../hook";
 import { useStoresQuery } from "../../tickets/hook";
-import { Loader } from "../../../components";
+import { Loader, FormLoadError, PageNav } from "../../../components";
+
+const PAGE_SIZE = 24;
 
 const DepartmentForm = lazy(() =>
   import("./DepartmentForm").then(module => ({ default: module.DepartmentForm })).catch(() => ({
-    default: () => <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 text-white p-6">Mock Form Module Loaded</div>
+    default: FormLoadError,
   }))
 );
 
@@ -45,8 +47,11 @@ const DepartmentGridSkeleton = () => (
 export const DepartmentList = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { data: departments = [], isPending, isError } = useDepartmentsQuery();
+  const { data: departmentsPage, isPending, isError } = useDepartmentsPageQuery(page, PAGE_SIZE);
+  const departments = departmentsPage?.data ?? [];
+  const meta = departmentsPage?.meta;
   const { data: users } = useUsersQuery();
   const { data: stores } = useStoresQuery();
   const updateMut = useUpdateDepartmentMutation();
@@ -107,7 +112,7 @@ export const DepartmentList = () => {
           </p>
           <button
             onClick={() => setShowForm(true)}
-            className="press-feedback inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold uppercase tracking-wide rounded-xl shadow-sm bg-surface text-text-secondary border border-border transition-all duration-300 hover:bg-surface-hover hover:text-primary-600 hover:border-primary-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            className="press-feedback inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold rounded-xl shadow-sm bg-surface text-text-secondary border border-border transition-all duration-300 hover:bg-surface-hover hover:text-primary-600 hover:border-primary-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
             <Plus className="w-3.5 h-3.5" />
             Create department
@@ -141,12 +146,12 @@ export const DepartmentList = () => {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-text-muted">
-          {departments.length} {departments.length === 1 ? 'department' : 'departments'} configured
+          {meta?.total ?? departments.length} {(meta?.total ?? departments.length) === 1 ? 'department' : 'departments'} configured
         </p>
 
         <button
           onClick={() => setShowForm(true)}
-          className="press-feedback group inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold uppercase tracking-wide text-white rounded-xl shadow-sm bg-gradient-to-b from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 active:scale-[0.98]"
+          className="press-feedback group inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-display font-bold text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 active:scale-[0.98]"
         >
           <Plus className="w-3.5 h-3.5 transition-transform duration-300 group-hover:rotate-90" />
           New department
@@ -154,6 +159,10 @@ export const DepartmentList = () => {
       </div>
 
       {renderContent()}
+
+      {meta && meta.totalPages > 1 && (
+        <PageNav page={page} totalPages={meta.totalPages} onPageChange={setPage} className="pt-1" />
+      )}
 
       {activeModal && (
         <Suspense fallback={

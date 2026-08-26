@@ -55,6 +55,17 @@ export const useUsersQuery = (enabled: boolean = true) => {
     });
 };
 
+// Paginated variant for the admin directory's Users list — keeps useUsersQuery above (the full
+// roster) for every other caller (org structure's tree, etc.) untouched.
+export const useUsersPageQuery = (page = 1, limit = 20) => {
+    const { token } = useAuth();
+    return useQuery({
+        queryKey: [...USER_KEYS.all, 'page', page, limit] as const,
+        queryFn: () => adminApi.getPage(page, limit),
+        enabled: !!token,
+    });
+};
+
 export const useUserQuery = (id: string) => {
     const { token } = useAuth();
     return useQuery({
@@ -106,6 +117,42 @@ export const useDeleteUserMutation = () => {
     });
 };
 
+export const useResetUserPasswordMutation = () => {
+    return useMutation({
+        mutationFn: ({ id, password }: { id: string; password: string }) =>
+            adminApi.resetPassword(id, password),
+        onSuccess: () => toast.success('Password reset'),
+        onError: (err) => toast.error(errorMessage(err, 'Failed to reset password')),
+    });
+};
+
+export const useUploadUserAvatarMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, file }: { id: string; file: File }) =>
+            adminApi.uploadAvatar(id, file).then(r => r.data),
+        onSuccess: (updated) => {
+            queryClient.setQueryData(USER_KEYS.detail(updated.id), updated);
+            queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+            toast.success('Profile picture updated');
+        },
+        onError: (err) => toast.error(errorMessage(err, 'Failed to upload profile picture')),
+    });
+};
+
+export const useRemoveUserAvatarMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => adminApi.removeAvatar(id).then(r => r.data),
+        onSuccess: (updated) => {
+            queryClient.setQueryData(USER_KEYS.detail(updated.id), updated);
+            queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+            toast.success('Profile picture removed');
+        },
+        onError: (err) => toast.error(errorMessage(err, 'Failed to remove profile picture')),
+    });
+};
+
 
 const DEPARTMENT_KEY = {
     all: ["departments"] as const,
@@ -116,6 +163,17 @@ export const useDepartmentsQuery = () => {
     return useQuery({
         queryKey: DEPARTMENT_KEY.all,
         queryFn: () => departmentApi.getAll().then(r => r.data),
+        enabled: !!token,
+    })
+};
+
+// Paginated variant for the admin directory's Departments list — useDepartmentsQuery above (the
+// full list) stays untouched for every other caller (dropdowns, org structure, etc.).
+export const useDepartmentsPageQuery = (page = 1, limit = 20) => {
+    const { token } = useAuth();
+    return useQuery({
+        queryKey: [...DEPARTMENT_KEY.all, 'page', page, limit] as const,
+        queryFn: () => departmentApi.getPage(page, limit),
         enabled: !!token,
     })
 };

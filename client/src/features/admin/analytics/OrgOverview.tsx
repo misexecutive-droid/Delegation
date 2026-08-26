@@ -10,6 +10,8 @@ import { TicketKpiSection } from './TicketKpiSection';
 import { ChecklistInstanceKpiSection } from './ChecklistInstanceKpiSection';
 import { AnalyticsSummaryStrip } from './AnalyticsSummaryStrip';
 import { StoresPerformanceSection } from './StoresPerformanceSection';
+import { ComplianceGaugeRail } from './ComplianceGaugeRail';
+import { TeamLeaderboardRail } from './TeamLeaderboardRail';
 import { QuickActionsGrid } from '../overview/QuickActionsGrid';
 import { RecentActivity } from '../../dashboard/RecentActivity';
 import type { FeedItem } from '../../dashboard/dashboardDisplay';
@@ -73,8 +75,7 @@ export const OrgOverview = () => {
     .slice(0, 6);
 
   return (
-    <main className="flex flex-col min-h-screen bg-slate-50/50 dark:bg-slate-950/50 p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-300">
-      <div className="flex flex-col gap-8 max-w-7xl mx-auto w-full">
+    <div className="flex flex-col gap-8 max-w-7xl mx-auto w-full">
         <header className="relative isolate overflow-hidden flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-6 border-b border-border">
           <LightBeams />
           <div className="flex items-start gap-4">
@@ -101,38 +102,56 @@ export const OrgOverview = () => {
 
         {canSeeStoresTab(user?.role) && <QuickActionsGrid />}
 
-        <Tabs value={section} onValueChange={(v) => setSection(v as SectionValue)}>
-          <TabsList className="bg-surface-hover p-1.5 rounded-xl gap-1.5 h-auto w-fit">
-            {sectionTabs.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                className="gap-2 px-4 py-2 rounded-lg font-display data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        {(() => {
+          const tabsBlock = (
+            <Tabs value={section} onValueChange={(v) => setSection(v as SectionValue)}>
+              <TabsList className="bg-surface-hover p-1.5 rounded-xl gap-1.5 h-auto w-fit">
+                {sectionTabs.map(({ value, label, icon: Icon }) => (
+                  <TabsTrigger
+                    key={value}
+                    value={value}
+                    className="gap-2 px-4 py-2 rounded-lg font-display data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-          <TabsContent value="checklists" className="pt-6">
-            <TaskChecklistKpiSection groupBy={groupBy} from={from} to={to} />
-          </TabsContent>
-          <TabsContent value="audits" className="pt-6">
-            <ChecklistInstanceKpiSection groupBy={groupBy} from={from} to={to} />
-          </TabsContent>
-          <TabsContent value="issues" className="pt-6">
-            <TicketKpiSection groupBy={groupBy} from={from} to={to} />
-          </TabsContent>
-          {canSeeStoresTab(user?.role) && (
-            <TabsContent value="stores" className="pt-6">
-              <StoresPerformanceSection groupBy={groupBy} from={from} to={to} />
-            </TabsContent>
-          )}
-        </Tabs>
+              <TabsContent value="checklists" className="pt-6">
+                <TaskChecklistKpiSection groupBy={groupBy} from={from} to={to} />
+              </TabsContent>
+              <TabsContent value="audits" className="pt-6">
+                <ChecklistInstanceKpiSection groupBy={groupBy} from={from} to={to} />
+              </TabsContent>
+              <TabsContent value="issues" className="pt-6">
+                <TicketKpiSection groupBy={groupBy} from={from} to={to} />
+              </TabsContent>
+              {canSeeStoresTab(user?.role) && (
+                <TabsContent value="stores" className="pt-6">
+                  <StoresPerformanceSection groupBy={groupBy} from={from} to={to} />
+                </TabsContent>
+              )}
+            </Tabs>
+          );
+
+          // The compliance/leaderboard rail surfaces the same org-wide comparison data as the
+          // Stores tab, so it's gated identically — MANAGER/SENIOR get the tabs full-width with
+          // no rail, instead of an empty third column.
+          if (!canSeeStoresTab(user?.role)) return tabsBlock;
+
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              <div className="lg:col-span-2">{tabsBlock}</div>
+              <div className="flex flex-col gap-6">
+                <ComplianceGaugeRail groupBy={groupBy} from={from} to={to} />
+                <TeamLeaderboardRail />
+              </div>
+            </div>
+          );
+        })()}
 
         <RecentActivity feed={feed} isPending={isFeedPending} />
-      </div>
-    </main>
+    </div>
   );
 };

@@ -1,16 +1,14 @@
 import { Building2 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { ENTITY_CARD_CLASS, StatusPill, EntityCardActions } from '../../../components';
+import { ENTITY_CARD_CLASS, StatusPill, EntityCardActions, Avatar } from '../../../components';
 import type { AdminUser } from '../../../api/admin';
 import { ROLE_STYLES, ROLE_LABEL } from '../roleBadge';
+import { resolveAvatarUrl } from '../../../lib/uploadsBase';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-const initialsOf = (firstName: string, lastName?: string | null) =>
-  `${firstName[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
 
 interface UserCardProps {
   user: AdminUser;
@@ -30,10 +28,8 @@ export const UserCard = ({ user, departmentName, isUpdating, isDeleting, onToggl
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Same 32px footprint as EntityIconTile, shaped as an avatar circle instead — the
               consistent "leading visual" pattern shared with Department/Store cards, adapted for
-              a person. */}
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white font-display font-bold text-[11px] shrink-0 shadow-sm ring-1 ring-primary-500/10">
-            {initialsOf(user.firstName, user.lastName)}
-          </div>
+              a person. Real photo when the user has one, initials otherwise. */}
+          <Avatar name={`${user.firstName} ${user.lastName ?? ''}`} src={resolveAvatarUrl(user.avatarUrl)} size="sm" />
           <div className="min-w-0 space-y-0.5">
             <h3 className="text-sm font-display font-bold text-text truncate group-hover:text-primary-600 transition-colors duration-300">
               {user.firstName} {user.lastName ?? ''}

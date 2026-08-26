@@ -1,6 +1,14 @@
 import { trendFrom, pointDelta, type Trend } from '../../dashboard';
+import type { TatReportRow } from '../../../api/ticket';
 
 type ReportRow = { bucket: string; [key: string]: unknown };
+
+// SLA-met % isn't a field the API returns directly — derive it from a TAT bucket's
+// overdueCount/createdCount so "on-time completion" reads as a real on-time rate, not
+// the close-rate throughput ratio TicketKpiSection uses for a different purpose. Shared by
+// AnalyticsSummaryStrip and ComplianceGaugeRail so both read the exact same on-time number.
+export const slaMetRate = (row?: TatReportRow) =>
+  row && row.createdCount > 0 ? Math.round((1 - row.overdueCount / row.createdCount) * 100) : null;
 
 // trendFrom expects a percent-change between two raw counts (e.g. ticket volume); pointDelta
 // expects a plain point difference between two already-percentage values (e.g. two buckets'

@@ -30,28 +30,34 @@ export const DirectoryPage = () => {
     departments: departments?.length,
     stores: stores?.length,
   };
+  const totalCount = (users?.length ?? 0) + (departments?.length ?? 0) + (stores?.length ?? 0);
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      <header className="flex items-center gap-3 pb-3 border-b border-border">
-        <div className="flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
+    <div className="flex flex-col gap-5 w-full">
+      <header className="flex items-start gap-4 pb-5 border-b border-border">
+        <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500/10 to-primary-700/10 dark:from-primary-500/20 dark:to-primary-700/20 text-primary-600 dark:text-primary-400 ring-1 ring-primary-500/20 shadow-sm shrink-0">
           <Contact className="w-5 h-5" />
         </div>
-        <div className="space-y-0.5">
-          <h1 className="text-lg font-display font-bold tracking-tight text-text">Directory</h1>
-          <p className="text-xs font-display text-text-muted max-w-lg leading-relaxed">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-text">Directory</h1>
+            <span className="flex items-center justify-center px-2.5 py-0.5 text-xs font-display font-bold bg-surface-hover text-text-secondary rounded-full border border-border">
+              {totalCount}
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm font-display text-text-muted max-w-lg leading-relaxed">
             Manage users, departments, and stores in one place.
           </p>
         </div>
       </header>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
-        <TabsList className="bg-surface-hover p-1 rounded-lg gap-1 h-auto w-fit">
+        <TabsList className="bg-surface-hover p-1 rounded-full gap-1 h-auto w-fit">
           {TABS.map(({ value, label, icon: Icon }) => (
             <TabsTrigger
               key={value}
               value={value}
-              className="gap-1.5 px-3 py-1.5 text-sm rounded-md font-display data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-md"
+              className="gap-1.5 px-3.5 py-1.5 text-sm rounded-full font-display transition-all duration-300 data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-md"
             >
               <Icon className="w-3.5 h-3.5" />
               {label}

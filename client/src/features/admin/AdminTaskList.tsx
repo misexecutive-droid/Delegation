@@ -27,8 +27,7 @@ export const AdminTaskList = () => {
   const [showExport, setShowExport] = useState(false);
 
   return (
-    <main className="flex flex-col min-h-screen bg-background p-4 sm:p-6 lg:p-8 transition-colors duration-300">
-      <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full">
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full">
 
         {/* Header Section */}
         <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-6 border-b border-border">
@@ -90,7 +89,6 @@ export const AdminTaskList = () => {
             onClose={() => setShowExport(false)}
           />
         )}
-      </div>
-    </main>
+    </div>
   );
 };
