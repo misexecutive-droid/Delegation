@@ -53,7 +53,7 @@ export const TicketStatusHistory = ({ statusUpdates, onPreview }: TicketStatusHi
               <div className="flex flex-col gap-2 p-3.5 rounded-md border border-border/80 bg-surface hover:border-border transition-all">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                    <span className="font-semibold text-text flex items-center gap-1">
+                    <span className="font-medium text-text flex items-center gap-1">
                       <User size={12} className="text-text-muted" />
                       {userDisplayName}
                     </span>
@@ -83,7 +83,7 @@ export const TicketStatusHistory = ({ statusUpdates, onPreview }: TicketStatusHi
                 {/* Evidence Attachments */}
                 {su.photos && su.photos.length > 0 && (
                   <div className="flex flex-col gap-2 pt-2 mt-1 border-t border-border/40">
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-primary-500 uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-primary-500 uppercase tracking-wider">
                       <Camera size={11} />
                       <span>Evidence ({su.photos.length})</span>
                     </div>

@@ -17,7 +17,9 @@ interface LeaderRow {
 // overview page instead of only inside the Stores tab.
 export const TeamLeaderboardRail = () => {
   const { data: departments = [] } = useDepartmentsQuery();
-  const { data: ticketPage } = useTicketsQuery(1, 200);
+  // 100 is the server's hard cap (ticket.validation.ts) — requesting more (e.g. 200) fails
+  // validation outright with a 400, not a silent truncation.
+  const { data: ticketPage } = useTicketsQuery(1, 100);
   const { data: tasks = [] } = useTasksQuery();
   const { data: users = [] } = useUsersQuery(true);
 

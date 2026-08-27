@@ -41,7 +41,7 @@ export const ChecklistInstanceItemCashTallyCard = ({ item, instanceId, canWork, 
           <Wallet size={16} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono font-semibold leading-snug text-text">{item.label}</p>
+          <p className="text-sm font-mono font-medium leading-snug text-text">{item.label}</p>
           {item.cashExpectedAmount != null && (
             <p className="text-[11px] text-text-muted font-mono mt-0.5">
               Expected {item.numberEntryUnit ?? ''}{item.cashExpectedAmount}

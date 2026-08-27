@@ -26,5 +26,5 @@ interface TaskQuickStatsProps {
 // Thin wrapper around the shared QuickFilterStats — this file just owns the Delegation-specific
 // tile data (keys/icons/colors), not the tile rendering itself.
 export const TaskQuickStats = ({ counts, active, onToggle }: TaskQuickStatsProps) => (
-  <QuickFilterStats tiles={TILES} counts={counts} active={active} onToggle={onToggle} itemLabel="delegations" />
+  <QuickFilterStats tiles={TILES} counts={counts} active={active} onToggle={onToggle} itemLabel="delegations" variant="navy" />
 );

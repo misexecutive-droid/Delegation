@@ -70,7 +70,7 @@ export const TaskTable = ({ tasks, assigneeNames, departmentNames, onOpen, field
                   className="bg-surface hover:bg-surface-hover transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-inset"
                 >
                   <td className="px-4 py-2.5 min-w-[14rem]">
-                    <span className={`font-semibold ${task.status === 'done' ? 'line-through text-text-light' : 'text-text'}`}>
+                    <span className={`font-medium ${task.status === 'done' ? 'line-through text-text-light' : 'text-text'}`}>
                       {task.title}
                     </span>
                   </td>
@@ -81,7 +81,7 @@ export const TaskTable = ({ tasks, assigneeNames, departmentNames, onOpen, field
                         return (
                           <td key={c.key} className="px-4 py-2.5 whitespace-nowrap">
                             {departmentName ? (
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${departmentTagClass(departmentName)}`}>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${departmentTagClass(departmentName)}`}>
                                 {departmentName}
                               </span>
                             ) : (
@@ -106,7 +106,7 @@ export const TaskTable = ({ tasks, assigneeNames, departmentNames, onOpen, field
                         return (
                           <td key={c.key} className="px-4 py-2.5 whitespace-nowrap">
                             {task.dueDate ? (
-                              <span className={`flex items-center gap-1.5 ${isOverdue ? 'text-danger font-semibold' : 'text-text-secondary'}`}>
+                              <span className={`flex items-center gap-1.5 ${isOverdue ? 'text-danger font-medium' : 'text-text-secondary'}`}>
                                 <Clock size={13} strokeWidth={2.5} className={isOverdue ? 'text-danger' : 'text-text-light'} />
                                 {formatShortDate(task.dueDate)}
                               </span>
@@ -118,7 +118,7 @@ export const TaskTable = ({ tasks, assigneeNames, departmentNames, onOpen, field
                       case 'status':
                         return (
                           <td key={c.key} className="px-4 py-2.5 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${status.badge}`}>
+                            <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border ${status.badge}`}>
                               {status.label}
                             </span>
                           </td>
@@ -134,7 +134,7 @@ export const TaskTable = ({ tasks, assigneeNames, departmentNames, onOpen, field
                           <td key={c.key} className="px-4 py-2.5 whitespace-nowrap">
                             <PriorityChip
                               priority={task.priority}
-                              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                              className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full"
                             />
                           </td>
                         );
@@ -142,7 +142,7 @@ export const TaskTable = ({ tasks, assigneeNames, departmentNames, onOpen, field
                         const cat = CATEGORY_CONFIG[task.category];
                         return (
                           <td key={c.key} className="px-4 py-2.5 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${cat.className}`}>
+                            <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full ${cat.className}`}>
                               <cat.icon size={13} strokeWidth={2.5} />
                               {cat.label}
                             </span>

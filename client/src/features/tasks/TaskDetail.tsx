@@ -78,12 +78,12 @@ export const TaskDetail = ({ task: initialTask, onClose }: TaskDetailProps) => {
           <div className="flex items-center gap-2.5 flex-wrap">
             <TaskScoreBadge status={task.status} />
             {task.status === 'done' && (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-success">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-success">
                 <CheckCircle2 size={15} /> Completed
               </span>
             )}
             {task.status === 'pending_verification' && !isVerifier && (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-info">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-info">
                 <ShieldQuestion size={15} /> Awaiting verification
               </span>
             )}
@@ -120,7 +120,7 @@ export const TaskDetail = ({ task: initialTask, onClose }: TaskDetailProps) => {
               onBlur={saveTitle}
               placeholder="Delegation title"
               disabled={isPC}
-              className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm font-semibold text-text outline-none transition-colors hover:border-border-hover focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed"
+              className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm font-medium text-text outline-none transition-colors hover:border-border-hover focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed"
             />
           </div>
 
@@ -212,21 +212,23 @@ export const TaskDetail = ({ task: initialTask, onClose }: TaskDetailProps) => {
             }
             disabled={isPC}
           />
-
-          {isVerifier && (
-            <Button
-              variant="danger"
-              size="sm"
-              className="mt-auto gap-1.5"
-              disabled={deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate(task.id, { onSuccess: onClose })}
-            >
-              {deleteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-              Delete task
-            </Button>
-          )}
         </div>
       </div>
+
+      {isVerifier && (
+        <div className="flex justify-end px-5 py-4 border-t border-border/60">
+          <Button
+            variant="danger"
+            size="sm"
+            className="gap-1.5"
+            disabled={deleteMutation.isPending}
+            onClick={() => deleteMutation.mutate(task.id, { onSuccess: onClose })}
+          >
+            {deleteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+            Delete task
+          </Button>
+        </div>
+      )}
 
       <TaskActivitySection taskId={task.id} />
     </Modal>

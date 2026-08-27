@@ -72,7 +72,7 @@ export const ItemRow = ({ item, departmentId, assignableUsers, index }: ItemRowP
               min={0}
               defaultValue={item.requiredImageCount}
               onBlur={handleMinBlur}
-              className="w-10 h-7 px-1 text-xs font-display font-semibold text-center transition-all bg-surface border border-border rounded-lg text-text focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="w-10 h-7 px-1 text-xs font-display font-medium text-center transition-all bg-surface border border-border rounded-lg text-text focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </label>
 
@@ -87,7 +87,7 @@ export const ItemRow = ({ item, departmentId, assignableUsers, index }: ItemRowP
               defaultValue={item.maxImageCount ?? ''}
               placeholder="∞"
               onBlur={handleMaxBlur}
-              className="w-10 h-7 px-1 text-xs font-display font-semibold text-center transition-all bg-surface border border-border rounded-lg text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="w-10 h-7 px-1 text-xs font-display font-medium text-center transition-all bg-surface border border-border rounded-lg text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </label>
         </div>
@@ -96,7 +96,7 @@ export const ItemRow = ({ item, departmentId, assignableUsers, index }: ItemRowP
         <button
           type="button"
           onClick={() => updateItem.mutate({ id: item.id, payload: { requiresLivePhoto: !item.requiresLivePhoto } })}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-display font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-display font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
             item.requiresLivePhoto
               ? 'bg-primary-500/10 border-primary-500/30 text-primary-700 dark:text-primary-400'
               : 'bg-surface border-border text-text-secondary hover:text-text hover:bg-surface-hover'
@@ -121,7 +121,7 @@ export const ItemRow = ({ item, departmentId, assignableUsers, index }: ItemRowP
             onChange={e => updateItem.mutate({ id: item.id, payload: { defaultAssigneeId: e.target.value === UNASSIGNED ? null : e.target.value } })}
             disabled={!departmentId}
             title={departmentId ? 'Default assignee' : 'Set a department on this template first'}
-            className={`h-9 pl-8 pr-8 text-xs font-display font-semibold appearance-none transition-all outline-none min-w-[130px] bg-surface-hover border rounded-xl ${
+            className={`h-9 pl-8 pr-8 text-xs font-display font-medium appearance-none transition-all outline-none min-w-[130px] bg-surface-hover border rounded-xl ${
               !departmentId
                 ? 'border-border/60 text-text-muted cursor-not-allowed'
                 : 'border-border text-text-secondary hover:border-border-hover focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 cursor-pointer'

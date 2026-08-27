@@ -149,7 +149,7 @@ export const TaskFiltersPopover = ({
             {PRIORITY_OPTIONS.map((opt) => {
               const checked = draft.priority.includes(opt.value);
               return (
-                <label key={opt.value} className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${checked ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
+                <label key={opt.value} className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${checked ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
                   <span className="flex items-center gap-3">
                     <div className={`flex items-center justify-center size-4 rounded-[4px] border transition-all ${checked ? 'bg-primary-600 border-primary-600 text-white' : 'bg-surface border-border-hover'}`}>
                       {checked && <Check size={12} strokeWidth={3} />}
@@ -213,7 +213,7 @@ export const TaskFiltersPopover = ({
         {currentUserId && (
           <FilterSection title="Assignment Target">
             <div className="flex flex-col gap-1">
-              <label className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${isAssignedToMe ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
+              <label className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${isAssignedToMe ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
                 <span className="flex items-center gap-3">
                   <div className={`flex items-center justify-center size-4 rounded-full border transition-all ${isAssignedToMe ? 'border-primary-600' : 'bg-surface border-border-hover'}`}>
                     {isAssignedToMe && <div className="size-2 rounded-full bg-primary-600" />}
@@ -228,7 +228,7 @@ export const TaskFiltersPopover = ({
                   onChange={() => updateDraft(d => ({ ...d, assigneeIds: [currentUserId] }))}
                 />
               </label>
-              <label className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${isAllTeam ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
+              <label className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${isAllTeam ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
                 <span className="flex items-center gap-3">
                   <div className={`flex items-center justify-center size-4 rounded-full border transition-all ${isAllTeam ? 'border-primary-600' : 'bg-surface border-border-hover'}`}>
                     {isAllTeam && <div className="size-2 rounded-full bg-primary-600" />}
@@ -311,7 +311,7 @@ export const TaskFiltersPopover = ({
           {CARD_FIELD_CONFIG.map(({ key, label, icon: Icon }) => {
             const checked = fieldVisibility[key];
             return (
-              <label key={key} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${checked ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
+              <label key={key} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${checked ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
                 <div className={`flex items-center justify-center size-4 rounded-[4px] border shrink-0 transition-all ${checked ? 'bg-primary-600 border-primary-600 text-white' : 'bg-surface border-border-hover'}`}>
                   {checked && <Check size={12} strokeWidth={3} />}
                 </div>

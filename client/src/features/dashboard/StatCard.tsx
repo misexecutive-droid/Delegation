@@ -84,7 +84,7 @@ export const StatCard = ({
           <span className={`text-[12px] font-bold ${highlight ? 'text-white/80' : 'text-text-muted'}`}>
             {label}
           </span>
-          <p className={`font-display text-3xl sm:text-4xl font-extrabold tracking-tight leading-none ${highlight ? 'text-white' : 'text-text'}`}>
+          <p className={`font-display text-3xl sm:text-4xl font-bold tracking-tight leading-none ${highlight ? 'text-white' : 'text-text'}`}>
             {value}
           </p>
         </div>

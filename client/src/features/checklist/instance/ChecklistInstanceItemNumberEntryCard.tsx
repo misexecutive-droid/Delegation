@@ -41,7 +41,7 @@ export const ChecklistInstanceItemNumberEntryCard = ({ item, instanceId, canWork
           <Hash size={16} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-mono font-semibold leading-snug ${item.isDone ? 'text-text' : 'text-text'}`}>
+          <p className={`text-sm font-mono font-medium leading-snug ${item.isDone ? 'text-text' : 'text-text'}`}>
             {item.label}
           </p>
           {(rangeHint || item.numberEntryUnit) && (

@@ -45,7 +45,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {/* Label */}
         <label
           htmlFor={id}
-          className={cn("flex items-center gap-1.5 text-xs font-semibold text-text-secondary transition-colors", labelClassName)}
+          className={cn("flex items-center gap-1.5 text-xs font-medium text-text-secondary transition-colors", labelClassName)}
         >
           {Icon && (
             <Icon
@@ -86,7 +86,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             id={messageId}
             role="alert"
             className={cn(
-              "flex items-center gap-1.5 text-xs font-semibold mt-0.5",
+              "flex items-center gap-1.5 text-xs font-medium mt-0.5",
               "animate-in slide-in-from-top-1 fade-in duration-200",
               isError ? "text-danger" : "text-success"
             )}

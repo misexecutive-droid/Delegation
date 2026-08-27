@@ -74,7 +74,7 @@ export const TaskFormReminderField = ({ minutes, channel, onChange, disabled = f
                 const next = Math.max(0, Number(e.target.value) || 0);
                 onChange(next > 0 ? next * UNIT_MINUTES[unit] : null, channel);
               }}
-              className="h-10 text-sm font-medium text-center px-1 rounded-lg w-full"
+              className="h-10 text-sm font-medium text-center px-1 rounded-lg w-full focus:border-border focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
 

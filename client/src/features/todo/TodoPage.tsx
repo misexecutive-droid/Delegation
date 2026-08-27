@@ -35,7 +35,7 @@ export const TodoPage = () => {
         <div className="flex items-center gap-3">
           <GradientIconTile icon={ListTodo} />
           <div>
-            <h1 className="text-xl font-display font-semibold text-text">To-Do</h1>
+            <h1 className="text-xl font-display font-bold text-text">To-Do</h1>
             <p className="text-sm text-text-muted mt-0.5">Your own personal task list — add it, then check it off when it's done.</p>
           </div>
         </div>
@@ -56,7 +56,7 @@ export const TodoPage = () => {
       <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-surface p-4 shadow-sm">
         <TodoDayStrip selected={selectedDate} onSelect={setSelectedDate} todos={todos} />
         <div className="flex items-center justify-between pt-2 border-t border-border/60">
-          <p className="text-sm font-display font-semibold text-text">
+          <p className="text-sm font-display font-medium text-text">
             {selectedDate
               ? isSameDay(selectedDate, new Date())
                 ? "Today's tasks"
@@ -67,7 +67,7 @@ export const TodoPage = () => {
             <button
               type="button"
               onClick={() => setSelectedDate(null)}
-              className="text-xs font-display font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
+              className="text-xs font-display font-medium text-primary-600 hover:text-primary-700 cursor-pointer"
             >
               Show all
             </button>

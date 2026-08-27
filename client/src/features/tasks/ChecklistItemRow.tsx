@@ -70,7 +70,7 @@ export const ChecklistItemRow = ({
           </p>
 
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="inline-flex text-xs font-semibold text-text-secondary bg-surface-hover px-2 py-0.5 rounded-md border border-border/60">
+            <span className="inline-flex text-xs font-medium text-text-secondary bg-surface-hover px-2 py-0.5 rounded-md border border-border/60">
               {item.isDone && item.completedAt
                 ? `Completed ${new Date(item.completedAt).toLocaleDateString()}`
                 : item.dueAt
@@ -183,7 +183,7 @@ export const ChecklistItemRow = ({
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <label className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg border border-info/30 text-info bg-info/10 hover:bg-info/20 cursor-pointer transition-colors shadow-xs focus-within:ring-2 focus-within:ring-info/30">
+                <label className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-info/30 text-info bg-info/10 hover:bg-info/20 cursor-pointer transition-colors shadow-xs focus-within:ring-2 focus-within:ring-info/30">
                   <Camera size={16} />
                   Take Photo
                   <input
@@ -192,7 +192,7 @@ export const ChecklistItemRow = ({
                   />
                 </label>
 
-                <label className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg border border-border text-text-secondary bg-surface hover:bg-surface-hover cursor-pointer transition-colors shadow-xs focus-within:ring-2 focus-within:ring-border-hover">
+                <label className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-border text-text-secondary bg-surface hover:bg-surface-hover cursor-pointer transition-colors shadow-xs focus-within:ring-2 focus-within:ring-border-hover">
                   <ImageIcon size={16} />
                   Gallery
                   <input
@@ -209,7 +209,7 @@ export const ChecklistItemRow = ({
                   type="button"
                   onClick={() => updateRemarks.mutate({ id: item.id, remarks })}
                   disabled={updateRemarks.isPending || !remarks.trim()}
-                  className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface-hover cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-border-hover"
+                  className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface-hover cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-border-hover"
                 >
                   {updateRemarks.isPending && <Loader2 size={16} className="animate-spin" />}
                   Save Notes
@@ -219,7 +219,7 @@ export const ChecklistItemRow = ({
                   type="button"
                   onClick={() => completeItem.mutate(item.id)}
                   disabled={completeItem.isPending}
-                  className="flex items-center justify-center gap-2 text-sm font-semibold px-5 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:scale-95"
+                  className="flex items-center justify-center gap-2 text-sm font-medium px-5 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:scale-95"
                 >
                   {completeItem.isPending ? <Loader2 size={16} className="animate-spin" /> : <CheckSquare size={16} />}
                   Complete Item

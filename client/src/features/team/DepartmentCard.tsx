@@ -20,7 +20,7 @@ export const DepartmentCard = ({ row, onClick }: { row: DepartmentCardRow; onCli
         <div className="flex items-center justify-center size-9 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 shrink-0">
           <Building2 size={16} />
         </div>
-        <h3 className="text-sm font-semibold text-text truncate">{row.name}</h3>
+        <h3 className="text-sm font-medium text-text truncate">{row.name}</h3>
       </div>
       <ChevronRight size={15} className="shrink-0 text-text-light group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all duration-150" />
     </div>
@@ -32,9 +32,9 @@ export const DepartmentCard = ({ row, onClick }: { row: DepartmentCardRow; onCli
 
     <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
       <span className="text-xs text-text-muted">
-        <strong className="font-semibold text-text">{row.openTickets}</strong> tickets · <strong className="font-semibold text-text">{row.openTasks}</strong> delegations
+        <strong className="font-medium text-text">{row.openTickets}</strong> tickets · <strong className="font-medium text-text">{row.openTasks}</strong> delegations
       </span>
-      <span className={`inline-flex items-center justify-center text-[11px] font-semibold px-2 py-0.5 rounded ${
+      <span className={`inline-flex items-center justify-center text-[11px] font-medium px-2 py-0.5 rounded ${
         row.overdue > 0 ? 'bg-danger/10 text-danger' : 'bg-surface-hover text-text-muted opacity-70'
       }`}>
         {row.overdue} overdue

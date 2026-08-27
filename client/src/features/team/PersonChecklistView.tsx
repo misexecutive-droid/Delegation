@@ -90,7 +90,7 @@ export const PersonChecklistView = ({ personName, departmentName, departmentId, 
       <button
         type="button"
         onClick={onBack}
-        className="self-start flex items-center gap-1 text-xs font-semibold text-text-muted hover:text-text transition-colors cursor-pointer"
+        className="self-start flex items-center gap-1 text-xs font-medium text-text-muted hover:text-text transition-colors cursor-pointer"
       >
         <ChevronLeft size={14} />
         Back to {departmentName}
@@ -102,7 +102,7 @@ export const PersonChecklistView = ({ personName, departmentName, departmentId, 
         <div className="rounded-xl border border-border/60 bg-surface p-6 flex flex-col gap-5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h2 className="text-lg font-display font-semibold text-text tracking-tight">{personName}</h2>
+              <h2 className="text-lg font-display font-bold text-text tracking-tight">{personName}</h2>
               <p className="text-xs font-display text-text-muted mt-0.5">Checklist activity by type, {PERIOD_LABEL[period]}</p>
             </div>
 

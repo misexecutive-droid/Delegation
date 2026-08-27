@@ -266,7 +266,7 @@ export const ChecklistBuilder = () => {
           </div>
 
           <div className="flex flex-col gap-4">
-            <label className="flex items-center gap-2 text-xs font-display font-semibold text-text-secondary uppercase tracking-wider">
+            <label className="flex items-center gap-2 text-xs font-display font-medium text-text-secondary uppercase tracking-wider">
               Checklist Items
               <Badge variant="outline">{itemDrafts.length}</Badge>
             </label>
@@ -276,7 +276,7 @@ export const ChecklistBuilder = () => {
                 <span className="flex items-center justify-center size-10 rounded-full bg-gradient-to-br from-primary-600 to-primary-500 text-white shadow-sm shadow-primary-600/20">
                   <ListChecks size={18} />
                 </span>
-                <p className="text-sm font-display font-semibold text-text">No items yet</p>
+                <p className="text-sm font-display font-medium text-text">No items yet</p>
                 <p className="text-xs font-display text-text-muted max-w-56">
                   Pick a question type from the panel on the left to add your first item.
                 </p>
@@ -363,7 +363,7 @@ export const ChecklistBuilder = () => {
 
         <button
           onClick={() => navigate('/admin/scheduled-checklists')}
-          className="press-feedback flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-display font-semibold text-text-secondary border border-border bg-surface hover:bg-surface-hover hover:text-text transition-colors duration-150 cursor-pointer"
+          className="press-feedback flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover hover:text-text transition-colors duration-150 cursor-pointer"
         >
           <ArrowLeft size={13} /> Back to Templates
         </button>
@@ -405,7 +405,7 @@ export const ChecklistBuilder = () => {
               <button
                 type="button"
                 onClick={() => goToStep(step - 1)}
-                className="press-feedback flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-display font-semibold text-text-secondary border border-border bg-surface hover:bg-surface-hover transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+                className="press-feedback flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
               >
                 <ChevronLeft size={15} /> Back
               </button>
@@ -416,7 +416,7 @@ export const ChecklistBuilder = () => {
                 type="button"
                 onClick={() => goToStep(step + 1)}
                 disabled={!sectionValidity[step]}
-                className="press-feedback flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-display font-semibold text-white bg-primary-700 shadow-sm transition-all duration-150 hover:bg-primary-800 hover:shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+                className="press-feedback flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-display font-medium text-white bg-primary-700 shadow-sm transition-all duration-150 hover:bg-primary-800 hover:shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
               >
                 Next <ChevronRight size={15} />
               </button>

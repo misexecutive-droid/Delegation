@@ -39,7 +39,7 @@ export const TicketQuickAttributes = ({
 
       {/* Status Control */}
       <div className="flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40">
-        <label className="text-[10px] uppercase text-text-muted font-semibold flex items-center gap-1">
+        <label className="text-[10px] uppercase text-text-muted font-medium flex items-center gap-1">
           <Tag size={11} /> Status
         </label>
         {canChangeStatus && isVerifier ? (
@@ -49,7 +49,7 @@ export const TicketQuickAttributes = ({
             trigger={
               <button
                 type="button"
-                className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md border cursor-pointer focus:outline-none transition-all w-fit ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md border cursor-pointer focus:outline-none transition-all w-fit ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
               >
                 {statusLabel}
                 <ChevronDown size={12} />
@@ -57,7 +57,7 @@ export const TicketQuickAttributes = ({
             }
           />
         ) : (
-          <span className={`text-xs font-semibold px-2 py-1 rounded-md border w-fit ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+          <span className={`text-xs font-medium px-2 py-1 rounded-md border w-fit ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
             {statusLabel}
           </span>
         )}
@@ -65,17 +65,17 @@ export const TicketQuickAttributes = ({
 
       {/* Priority Badge */}
       <div className="flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40">
-        <label className="text-[10px] uppercase text-text-muted font-semibold flex items-center gap-1">
+        <label className="text-[10px] uppercase text-text-muted font-medium flex items-center gap-1">
           <Sparkles size={11} /> Priority
         </label>
-        <span className={`text-xs font-semibold px-2 py-1 rounded-md border w-fit ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}>
+        <span className={`text-xs font-medium px-2 py-1 rounded-md border w-fit ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}>
           {ticket.priority}
         </span>
       </div>
 
       {/* Assignee Selection */}
       <div className="flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40">
-        <label className="text-[10px] uppercase text-text-muted font-semibold flex items-center gap-1">
+        <label className="text-[10px] uppercase text-text-muted font-medium flex items-center gap-1">
           <UserCheck size={11} /> Assignee
         </label>
         {canAssign ? (
@@ -88,7 +88,7 @@ export const TicketQuickAttributes = ({
                 className="inline-flex items-center gap-1.5 text-xs px-1.5 py-1 rounded-md border border-border bg-surface text-text cursor-pointer focus:outline-none w-fit"
               >
                 {ticket.assignee ? (
-                  <span className="flex items-center justify-center size-4.5 rounded-full bg-primary-600 text-white text-[9px] font-display font-semibold shrink-0">
+                  <span className="flex items-center justify-center size-4.5 rounded-full bg-primary-600 text-white text-[9px] font-display font-medium shrink-0">
                     {ticket.assignee.firstName.slice(0, 2).toUpperCase()}
                   </span>
                 ) : (
@@ -102,7 +102,7 @@ export const TicketQuickAttributes = ({
         ) : (
           <span className="text-xs text-text-secondary flex items-center gap-1.5 py-0.5">
             {ticket.assignee ? (
-              <span className="flex items-center justify-center size-4.5 rounded-full bg-primary-600 text-white text-[9px] font-display font-semibold shrink-0">
+              <span className="flex items-center justify-center size-4.5 rounded-full bg-primary-600 text-white text-[9px] font-display font-medium shrink-0">
                 {ticket.assignee.firstName.slice(0, 2).toUpperCase()}
               </span>
             ) : (
@@ -115,7 +115,7 @@ export const TicketQuickAttributes = ({
 
       {/* SLA / Due Date Info */}
       <div className="flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40">
-        <label className="text-[10px] uppercase text-text-muted font-semibold flex items-center gap-1">
+        <label className="text-[10px] uppercase text-text-muted font-medium flex items-center gap-1">
           <Clock size={11} /> SLA Deadline
         </label>
         {ticket.tatDueAt ? (

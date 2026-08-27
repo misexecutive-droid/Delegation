@@ -51,7 +51,7 @@ export const ModernHeroTitle = () => {
         aria-label={PHRASES.join(", ")}
         className={cn(
           "flex items-center justify-center lg:justify-start flex-wrap gap-1",
-          "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight",
+          "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight",
           "min-h-[2rem] sm:min-h-[2.5rem] lg:min-h-[3.25rem]"
         )}
       >

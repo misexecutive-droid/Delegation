@@ -52,7 +52,7 @@ export const EventList = () => {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-display font-semibold text-text truncate">{e.title}</p>
+                  <p className="text-sm font-display font-medium text-text truncate">{e.title}</p>
                   <span className={`text-[11px] font-display font-medium px-2 py-0.5 rounded-full shrink-0 ${EVENT_TYPE_COLORS[e.type]}`}>
                     {EVENT_TYPE_LABELS[e.type]}
                   </span>
@@ -100,7 +100,7 @@ export const EventList = () => {
         <div className="flex items-center gap-3">
           <GradientIconTile icon={CalendarClock} />
           <div>
-            <h1 className="text-xl font-display font-semibold text-text">Events</h1>
+            <h1 className="text-xl font-display font-bold text-text">Events</h1>
             <p className="text-sm text-text-muted mt-0.5">
               Deadlines, announcements, and broadcasts for everyone
             </p>

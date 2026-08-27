@@ -29,7 +29,7 @@ export const TaskTimeline = ({ tasks, assigneeNames, onOpen }: TaskTimelineProps
         <div className="flex items-center justify-center mb-4 text-text-light">
           <CalendarRange size={24} />
         </div>
-        <h3 className="text-lg font-semibold text-text tracking-tight">Nothing to plot</h3>
+        <h3 className="text-lg font-bold text-text tracking-tight">Nothing to plot</h3>
         <p className="text-sm text-text-muted mt-1 max-w-sm">
           None of the tasks in this view have a due date, so there's nothing to place on the timeline.
         </p>
@@ -95,7 +95,7 @@ export const TaskTimeline = ({ tasks, assigneeNames, onOpen }: TaskTimelineProps
                   className="sticky left-0 z-10 shrink-0 bg-background border-r border-border px-3 py-2.5 min-w-0"
                   style={{ width: LABEL_WIDTH }}
                 >
-                  <p className={`text-sm font-semibold truncate ${task.status === 'done' ? 'line-through text-text-light' : 'text-text'}`}>
+                  <p className={`text-sm font-medium truncate ${task.status === 'done' ? 'line-through text-text-light' : 'text-text'}`}>
                     {task.title}
                   </p>
                   <p className="text-[11px] text-text-muted truncate">{assigneeName ?? 'Unassigned'}</p>

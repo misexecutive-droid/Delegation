@@ -106,7 +106,7 @@ export const TicketFiltersPopover = ({
           {PRIORITY_OPTIONS.map((opt) => {
             const checked = draft.priority.includes(opt.value);
             return (
-              <label key={opt.value} className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${checked ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
+              <label key={opt.value} className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${checked ? 'bg-surface-active/50 text-text' : 'text-text-secondary hover:bg-surface hover:text-text'}`}>
                 <span className="flex items-center gap-3">
                   <div className={`flex items-center justify-center size-4 rounded-[4px] border transition-all ${checked ? 'bg-primary-600 border-primary-600 text-white' : 'bg-surface border-border-hover'}`}>
                     {checked && <Check size={12} strokeWidth={3} />}

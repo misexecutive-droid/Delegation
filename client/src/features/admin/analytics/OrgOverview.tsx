@@ -85,7 +85,7 @@ export const OrgOverview = () => {
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-display font-bold tracking-tight text-text">Overview</h1>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-display font-semibold bg-primary-500/10 text-primary-700 dark:text-primary-400">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-display font-medium bg-primary-500/10 text-primary-700 dark:text-primary-400">
                   {scopeLabel}
                 </span>
               </div>
@@ -105,18 +105,23 @@ export const OrgOverview = () => {
         {(() => {
           const tabsBlock = (
             <Tabs value={section} onValueChange={(v) => setSection(v as SectionValue)}>
-              <TabsList className="bg-surface-hover p-1.5 rounded-xl gap-1.5 h-auto w-fit">
-                {sectionTabs.map(({ value, label, icon: Icon }) => (
-                  <TabsTrigger
-                    key={value}
-                    value={value}
-                    className="gap-2 px-4 py-2 rounded-lg font-display data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-md"
-                  >
-                    <Icon className="w-4 h-4" />
-                    {label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              {/* Scrolls horizontally instead of clipping on phone-width screens, where four tabs
+                  don't fit in one row — AdminLayout's <main> is overflow-x-hidden, so the tab
+                  row needs its own scroll container rather than relying on page scroll. */}
+              <div className="overflow-x-auto">
+                <TabsList className="bg-surface-hover p-1.5 rounded-xl gap-1.5 h-auto w-fit">
+                  {sectionTabs.map(({ value, label, icon: Icon }) => (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="gap-2 px-4 py-2 rounded-lg font-display data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-md"
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
 
               <TabsContent value="checklists" className="pt-6">
                 <TaskChecklistKpiSection groupBy={groupBy} from={from} to={to} />

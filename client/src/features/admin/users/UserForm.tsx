@@ -14,6 +14,8 @@ import {
 } from '../hook';
 import { useStoresQuery } from '../../tickets/hook';
 import { resolveAvatarUrl } from '../../../lib/uploadsBase';
+import { DepartmentForm } from '../department/DepartmentForm';
+import { StoreForm } from '../store/StoreForm';
 import type { AdminUser, Role } from '../../../api/admin';
 
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
@@ -96,7 +98,7 @@ const ResetPasswordSection = ({ userId }: { userId: string }) => {
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className="flex items-center gap-1.5 self-start text-xs font-display font-semibold text-text-secondary hover:text-primary-600 dark:hover:text-primary-400 transition-colors pt-3 mt-1 border-t border-border w-full"
+        className="flex items-center gap-1.5 self-start text-xs font-display font-medium text-text-secondary hover:text-primary-600 dark:hover:text-primary-400 transition-colors pt-3 mt-1 border-t border-border w-full"
       >
         <KeyRound className="w-3.5 h-3.5" />
         Reset password
@@ -159,11 +161,19 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
 
   const schema = useMemo(() => buildUserSchema(isEditing), [isEditing]);
 
+  // Quick-add: "Create new department/store" from inside the Combobox below opens the real
+  // Department/Store form nested on top of this one, then feeds the freshly-created id straight
+  // back into this form's field instead of making the admin close this modal, go create it
+  // elsewhere, and reopen.
+  const [creatingDepartment, setCreatingDepartment] = useState<string | null>(null);
+  const [creatingStore, setCreatingStore] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<UserFields>({
     resolver: zodResolver(schema),
@@ -324,7 +334,7 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="role" className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+            <label htmlFor="role" className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
               <ShieldCheck className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
               Role
             </label>
@@ -344,7 +354,7 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="departmentId" className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+            <label htmlFor="departmentId" className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
               <Building2 className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
               Department
             </label>
@@ -360,13 +370,15 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
                   placeholder="Search departments..."
                   emptyOptionLabel="No department"
                   options={(departments ?? []).map(d => ({ value: d.id, label: d.name }))}
+                  onCreateNew={(query) => setCreatingDepartment(query)}
+                  createNewLabel="Create new department"
                 />
               )}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="storeId" className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+            <label htmlFor="storeId" className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
               <Store className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
               Store
             </label>
@@ -382,6 +394,8 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
                   placeholder="Search stores..."
                   emptyOptionLabel="No store"
                   options={(stores ?? []).map(s => ({ value: s.id, label: s.name }))}
+                  onCreateNew={(query) => setCreatingStore(query)}
+                  createNewLabel="Create new store"
                 />
               )}
             />
@@ -408,6 +422,22 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
           </div>
         )}
       </form>
+
+      {creatingDepartment !== null && (
+        <DepartmentForm
+          onClose={() => setCreatingDepartment(null)}
+          prefillName={creatingDepartment}
+          onCreated={(created) => setValue('departmentId', created.id, { shouldValidate: true })}
+        />
+      )}
+
+      {creatingStore !== null && (
+        <StoreForm
+          onClose={() => setCreatingStore(null)}
+          prefillName={creatingStore}
+          onCreated={(created) => setValue('storeId', created.id, { shouldValidate: true })}
+        />
+      )}
     </Modal>
   );
 };

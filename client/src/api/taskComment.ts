@@ -7,21 +7,30 @@ export type TaskCommentAttachment = {
     sizeBytes:        number;
 };
 
-export type TaskCommentLocation = {
-    lat:   number;
-    lng:   number;
-    label: string | null;
+export type TaskCommentAuthor = {
+    id:        string;
+    firstName: string;
+    lastName:  string | null;
+    email:     string;
+    role:      string;
 };
 
 export type TaskComment = {
-    id:         string;
-    taskId:     string;
-    body:       string;
-    attachments: TaskCommentAttachment[];
-    location:   TaskCommentLocation | null;
-    authorId:   { id: string; firstName: string; lastName: string | null; email: string; role: string } | null;
-    createdAt:  string;
-    updatedAt:  string;
+    id:            string;
+    taskId:        string;
+    body:          string;
+    attachments:   TaskCommentAttachment[];
+    // Flat lat/lng/label columns, matching taskComment.service.ts's raw row shape — not a nested
+    // `location` object.
+    locationLat:   number | null;
+    locationLng:   number | null;
+    locationLabel: string | null;
+    // authorId is the raw foreign-key string; `author` is the joined user record (null if the
+    // author's account was since deleted) — see findCommentsWithDetails in taskComment.service.ts.
+    authorId:      string;
+    author:        TaskCommentAuthor | null;
+    createdAt:     string;
+    updatedAt:     string;
 };
 
 export type CreateTaskCommentPayload = {

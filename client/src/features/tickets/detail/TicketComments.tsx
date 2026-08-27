@@ -24,7 +24,7 @@ export const TicketComments = ({
   <div className="flex flex-col gap-3">
     <h3 className={SECTION_HEADER}>
       <MessageSquare size={13} /> Comments
-      <span className="text-text-muted normal-case font-normal">({comments.length})</span>
+      <span className="text-text-muted normal-case font-medium">({comments.length})</span>
     </h3>
 
     <div className="flex flex-col gap-3">
@@ -34,10 +34,10 @@ export const TicketComments = ({
       {comments.map(c => (
         <div key={c.id} className="flex flex-col gap-1 p-3 rounded-lg border border-border/60 bg-surface">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center size-5 rounded-full bg-primary-600 text-white text-[10px] font-display font-semibold shrink-0">
+            <span className="flex items-center justify-center size-5 rounded-full bg-primary-600 text-white text-[10px] font-display font-medium shrink-0">
               {(c.author?.firstName ?? '?').charAt(0).toUpperCase()}
             </span>
-            <span className="text-xs font-display font-semibold text-text">
+            <span className="text-xs font-display font-medium text-text">
               {c.author?.firstName ?? 'Unknown'}
             </span>
             <span className="text-[10px] text-text-muted font-display">

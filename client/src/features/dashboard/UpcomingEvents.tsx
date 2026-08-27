@@ -22,7 +22,7 @@ export const UpcomingEvents = ({ events, isPending }: UpcomingEventsProps) => (
           <CalendarClock size={18} strokeWidth={2.5} />
         </div>
         <div>
-          <h2 className="text-lg font-display font-semibold text-text tracking-tight">Upcoming Events</h2>
+          <h2 className="text-lg font-display font-bold text-text tracking-tight">Upcoming Events</h2>
           <p className="text-xs font-display text-text-muted mt-0.5">Deadlines, announcements, and broadcasts</p>
         </div>
       </div>
@@ -83,7 +83,7 @@ export const UpcomingEvents = ({ events, isPending }: UpcomingEventsProps) => (
 
                 {/* Badges and Metadata */}
                 <div className="flex items-center gap-4 pl-11 sm:pl-0 shrink-0">
-                  <span className={`inline-flex items-center justify-center text-[11px] font-display font-semibold px-2.5 py-1 rounded-full ${EVENT_TYPE_COLORS[e.type]}`}>
+                  <span className={`inline-flex items-center justify-center text-[11px] font-display font-medium px-2.5 py-1 rounded-full ${EVENT_TYPE_COLORS[e.type]}`}>
                     {EVENT_TYPE_LABELS[e.type]}
                   </span>
 

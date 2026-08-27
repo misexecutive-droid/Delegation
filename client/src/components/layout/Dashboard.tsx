@@ -11,9 +11,7 @@ export const Dashboard = () => {
 
   return (
     <div 
-      className="flex flex-col h-svh overflow-hidden text-text transition-colors duration-300" 
-      style={{ background: 'var(--bg-body)' }}
-    >
+      className="flex flex-col h-svh overflow-hidden text-text transition-colors duration-300"     >
       <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
 
       <div className="flex flex-1 min-h-0 relative z-0">
@@ -26,14 +24,12 @@ export const Dashboard = () => {
 
         <main className="flex-1 overflow-auto min-w-0 relative">
           
-          {/* Ambient Mesh Gradient Background */}
           <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
             <div className="absolute top-[-10%] right-[-5%] w-[45rem] h-[45rem] rounded-full bg-primary-500/10 blur-[120px]" />
             <div className="absolute bottom-[-10%] left-[-5%] w-[40rem] h-[40rem] rounded-full bg-primary-400/10 blur-[120px]" />
             <div className="absolute top-[30%] left-[15%] w-[30rem] h-[30rem] rounded-full bg-coral-500/5 blur-[100px]" />
           </div>
 
-          {/* Main Content Area */}
           <div className="relative z-10 p-3 sm:p-5 md:p-6 lg:p-8 xl:p-10 pb-20 md:pb-8 max-w-[1600px] mx-auto w-full min-h-full flex flex-col">
             <AnimatePresence mode="wait">
               <motion.div
@@ -58,8 +54,6 @@ export const Dashboard = () => {
       <div className="relative z-20 hidden md:block">
         <Footer />
       </div>
-
-      {/* Mobile Bottom Navigation */}
       <BottomNav />
     </div>
   );

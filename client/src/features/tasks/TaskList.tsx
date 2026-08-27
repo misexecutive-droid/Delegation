@@ -372,9 +372,9 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                   title="Assigned to me"
                   aria-label="Assigned to me"
                   aria-pressed={isAssignedToMe}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
                     isAssignedToMe
-                      ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
+                      ? 'bg-background text-text border border-border ring-1 ring-border/50'
                       : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
                   }`}
                 >
@@ -387,9 +387,9 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                   title="Assigned by me"
                   aria-label="Assigned by me"
                   aria-pressed={isAssignedByMe}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
                     isAssignedByMe
-                      ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
+                      ? 'bg-background text-text border border-border ring-1 ring-border/50'
                       : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
                   }`}
                 >
@@ -474,7 +474,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52 rounded-xl">
-                    <DropdownMenuLabel className="text-xs text-text-muted font-semibold uppercase tracking-wider">Show only</DropdownMenuLabel>
+                    <DropdownMenuLabel className="text-xs text-text-muted font-medium uppercase tracking-wider">Show only</DropdownMenuLabel>
                     {CARD_FIELD_CONFIG.map(({ key, label, icon: Icon }) => (
                       <DropdownMenuCheckboxItem
                         key={key}
@@ -498,7 +498,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
               <Button
                 variant="secondary"
                 size="sm"
-                className="hidden sm:inline-flex h-9 px-3 gap-1.5 border border-border/60 shadow-sm rounded-lg bg-surface hover:bg-surface-hover transition-colors"
+                className="hidden sm:inline-flex h-9 px-3 gap-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover transition-colors"
                 onClick={() => setShowExport(true)}
                 aria-label="Export delegations"
                 title="Export delegations"
@@ -517,7 +517,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
           {activeChips.map(chip => (
             <span
               key={chip.key}
-              className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-[11px] font-semibold rounded-lg bg-primary-50/80 text-primary-700 border border-primary-200/60 shadow-sm dark:bg-primary-900/20 dark:border-primary-800/80 dark:text-primary-300"
+              className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-[11px] font-medium rounded-lg bg-primary-50/80 text-primary-700 border border-primary-200/60 shadow-sm dark:bg-primary-900/20 dark:border-primary-800/80 dark:text-primary-300"
             >
               {chip.label}
               <button
@@ -535,7 +535,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
             type="button"
             onClick={saveFilters}
             title="Save this filter combination as your default"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-text-muted hover:text-text hover:bg-surface border border-transparent hover:border-border/60 hover:shadow-sm transition-all duration-200 cursor-pointer ml-1"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg text-text-muted hover:text-text hover:bg-surface border border-transparent hover:border-border/60 hover:shadow-sm transition-all duration-200 cursor-pointer ml-1"
           >
             <Save size={13} />
             Save view
@@ -586,7 +586,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
         <div className="flex items-start gap-3 p-4 bg-danger/5 rounded-xl border border-danger/20 text-danger shadow-sm">
           <AlertCircle size={18} className="mt-0.5 shrink-0" />
           <div>
-            <h4 className="text-sm font-semibold">Error Loading Delegations</h4>
+            <h4 className="text-sm font-medium">Error Loading Delegations</h4>
             <p className="text-sm mt-1 opacity-90">Failed to connect to the server. Please refresh the page.</p>
           </div>
         </div>
@@ -630,8 +630,12 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                   <div className="flex-1 h-px bg-border/40" />
                 </div>
                 
-                {/* Tasks Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
+                {/* TaskRow is a full-width horizontal row (flex, left content + right meta/actions
+                    spread across the whole line), not a card — a multi-column grid here squeezes
+                    each row down to ~1/3 width and cascades into every badge inside it wrapping
+                    onto multiple lines. Board view below (which uses the card-shaped TaskCard) is
+                    the one that's meant to be a multi-column grid. */}
+                <div className="flex flex-col gap-3 md:gap-4">
                   {group.tasks.map(task => (
                     <TaskRow
                       key={task.id}

@@ -52,21 +52,25 @@ export const DirectoryPage = () => {
       </header>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
-        <TabsList className="bg-surface-hover p-1 rounded-full gap-1 h-auto w-fit">
-          {TABS.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              className="gap-1.5 px-3.5 py-1.5 text-sm rounded-full font-display transition-all duration-300 data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-md"
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-              {counts[value] !== undefined && (
-                <span className="text-xs font-semibold opacity-70">{counts[value]}</span>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {/* Scrolls horizontally instead of clipping the last tab on narrow phones — AdminLayout's
+            <main> is overflow-x-hidden, so this row needs its own scroll container. */}
+        <div className="overflow-x-auto">
+          <TabsList className="bg-surface-hover p-1 rounded-full gap-1 h-auto w-fit">
+            {TABS.map(({ value, label, icon: Icon }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="gap-1.5 px-3.5 py-1.5 text-sm rounded-full font-display transition-all duration-300 data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-md"
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+                {counts[value] !== undefined && (
+                  <span className="text-xs font-medium opacity-70">{counts[value]}</span>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         <TabsContent value="users" className="pt-4">
           <UserList />

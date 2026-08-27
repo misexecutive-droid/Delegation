@@ -52,7 +52,7 @@ export const StatusPill = ({ active, isUpdating, onToggle, ariaLabel }: StatusPi
     disabled={isUpdating}
     aria-label={ariaLabel}
     className={cn(
-      'flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-display font-semibold shrink-0 transition-all duration-300',
+      'flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-display font-medium shrink-0 transition-all duration-300',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
       active
         ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 focus-visible:ring-emerald-500'

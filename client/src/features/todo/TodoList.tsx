@@ -70,7 +70,7 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
 
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <p
-            className={`text-sm sm:text-[15px] font-display font-semibold truncate transition-colors duration-200 ${
+            className={`text-sm sm:text-[15px] font-display font-medium truncate transition-colors duration-200 ${
               todo.completed ? 'text-text-light line-through' : 'text-text'
             }`}
           >
@@ -82,12 +82,12 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
               {priorityMeta.label}
             </span>
             {todo.dueDate ? (
-              <span className={`inline-flex items-center gap-1 text-[11px] font-display font-semibold ${overdue ? 'text-danger' : 'text-text-muted'}`}>
+              <span className={`inline-flex items-center gap-1 text-[11px] font-display font-medium ${overdue ? 'text-danger' : 'text-text-muted'}`}>
                 <CalendarClock size={11} />
                 {relativeDayLabel(new Date(todo.dueDate))}
               </span>
             ) : (
-              <span className="text-[11px] font-display font-semibold text-text-light">No due date</span>
+              <span className="text-[11px] font-display font-medium text-text-light">No due date</span>
             )}
           </div>
         </div>
@@ -143,7 +143,7 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
 
       {completed.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-display font-semibold uppercase tracking-wide text-text-light px-1">
+          <p className="text-xs font-display font-medium uppercase tracking-wide text-text-light px-1">
             Completed ({completed.length})
           </p>
           {completed.map(renderRow)}

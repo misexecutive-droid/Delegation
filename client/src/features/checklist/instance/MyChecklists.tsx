@@ -20,7 +20,7 @@ export const MyChecklists = () => {
       <div className="flex items-center gap-3">
         <GradientIconTile icon={ClipboardCheck} />
         <div>
-          <h1 className="text-xl font-mono font-semibold text-text">My Checklists</h1>
+          <h1 className="text-xl font-mono font-bold text-text">My Checklists</h1>
           <p className="text-sm text-text-muted mt-0.5">
             {instances.length} checklist{instances.length !== 1 ? 's' : ''} assigned to you
           </p>
@@ -53,7 +53,7 @@ export const MyChecklists = () => {
         <div className="flex flex-col gap-6">
           {[...grouped.entries()].map(([recurrence, group]) => (
             <div key={recurrence} className="flex flex-col gap-3">
-              <h3 className="text-xs font-mono font-semibold text-text-muted uppercase tracking-wider">
+              <h3 className="text-xs font-mono font-medium text-text-muted uppercase tracking-wider">
                 {RECURRENCE_LABEL[recurrence]}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

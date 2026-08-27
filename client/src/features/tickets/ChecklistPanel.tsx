@@ -99,7 +99,7 @@ const ItemRow = ({
         </span>
 
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-display font-semibold leading-snug ${item.isDone ? 'line-through text-text-muted' : 'text-text'}`}>
+          <p className={`text-sm font-display font-medium leading-snug ${item.isDone ? 'line-through text-text-muted' : 'text-text'}`}>
             {item.label}
           </p>
           <p className="text-xs text-text-muted font-display truncate">
@@ -376,7 +376,7 @@ export const ChecklistPanel = ({ ticketId, checklists }: ChecklistPanelProps) =>
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h3 className="text-sm font-display font-semibold text-text">Checklists</h3>
+        <h3 className="text-sm font-display font-medium text-text">Checklists</h3>
         {isAdmin && !adding && (
           <div className="flex items-center gap-2">
             {!!templates?.length && (

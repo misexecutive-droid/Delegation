@@ -61,7 +61,7 @@ export const SignupForm = () => {
                     >
                         <div className="flex flex-col gap-3">
                             <div className="pb-3 border-b-2 border-primary-500">
-                                <h2 className="text-xl sm:text-2xl font-display font-semibold text-text">
+                                <h2 className="text-xl sm:text-2xl font-display font-bold text-text">
                                     Create Account
                                 </h2>
                             </div>
@@ -130,7 +130,7 @@ export const SignupForm = () => {
                                 variant="primary"
                                 size="lg"
                                 isLoading={mutation.isPending}
-                                className="mt-1 w-full font-light bg-gradient-to-r from-primary-800 via-primary-600 to-primary-700 hover:from-primary-700 hover:via-primary-500 hover:to-primary-600 text-white shadow-lg transition-all duration-300"
+                                className="mt-1 w-full font-medium bg-gradient-to-r from-primary-800 via-primary-600 to-primary-700 hover:from-primary-700 hover:via-primary-500 hover:to-primary-600 text-white shadow-lg transition-all duration-300"
                             >
                                 Create account
                             </Button>
@@ -141,7 +141,7 @@ export const SignupForm = () => {
                             Already have an account?{" "}
                             <NavLink
                                 to="/login"
-                                className="font-semibold text-primary-700 hover:text-primary-600 transition-colors"
+                                className="font-medium text-primary-700 hover:text-primary-600 transition-colors"
                                 style={{ transitionDuration: "var(--transition-fast)" }}
                             >
                                 Sign in

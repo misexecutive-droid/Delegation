@@ -49,12 +49,12 @@ const NAV: AdminNavItem[] = [
 // The sidebar is intentionally a fixed navy "chrome" — like the reference layout's colored rail —
 // rather than a theme-reactive surface, so these classes have no dark: variants of their own.
 const NAV_LINK_BASE =
-  "group relative flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 active:scale-[0.98]";
+  "group relative flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 active:scale-[0.98]";
 const NAV_LINK_ACTIVE = "bg-white text-primary-700 shadow-sm";
 const NAV_LINK_INACTIVE = "text-white/65 hover:bg-white/10 hover:text-white";
 const NAV_ICON_ACTIVE = "text-primary-700";
 const NAV_ICON_INACTIVE = "text-white/50 group-hover:text-white/80";
-const LOGOUT_BUTTON = "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white/65 hover:bg-white/10 hover:text-white transition-all duration-200 cursor-pointer";
+const LOGOUT_BUTTON = "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/65 hover:bg-white/10 hover:text-white transition-all duration-200 cursor-pointer";
 
 export const AdminLayout = () => {
   const { logout } = useAuth();

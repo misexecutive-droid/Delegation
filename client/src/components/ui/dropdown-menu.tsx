@@ -35,7 +35,16 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[10rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border border-border p-1 shadow-lg",
+          // z-[80] — above Dialog's z-[70] (see dialog.tsx), since this menu is routinely opened
+          // from inside a modal (e.g. the assignee picker in a task/delegation form) and, being
+          // portalled to document.body as a sibling of the dialog, needs a higher z-index of its
+          // own to actually render on top of it rather than invisibly underneath.
+          //
+          // Fade only, no zoom/slide: a scale+slide entrance on a field opening inside an already-
+          // open modal reads as a second panel popping in on top of the first, not as "the menu
+          // appeared" — a quick plain fade is calm enough not to look like an extra popup while
+          // still avoiding an instant, jarring snap.
+          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-100 z-[80] max-h-(--radix-dropdown-menu-content-available-height) min-w-[10rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border border-border p-1 shadow-lg",
           className,
         )}
         {...props}
@@ -146,7 +155,7 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        "text-text-muted px-2 py-1.5 text-xs font-display font-semibold uppercase tracking-wide data-[inset]:pl-8",
+        "text-text-muted px-2 py-1.5 text-xs font-display font-medium uppercase tracking-wide data-[inset]:pl-8",
         className,
       )}
       {...props}
@@ -221,7 +230,7 @@ function DropdownMenuSubContent({
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-xl border border-border p-1 shadow-lg",
+        "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-[80] min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-xl border border-border p-1 shadow-lg",
         className,
       )}
       {...props}

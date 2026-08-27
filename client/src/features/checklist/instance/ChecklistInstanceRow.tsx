@@ -47,7 +47,7 @@ export const ChecklistInstanceRow = ({ instance }: ChecklistInstanceRowProps) =>
           <span className="flex items-center gap-1 text-xs text-text-muted font-mono">
             <ClipboardList size={11} /> {done}/{total}
           </span>
-          <span className={`text-xs font-mono font-semibold ${rateToneClass(progress)}`}>
+          <span className={`text-xs font-mono font-medium ${rateToneClass(progress)}`}>
             Mark {progress}%
           </span>
           <span
@@ -56,7 +56,7 @@ export const ChecklistInstanceRow = ({ instance }: ChecklistInstanceRowProps) =>
             {VERIFICATION_STATUS_LABEL[instance.verificationStatus]}
           </span>
           {overdue && (
-            <span className="flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-danger/10 text-danger">
+            <span className="flex items-center gap-1 text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-danger/10 text-danger">
               <Clock size={11} /> Overdue
             </span>
           )}

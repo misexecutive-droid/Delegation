@@ -26,5 +26,5 @@ interface TicketQuickStatsProps {
 // Thin wrapper around the shared QuickFilterStats, same one the Delegation page uses — this file
 // just owns the Ticket-specific tile data (keys/icons/colors), not the tile rendering itself.
 export const TicketQuickStats = ({ counts, active, onToggle }: TicketQuickStatsProps) => (
-  <QuickFilterStats tiles={TILES} counts={counts} active={active} onToggle={onToggle} itemLabel="tickets" />
+  <QuickFilterStats tiles={TILES} counts={counts} active={active} onToggle={onToggle} itemLabel="tickets" variant="navy" />
 );

@@ -24,7 +24,7 @@ export const CategoryBarChart = ({ bars }: { bars: CategoryBar[] }) => (
           disabled={bar.total === 0}
           className="group flex flex-1 flex-col items-center gap-2 h-full cursor-pointer outline-none disabled:cursor-default"
         >
-          <span className="text-xs font-display font-semibold text-text tabular-nums">
+          <span className="text-xs font-display font-medium text-text tabular-nums">
             {bar.total > 0 ? `${rate}%` : '—'}
           </span>
 
@@ -37,7 +37,7 @@ export const CategoryBarChart = ({ bars }: { bars: CategoryBar[] }) => (
             )}
           </div>
 
-          <span className="text-[11px] font-display font-semibold text-text-secondary">{bar.label}</span>
+          <span className="text-[11px] font-display font-medium text-text-secondary">{bar.label}</span>
           <span className="text-[10px] font-display text-text-muted tabular-nums">{bar.done}/{bar.total}</span>
         </button>
       );

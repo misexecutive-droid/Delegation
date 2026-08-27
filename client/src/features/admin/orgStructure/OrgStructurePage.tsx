@@ -107,7 +107,7 @@ export const OrgStructurePage = () => {
 
       {/* Stat strip — People leads as the highlighted hero tile, same convention as the
           Analytics summary strip's on-time-completion tile. */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard icon={Users} label="People" value={totalMembers} caption="Across your org" highlight decorative />
         <StatCard
           icon={Store}

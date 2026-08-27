@@ -4,26 +4,34 @@ import { useAuth } from '../../context/AuthContext';
 import { useTicketsQuery } from '../tickets/hook';
 import { useTasksQuery } from '../tasks/hook';
 import { useUpcomingEventsQuery } from '../events/hook';
+import { useTodosQuery } from '../todo/hook';
 import { TASK_SCORE } from '../tasks/taskDisplay';
 import { DashboardHeader } from './DashboardHeader';
 import { DashboardOverview } from './DashboardOverview';
 import { MonthlyTargetCard, type FooterStat } from './MonthlyTargetCard';
-import { MonthlyActivityChart } from './MonthlyActivityChart';
+import { ActivityTrendChart } from './ActivityTrendChart';
+import { ActivityComplianceGauges } from './ActivityComplianceGauges';
+import { ActivityGroupByControl } from './ActivityGroupByControl';
+import { CompareDashboard } from './CompareDashboard';
 import { RecentActivity } from './RecentActivity';
 import { UpcomingEvents } from './UpcomingEvents';
-import { type FeedItem, type CompliancePeriod, PERIOD_LABEL, periodStartDate, shiftPeriod, pointDelta } from './dashboardDisplay';
+import { type FeedItem, type CompliancePeriod, type ActivityGroupBy, PERIOD_LABEL, periodStartDate, shiftPeriod, pointDelta } from './dashboardDisplay';
 import type { Task } from '../../api/task';
 import { TodoDrawer, TodoFab } from '../todo';
 
 export const HomePage = () => {
   const { user } = useAuth();
   const [period, setPeriod] = useState<CompliancePeriod>('month');
+  const [comparePeriod, setComparePeriod] = useState<CompliancePeriod>('month');
+  const [activityGroupBy, setActivityGroupBy] = useState<ActivityGroupBy>('month');
   const [showTodoDrawer, setShowTodoDrawer] = useState(false);
   const { data: ticketPage, isPending: ticketsPending } = useTicketsQuery(1, 100);
   const { data: allTasks, isPending: tasksPending } = useTasksQuery();
+  const { data: todos = [], isPending: todosPending } = useTodosQuery();
   const { data: upcomingEvents, isPending: eventsPending } = useUpcomingEventsQuery(5);
 
   const isPending = ticketsPending || tasksPending;
+  const activityPending = isPending || todosPending;
 
   // This is everyone's dashboard homepage, not just admin's — regardless of role, it should only
   // ever reflect the signed-in user's own work (raised by them or assigned to them), never
@@ -33,6 +41,18 @@ export const HomePage = () => {
   const tasks = (allTasks ?? []).filter(
     (t) => t.userId === user?.id || t.assigneeId === user?.id || t.additionalAssigneeIds?.includes(user?.id ?? ''),
   );
+
+  // Process & Workflow card: ADMIN/PC see org-wide totals (that's literally their job — the
+  // verification queue is everyone's, not just their own) — everyone else sees the same
+  // mine-only `tasks` already used by the rest of this page.
+  const isOrgWideRole = user?.role === 'ADMIN' || user?.role === 'PC';
+  const workflowTasks = isOrgWideRole ? (allTasks ?? []) : tasks;
+  const workflowStats = {
+    pending: workflowTasks.filter((t) => t.status === 'todo' || t.status === 'in_progress').length,
+    approvals: workflowTasks.filter((t) => t.status === 'pending_verification').length,
+    completed: workflowTasks.filter((t) => t.status === 'done').length,
+    assigned: workflowTasks.length,
+  };
 
   // "now" only needs to be approximately current for the overdue checks below; memoized so
   // it's read once per mount, not on every render.
@@ -92,33 +112,44 @@ export const HomePage = () => {
     <div className="flex flex-col gap-5 w-full animate-in fade-in duration-500 ease-out">
       <DashboardHeader userName={user?.name} onOpenTodo={() => setShowTodoDrawer(true)} />
 
-      <DashboardOverview isPending={isPending} tickets={tickets} tasks={tasks} />
+      <DashboardOverview isPending={isPending} tickets={tickets} tasks={tasks} todos={todos} workflowStats={workflowStats} />
 
       <div className="rounded-2xl border border-border/60 dark:border-white/[0.06] bg-surface p-5 sm:p-6 lg:p-7">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-800/50 text-primary-600 dark:text-primary-400 shadow-sm">
-            <BarChart3 size={20} strokeWidth={2.5} />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-800/50 text-primary-600 dark:text-primary-400 shadow-sm">
+              <BarChart3 size={20} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-text tracking-tight leading-tight">Activity Overview</h3>
+              <p className="text-xs font-medium text-text-muted mt-0.5 tracking-wide">Delegations, tickets &amp; todo, and your overall completion rate</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-text tracking-tight leading-tight">Activity Overview</h3>
-            <p className="text-xs font-medium text-text-muted mt-0.5 capitalize tracking-wide">Last 6 months</p>
-          </div>
+          <ActivityGroupByControl value={activityGroupBy} onChange={setActivityGroupBy} />
         </div>
-        {isPending ? (
-          <div className="h-[200px] flex items-center justify-center text-sm text-text-muted">Loading…</div>
+
+        {activityPending ? (
+          <div className="h-[220px] flex items-center justify-center text-sm text-text-muted">Loading…</div>
         ) : (
-          <MonthlyActivityChart tasks={tasks} tickets={tickets} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+            <ActivityTrendChart tasks={tasks} tickets={tickets} todos={todos} groupBy={activityGroupBy} />
+            <ActivityComplianceGauges tasks={tasks} tickets={tickets} todos={todos} groupBy={activityGroupBy} />
+          </div>
         )}
       </div>
 
-      <MonthlyTargetCard
-        percent={targetPercent}
-        change={targetChange}
-        description={targetDescription}
-        stats={targetStats}
-        period={period}
-        onPeriodChange={setPeriod}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
+        <CompareDashboard tasks={tasks} tickets={tickets} todos={todos} period={comparePeriod} onPeriodChange={setComparePeriod} />
+
+        <MonthlyTargetCard
+          percent={targetPercent}
+          change={targetChange}
+          description={targetDescription}
+          stats={targetStats}
+          period={period}
+          onPeriodChange={setPeriod}
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-8">
         <RecentActivity feed={feed} isPending={isPending} />

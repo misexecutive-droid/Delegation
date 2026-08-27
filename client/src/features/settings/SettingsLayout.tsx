@@ -12,7 +12,7 @@ export const SettingsLayout = () => {
       <div className="flex items-center gap-3">
         <GradientIconTile icon={SettingsIcon} />
         <div>
-          <h1 className="text-xl font-display font-semibold text-text">Settings</h1>
+          <h1 className="text-xl font-display font-bold text-text">Settings</h1>
           <p className="text-sm text-text-muted mt-0.5">Manage system configuration.</p>
         </div>
       </div>

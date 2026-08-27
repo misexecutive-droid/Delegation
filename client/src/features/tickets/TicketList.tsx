@@ -199,7 +199,7 @@ export const TicketList = () => {
 
         {quickFilter && (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-xs font-display font-semibold rounded-full bg-primary-50 text-primary-700 border border-primary-200">
+            <span className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-xs font-display font-medium rounded-full bg-primary-50 text-primary-700 border border-primary-200">
               Showing: {quickFilter.charAt(0).toUpperCase() + quickFilter.slice(1)}
               <button
                 type="button"
@@ -346,7 +346,7 @@ export const TicketList = () => {
         </div>
 
         {assigneeIdFilter && (
-          <div className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold w-fit">
+          <div className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-primary-50 text-primary-700 text-xs font-medium w-fit">
             Showing tickets for {tickets[0]?.assignee?.firstName ?? 'this person'}
             <button
               type="button"
@@ -378,7 +378,7 @@ export const TicketList = () => {
           <div className="mb-3 text-text-muted">
             <Inbox size={26} />
           </div>
-          <h3 className="text-sm font-semibold text-text font-display">No tickets found</h3>
+          <h3 className="text-sm font-medium text-text font-display">No tickets found</h3>
           <p className="text-xs text-text-muted font-display mt-1 max-w-xs">
             {hasActiveFilters
               ? 'No tickets matched your current search query or filter selection.'

@@ -11,7 +11,7 @@ export interface ItemTypeFieldsProps {
   storeId?: string;
 }
 
-const FIELD_LABEL = 'text-[11px] font-display font-semibold text-text-muted';
+const FIELD_LABEL = 'text-[11px] font-display font-medium text-text-muted';
 const MINI_INPUT =
   'px-2 py-1.5 text-xs font-mono text-center bg-surface text-text rounded-md border border-border ' +
   'placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-150';
@@ -52,7 +52,7 @@ const PhotoFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
 const AuditFields = ({ draft, onChange, storeId }: ItemTypeFieldsProps) => (
   <div className="flex flex-col gap-3">
     <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-display font-semibold text-text-secondary">Who audits this?</span>
+      <span className="text-xs font-display font-medium text-text-secondary">Who audits this?</span>
       <UserMultiSelect storeId={storeId} selected={draft.auditUserIds} onChange={ids => onChange({ auditUserIds: ids })} />
     </div>
     <AccessoriesListEditor accessories={draft.accessories} onChange={accessories => onChange({ accessories })} />
@@ -100,7 +100,7 @@ const RatingFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
           type="button"
           onClick={() => onChange({ ratingScale: scale })}
           className={[
-            'px-3 py-1.5 rounded-md text-xs font-display font-semibold transition-all duration-200 cursor-pointer',
+            'px-3 py-1.5 rounded-md text-xs font-display font-medium transition-all duration-200 cursor-pointer',
             draft.ratingScale === scale ? 'bg-primary-700 text-white shadow-sm' : 'text-text-muted hover:text-text hover:bg-surface-hover',
           ].join(' ')}
         >

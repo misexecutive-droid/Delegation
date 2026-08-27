@@ -72,7 +72,7 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
                         <div className="flex items-center gap-1.5 min-w-0">
                             <button
                                 onClick={() => onOpen(task)}
-                                className={`text-[15px] font-semibold truncate text-left transition-colors outline-none focus-visible:text-primary-600 focus-visible:underline ${
+                                className={`text-[15px] font-medium truncate text-left transition-colors outline-none focus-visible:text-primary-600 focus-visible:underline ${
                                     task.status === 'done'
                                         ? 'line-through text-text-light'
                                         : 'text-text hover:text-primary-600'
@@ -87,7 +87,7 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
                             {fields.status && (() => {
                                 const status = STATUS_CONFIG[task.status];
                                 return (
-                                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${status.badge}`}>
+                                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border ${status.badge}`}>
                                         {status.label}
                                     </span>
                                 );
@@ -112,7 +112,7 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
                             {fields.category && (() => {
                                 const cat = CATEGORY_CONFIG[task.category];
                                 return (
-                                    <span className={`flex items-center gap-1.5 text-[11px] font-semibold px-1.5 py-0.5 rounded ${cat.className}`}>
+                                    <span className={`flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded ${cat.className}`}>
                                         <cat.icon size={12} strokeWidth={2.5} />
                                         {cat.label}
                                     </span>
@@ -163,7 +163,7 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
                     )}
 
                     {fields.department && departmentName && (
-                        <span className={`inline-flex items-center px-2 py-1 rounded text-[11px] font-semibold shrink-0 ${departmentTagClass(departmentName)}`}>
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-[11px] font-medium shrink-0 ${departmentTagClass(departmentName)}`}>
                             {departmentName}
                         </span>
                     )}
@@ -171,7 +171,7 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
                     {fields.priority && (
                         <PriorityChip
                             priority={task.priority}
-                            className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded shrink-0"
+                            className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded shrink-0"
                         />
                     )}
 

@@ -48,7 +48,7 @@ export const BuilderStepper = ({ steps, current, maxReached, allUnlocked, isStep
               </span>
               <span
                 className={[
-                  'hidden sm:inline text-xs font-display font-semibold whitespace-nowrap transition-colors duration-200',
+                  'hidden sm:inline text-xs font-display font-medium whitespace-nowrap transition-colors duration-200',
                   locked ? 'text-text-light' : isCurrent ? 'text-primary-700' : valid ? 'text-text-secondary' : 'text-warning',
                   !locked && 'group-hover:text-primary-700',
                 ].join(' ')}

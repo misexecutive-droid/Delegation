@@ -26,10 +26,10 @@ export const ImportFromTemplateField = ({ templates, onImport }: ImportFromTempl
         <span className="flex items-center justify-center text-coral-600 dark:text-coral-400 shrink-0">
           <Sparkles size={13} />
         </span>
-        <span className="text-xs font-display font-semibold text-text-secondary uppercase tracking-wider">
+        <span className="text-xs font-display font-medium text-text-secondary uppercase tracking-wider">
           Start From a Template
         </span>
-        <span className="text-[11px] font-display normal-case font-normal text-text-muted/70 tracking-normal">
+        <span className="text-[11px] font-display normal-case font-medium text-text-muted/70 tracking-normal">
           (Optional)
         </span>
       </div>

@@ -51,14 +51,14 @@ export const TodoDayStrip = ({ selected, onSelect, todos }: TodoDayStripProps) =
             className="group flex flex-1 flex-col items-center gap-1.5 py-1 cursor-pointer outline-none"
           >
             <span
-              className={`text-[10px] font-display font-semibold uppercase tracking-wide transition-colors ${
+              className={`text-[10px] font-display font-medium uppercase tracking-wide transition-colors ${
                 isSelected ? 'text-primary-600' : 'text-text-light'
               }`}
             >
               {WEEKDAY[day.getDay()]}
             </span>
             <span
-              className={`relative flex items-center justify-center size-8 sm:size-10 rounded-xl text-xs sm:text-sm font-display font-semibold transition-all duration-200 ${
+              className={`relative flex items-center justify-center size-8 sm:size-10 rounded-xl text-xs sm:text-sm font-display font-medium transition-all duration-200 ${
                 isSelected
                   ? 'bg-gradient-to-br from-primary-600 to-primary-500 text-white shadow-sm shadow-primary-600/30 scale-105'
                   : isToday

@@ -19,7 +19,7 @@ export const VerificationBanner = ({ ticket }: VerificationBannerProps) => {
     }`}>
       {isClosed ? <ShieldCheck size={14} className="shrink-0 mt-0.5" /> : <ShieldX size={14} className="shrink-0 mt-0.5" />}
       <div>
-        <p className="font-semibold">
+        <p className="font-medium">
           {isClosed && ticket.verifiedBy ? 'Verified' : 'Sent back for changes'}
         </p>
         <p className="mt-0.5 text-text-secondary">{ticket.verificationNote}</p>

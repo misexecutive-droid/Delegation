@@ -16,7 +16,7 @@ export const UserRow = memo(({ user }: { user: AdminUser }) => (
   <div className="group flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors duration-200 hover:bg-surface-hover">
     <Avatar name={`${user.firstName} ${user.lastName ?? ''}`} src={resolveAvatarUrl(user.avatarUrl)} size="sm" />
     <div className="min-w-0 flex-1">
-      <p className="text-sm font-display font-semibold text-text truncate">
+      <p className="text-sm font-display font-medium text-text truncate">
         {user.firstName} {user.lastName ?? ''}
       </p>
       <p className="text-xs font-display text-text-muted truncate">{user.email}</p>

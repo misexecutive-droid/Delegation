@@ -25,7 +25,9 @@ interface StoreRow {
 export const StoresPerformanceSection = ({ groupBy, from, to }: StoresPerformanceSectionProps) => {
   const { token } = useAuth();
   const { data: departments = [] } = useDepartmentsQuery();
-  const { data: ticketPage } = useTicketsQuery(1, 200);
+  // 100 is the server's hard cap (ticket.validation.ts) — requesting more (e.g. 200) fails
+  // validation outright with a 400, not a silent truncation.
+  const { data: ticketPage } = useTicketsQuery(1, 100);
   const { data: tasks = [] } = useTasksQuery();
 
   const tickets = useMemo(() => ticketPage?.data ?? [], [ticketPage]);
@@ -82,12 +84,12 @@ export const StoresPerformanceSection = ({ groupBy, from, to }: StoresPerformanc
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-primary-700 text-white">
-                <th className="text-left font-display font-semibold px-5 py-3 whitespace-nowrap">Store</th>
-                <th className="text-right font-display font-semibold px-5 py-3 whitespace-nowrap">Checklist</th>
-                <th className="text-right font-display font-semibold px-5 py-3 whitespace-nowrap">Audit score</th>
-                <th className="text-right font-display font-semibold px-5 py-3 whitespace-nowrap">Open issues</th>
-                <th className="text-right font-display font-semibold px-5 py-3 whitespace-nowrap">Avg TAT</th>
-                <th className="text-right font-display font-semibold px-5 py-3 whitespace-nowrap">SLA met</th>
+                <th className="text-left font-display font-medium px-5 py-3 whitespace-nowrap">Store</th>
+                <th className="text-right font-display font-medium px-5 py-3 whitespace-nowrap">Checklist</th>
+                <th className="text-right font-display font-medium px-5 py-3 whitespace-nowrap">Audit score</th>
+                <th className="text-right font-display font-medium px-5 py-3 whitespace-nowrap">Open issues</th>
+                <th className="text-right font-display font-medium px-5 py-3 whitespace-nowrap">Avg TAT</th>
+                <th className="text-right font-display font-medium px-5 py-3 whitespace-nowrap">SLA met</th>
               </tr>
             </thead>
             <tbody>
@@ -128,33 +130,33 @@ export const StoresPerformanceSection = ({ groupBy, from, to }: StoresPerformanc
           ) : (
             storeRows.map((row) => (
               <div key={row.id} className="p-4 flex flex-col gap-3">
-                <p className="font-display font-semibold text-text text-sm">{row.name}</p>
+                <p className="font-display font-medium text-text text-sm">{row.name}</p>
                 <div className="grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-text-muted uppercase tracking-wide text-[10px]">Checklist</span>
-                    <span className="font-display font-semibold tabular-nums text-text">
+                    <span className="font-display font-medium tabular-nums text-text">
                       {row.checklistRate != null ? `${row.checklistRate}%` : '—'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-text-muted uppercase tracking-wide text-[10px]">Audit score</span>
-                    <span className="font-display font-semibold tabular-nums text-text">
+                    <span className="font-display font-medium tabular-nums text-text">
                       {row.auditScore != null ? row.auditScore : '—'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-text-muted uppercase tracking-wide text-[10px]">Open issues</span>
-                    <span className="font-display font-semibold tabular-nums text-text">{row.openIssues}</span>
+                    <span className="font-display font-medium tabular-nums text-text">{row.openIssues}</span>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-text-muted uppercase tracking-wide text-[10px]">Avg TAT</span>
-                    <span className="font-display font-semibold tabular-nums text-text">
+                    <span className="font-display font-medium tabular-nums text-text">
                       {row.avgTat != null ? `${row.avgTat}h` : '—'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-text-muted uppercase tracking-wide text-[10px]">SLA met</span>
-                    <span className="font-display font-semibold tabular-nums text-text">
+                    <span className="font-display font-medium tabular-nums text-text">
                       {row.slaMet != null ? `${row.slaMet}%` : '—'}
                     </span>
                   </div>

@@ -33,7 +33,6 @@ interface NavItem {
   icon: typeof LayoutDashboard;
   label: string;
   children?: NavChild[];
-  /** Renders as a disabled, "Soon"-badged row instead of a working link. */
   soon?: boolean;
 }
 
@@ -70,8 +69,6 @@ const NAV: NavItem[] = [
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
 ];
 
-// Kept out of the scrollable NAV list and rendered in its own small fixed section just above the
-// user's profile card instead — same placement idea as a "Support"/"Settings" footer group.
 const SETTINGS_ITEM: NavItem = { to: '/settings', icon: Settings, label: 'Settings' };
 
 const isChildActive = (child: NavChild, location: { pathname: string; search: string }) =>
@@ -84,7 +81,6 @@ interface SidebarProps {
   user: { id: string; name: string; email: string; role?: string } | null;
   logout: () => void;
   onNavigate?: () => void;
-  /** Renders a floating collapse/expand toggle on the desktop sidebar's edge when provided. */
   onToggleCollapse?: () => void;
 }
 
@@ -153,10 +149,6 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
   const renderNavItem = ({ to, icon: Icon, label, children, soon }: NavItem, isDrawer: boolean) => {
     const hasActiveChild = children?.some((child) => !child.soon && isChildActive(child, location)) ?? false;
     const hasChildren = !!children?.length;
-    // Was `isDrawer || expandedKeys.has(to)` — that forced every group open inside the mobile
-    // drawer no matter what, so the chevron rendered there but clicking it never visibly did
-    // anything. expandedKeys already defaults every group to open (see the useState above), so
-    // dropping the isDrawer override just makes the arrow actually toggle in both contexts.
     const isExpanded = expandedKeys.has(to);
     const showLabel = isDrawer || isOpen;
 
@@ -190,7 +182,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
             </span>
           </span>
           {showLabel && (
-            <span className="shrink-0 ml-2 text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-border/60 text-text-muted">
+            <span className="shrink-0 ml-2 text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-slate-300 text-text-muted">
               Soon
             </span>
           )}
@@ -209,8 +201,6 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
             className={({ isActive }) =>
               [
                 'group/link relative flex flex-1 min-w-0 items-center rounded-xl text-[13px] transition-colors duration-200 ease-out',
-                // The mobile drawer gets a taller touch target (closer to the 44px minimum) than
-                // the desktop sidebar, which stays at its tighter, mouse-driven density.
                 isDrawer ? 'px-3 py-3' : 'px-3 py-2.5',
                 showLabel ? 'justify-start' : 'md:justify-center md:px-0',
                 isActive || hasActiveChild
@@ -224,7 +214,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                 {(isActive || hasActiveChild) && (
                   <motion.span
                     layoutId={`sidebar-active-pill-${isDrawer ? 'drawer' : 'desktop'}`}
-                    className="absolute inset-0 rounded-xl bg-primary-50/80 border border-slate-300 dark:bg-primary-900/20 dark:border-slate-600"
+                    className="absolute inset-0 rounded-xl bg-primary-50/80 dark:bg-primary-900/20"
                     transition={{ type: 'spring', stiffness: 500, damping: 40, mass: 0.5 }}
                   />
                 )}
@@ -233,8 +223,8 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                     'relative z-10 flex items-center justify-center shrink-0 rounded-lg transition-all duration-300',
                     isDrawer ? 'size-8' : 'size-7',
                     isActive || hasActiveChild
-                      ? 'bg-primary-600 text-white shadow-sm shadow-primary-600/25 dark:bg-primary-500'
-                      : 'bg-surface-hover/60 text-text-muted group-hover/link:bg-surface-active group-hover/link:text-text-secondary',
+                      ? 'bg-primary-600 text-white dark:bg-primary-500'
+                      : 'bg-surface-hover/60 text-text-muted  group-hover/link:bg-surface-active group-hover/link:text-text-secondary',
                   ].join(' ')}
                 >
                   <Icon
@@ -261,7 +251,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
               onClick={() => toggleExpanded(to)}
               aria-label={isExpanded ? `Collapse ${label}` : `Expand ${label}`}
               aria-expanded={isExpanded}
-              className="shrink-0 p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+              className="shrink-0 p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
             >
               <ChevronDown
                 size={16}
@@ -282,7 +272,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="overflow-hidden"
             >
-              <div className="flex flex-col gap-1 mt-1 mb-2 ml-4 pl-4 border-l-2 border-border/50">
+              <div className="flex flex-col gap-1 mt-1 mb-2 ml-4 pl-4 ">
                 {children!.map((child) => {
                   if (child.soon) {
                     return (
@@ -291,7 +281,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                         className={`flex items-center justify-between gap-2 rounded-lg px-3 text-[12px] font-medium text-text-muted/70 cursor-not-allowed select-none ${isDrawer ? 'py-2.5' : 'py-1.5'}`}
                       >
                         {child.label}
-                        <span className="text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-border/60 text-text-muted">
+                        <span className="text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-slate-300 text-text-muted">
                           Soon
                         </span>
                       </span>
@@ -313,7 +303,6 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                           : 'text-text-secondary font-medium hover:bg-surface-hover hover:text-text',
                       ].join(' ')}
                     >
-                      {/* Subtle active indicator dot */}
                       {isActiveChild && (
                         <span className="absolute left-0 top-1/2 -translate-y-1/2 -ml-[19px] size-1.5 rounded-full bg-primary-500 ring-4 ring-surface" />
                       )}
@@ -354,14 +343,17 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
           )}
         </div>
 
-        <nav className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 -mr-2">
+        <nav
+          className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto pr-1.5 -mr-1.5 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {navItems.map((item) => renderNavItem(item, isDrawer))}
 
           {adminNavItems.length > 0 && (
             <>
               <div
                 className={[
-                  'border-t border-border/60 transition-all duration-300 ease-in-out',
+                  'border-t border-slate-300 transition-all duration-300 ease-in-out',
                   (isDrawer || isOpen) ? 'mt-4 mb-3 mx-1' : 'mt-3 mb-2 mx-2',
                 ].join(' ')}
                 aria-hidden="true"
@@ -381,9 +373,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
         </nav>
       </div>
 
-      {/* Settings — pulled out of the scrollable NAV list and pinned here instead, right above
-          the profile card, same placement as a "Support" footer group. */}
-      <div className="shrink-0 pt-3 border-t border-border/50">
+      <div className="shrink-0 pt-3 border-t border-slate-300">
         <p
           className={[
             'text-[11px] font-bold text-text-muted capitalize tracking-wide px-3 mb-1',
@@ -396,16 +386,15 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
         {renderNavItem(SETTINGS_ITEM, isDrawer)}
       </div>
 
-      {/* User Footer Profile */}
       <div className="shrink-0 pt-3 mt-1">
         <div
           className={[
             'flex items-center p-2 rounded-xl border border-transparent transition-all duration-300',
-            (isDrawer || isOpen) ? 'bg-surface-hover/50 border-border/40 shadow-sm' : 'md:justify-center hover:bg-surface-hover/50',
+            (isDrawer || isOpen) ? 'bg-surface-hover/50 border-slate-300' : 'md:justify-center hover:bg-surface-hover/50',
           ].join(' ')}
         >
           <div
-            className="size-9 rounded-full bg-primary-600 shadow-sm flex items-center justify-center text-white text-xs font-bold shrink-0"
+            className="size-9 rounded-full bg-primary-600 border border-slate-300 flex items-center justify-center text-white text-xs font-bold shrink-0"
             title={user?.name}
           >
             {initials}
@@ -443,44 +432,44 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
 
   return (
     <>
-      {/* 1. Mobile Backdrop */}
-      {isOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
-          onClick={onNavigate}
-          aria-hidden="true"
-        />
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            onClick={onNavigate}
+            aria-hidden="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* 2. Mobile Drawer — extra top padding (pt-8 instead of the shared py-5) clears the fixed
-          Header bar above it, so "Workspace"/"Dashboard" don't read as glued to its icon row.
-          h-dvh (not h-full + bottom-0) pins this to the actual visible viewport — mobile browsers
-          resize the layout viewport as their address-bar chrome shows/hides, and `h-full`/`100vh`
-          can end up taller than what's really visible, silently pushing the footer profile card
-          (the last item in the column) below the fold with no way to scroll back up to it. */}
-      <aside
-        className={[
-          'md:hidden fixed top-0 left-0 z-50 w-[280px] max-w-[85vw] h-dvh flex flex-col px-4 pt-8 pb-5 shadow-2xl border-r border-border/50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
-          isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none',
-        ].join(' ')}
-        style={{ background: 'var(--color-surface, #1e293b)' }}
+      <motion.aside
+        className="md:hidden fixed top-0 left-0 z-50 w-[280px] max-w-[85vw] h-dvh flex flex-col px-4 pt-8 pb-5 border-r border-slate-300"
+        style={{ background: 'var(--color-surface, #1e293b)', pointerEvents: isOpen ? 'auto' : 'none' }}
+        initial={false}
+        animate={{ x: isOpen ? 0 : '-100%' }}
+        transition={{ type: 'spring', stiffness: 380, damping: 38, mass: 0.9 }}
       >
         {renderContent(true)}
-      </aside>
+      </motion.aside>
 
-      {/* 3. Desktop Sidebar — wrapped in a plain (non-clipping) relative box so the floating
-          collapse toggle below can sit half outside the aside's own edge without being cut off
-          by the aside's `overflow-hidden` (needed there to hide labels during the width tween). */}
       <div className="hidden md:block relative shrink-0 h-full z-20">
-        <aside
-          className={[
-            'flex flex-col h-full border-r border-border/50 transition-[width,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden py-5',
-            isOpen ? 'w-[260px] px-4' : 'w-[72px] px-3',
-          ].join(' ')}
+        <motion.aside
+          className="flex flex-col h-full border-r border-slate-300 overflow-hidden py-5"
           style={{ background: 'var(--color-surface)' }}
+          initial={false}
+          animate={{
+            width: isOpen ? 260 : 72,
+            paddingLeft: isOpen ? 16 : 12,
+            paddingRight: isOpen ? 16 : 12,
+          }}
+          transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.9 }}
         >
           {renderContent(false)}
-        </aside>
+        </motion.aside>
 
         {onToggleCollapse && (
           <button
@@ -488,7 +477,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
             onClick={onToggleCollapse}
             aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
             title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-            className="absolute top-1/2 -right-3 -translate-y-1/2 z-30 flex size-6 items-center justify-center rounded-full border border-border bg-surface text-text-muted shadow-md transition-all duration-200 cursor-pointer hover:text-primary-600 hover:border-primary-300 hover:shadow-lg active:scale-90"
+            className="absolute top-1/2 -right-3 -translate-y-1/2 z-30 flex size-6 items-center justify-center rounded-full border border-slate-300 bg-surface text-text-muted transition-all duration-200 cursor-pointer hover:text-primary-600 hover:border-primary-300 active:scale-90"
           >
             {isOpen ? <ChevronLeft size={13} strokeWidth={2.5} /> : <ChevronRight size={13} strokeWidth={2.5} />}
           </button>

@@ -6,7 +6,7 @@ interface PriorityChipProps {
   className?: string;
 }
 
-const DEFAULT_CLASS = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold';
+const DEFAULT_CLASS = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium';
 
 // A colored dot + label chip driven by PRIORITY_MAP — the markup itself was being copy-pasted at
 // every call site even though the color lookup was already centralized. `className` lets each

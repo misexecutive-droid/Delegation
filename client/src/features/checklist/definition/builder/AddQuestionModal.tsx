@@ -42,7 +42,7 @@ export const AddQuestionModal = ({ entry, storeId, onClose, onConfirm }: AddQues
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-display font-semibold text-text-secondary border border-border bg-surface hover:bg-surface-hover transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+            className="px-4 py-2 rounded-lg text-sm font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
           >
             Cancel
           </button>
@@ -50,7 +50,7 @@ export const AddQuestionModal = ({ entry, storeId, onClose, onConfirm }: AddQues
             type="button"
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-display font-semibold text-white bg-primary-700 shadow-sm transition-all duration-150 hover:bg-primary-800 hover:shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-display font-medium text-white bg-primary-700 shadow-sm transition-all duration-150 hover:bg-primary-800 hover:shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
           >
             <Sparkles size={14} />
             Add to checklist
@@ -59,7 +59,7 @@ export const AddQuestionModal = ({ entry, storeId, onClose, onConfirm }: AddQues
       }
     >
       <div className="flex flex-col gap-2">
-        <label htmlFor="quick-add-label" className="text-xs font-display font-semibold text-text-secondary">
+        <label htmlFor="quick-add-label" className="text-xs font-display font-medium text-text-secondary">
           What should the store team see?
         </label>
         <input

@@ -39,7 +39,7 @@ export const BuilderProofPanel = ({ selected, onChange }: BuilderProofPanelProps
               onClick={() => toggle(opt.value)}
               aria-pressed={checked}
               className={[
-                'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-display font-semibold transition-all duration-200 ease-out cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+                'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-display font-medium transition-all duration-200 ease-out cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                 checked
                   ? 'bg-primary-700 text-white shadow-sm'
                   : 'bg-surface border border-border text-text-secondary hover:bg-surface-hover hover:border-border-hover',

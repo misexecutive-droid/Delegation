@@ -79,7 +79,7 @@ export const TicketStatusUpdatePanel = ({
               onClick={() => onPickStatus(opt.value)}
               className={`text-xs font-medium px-2.5 py-2 rounded-md border transition-all text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 cursor-pointer ${
                 isSelected
-                  ? 'border-primary-500/60 bg-primary-500/10 text-primary-500 font-semibold shadow-xs'
+                  ? 'border-primary-500/60 bg-primary-500/10 text-primary-500 font-medium shadow-xs'
                   : 'border-border/80 bg-surface text-text-secondary hover:bg-surface-muted hover:text-text'
               }`}
             >

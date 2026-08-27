@@ -22,7 +22,7 @@ const VARIANT_CLASS = {
 } as const;
 
 export const TaskScoreBadge = ({ status, variant = 'md' }: TaskScoreBadgeProps) => (
-  <span className={`inline-flex items-center font-semibold ${VARIANT_CLASS[variant]} ${scoreBadgeClass(status)}`}>
+  <span className={`inline-flex items-center font-medium ${VARIANT_CLASS[variant]} ${scoreBadgeClass(status)}`}>
     Mark {taskScorePercent(status)}%
   </span>
 );

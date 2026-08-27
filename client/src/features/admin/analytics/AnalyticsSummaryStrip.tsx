@@ -34,7 +34,7 @@ export const AnalyticsSummaryStrip = ({ groupBy, from, to }: AnalyticsSummaryStr
   const proofTrend = taskQuality.value != null ? taskQuality.trend : instanceQuality.trend;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       {/* Leads the row as the highlighted "hero" tile — the single most central org-wide metric —
           same convention as the dashboard's own KpiStrip.tsx. */}
       <StatCard

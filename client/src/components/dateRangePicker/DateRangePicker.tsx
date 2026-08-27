@@ -129,7 +129,7 @@ export function DateRangePicker({
         )}
       >
         <CalendarIcon size={16} className="text-text-light shrink-0" />
-        <span className={cn("truncate", hasValue ? 'text-text font-semibold' : 'text-text-muted font-normal')}>
+        <span className={cn("truncate", hasValue ? 'text-text font-medium' : 'text-text-muted font-medium')}>
           {label}
         </span>
         {hasValue && (
@@ -211,7 +211,7 @@ export function DateRangePicker({
                 onMouseEnter={() => setHoverDate(day)}
                 disabled={!inMonth}
                 className={cn(
-                  'h-9 text-xs rounded-md transition-colors font-semibold',
+                  'h-9 text-xs rounded-md transition-colors font-medium',
                   !inMonth ? 'text-text-light/40 cursor-default' : 'text-text-secondary cursor-pointer',
                   (isFrom || isTo) && 'bg-primary-700 text-white shadow-sm hover:bg-primary-800',
                   inRange && 'bg-primary-500/15 text-primary-700 dark:text-primary-300',

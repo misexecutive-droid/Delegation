@@ -18,10 +18,17 @@ type DepartmentFields = z.infer<typeof departmentSchema>;
 interface DepartmentFormProps {
   onClose: () => void;
   department?: Department;
+  /** Called with the newly-created department right after a successful create (not fired when
+   *  editing) — lets a caller opening this as a nested "quick create" (e.g. from UserForm's
+   *  department Combobox) auto-select the result instead of the admin re-picking it themselves. */
+  onCreated?: (department: Department) => void;
+  /** Seeds the name field — e.g. whatever the admin had already typed into a Combobox's search
+   *  box before hitting "Create new department". */
+  prefillName?: string;
 }
 
 // --- Main Component ---
-export const DepartmentForm = ({ onClose, department }: DepartmentFormProps) => {
+export const DepartmentForm = ({ onClose, department, onCreated, prefillName }: DepartmentFormProps) => {
   const isEditing = !!department;
   const createMutation = useCreateDepartmentMutation();
   const updateMutation = useUpdateDepartmentMutation();
@@ -36,7 +43,7 @@ export const DepartmentForm = ({ onClose, department }: DepartmentFormProps) => 
     formState: { errors },
   } = useForm<DepartmentFields>({
     resolver: zodResolver(departmentSchema),
-    defaultValues: { name: department?.name || '', storeId: department?.storeId ?? '' }
+    defaultValues: { name: department?.name || prefillName || '', storeId: department?.storeId ?? '' }
   });
 
   const isPending = mutation.isPending;
@@ -50,7 +57,10 @@ export const DepartmentForm = ({ onClose, department }: DepartmentFormProps) => 
         { onSuccess: onClose }
       );
     } else {
-      createMutation.mutate({ name: data.name, storeId: storePayload }, { onSuccess: onClose });
+      createMutation.mutate(
+        { name: data.name, storeId: storePayload },
+        { onSuccess: (created) => { onCreated?.(created); onClose(); } }
+      );
     }
   };
 
@@ -69,6 +79,10 @@ export const DepartmentForm = ({ onClose, department }: DepartmentFormProps) => 
     <Modal
       open
       onClose={() => !isPending && onClose()}
+      // Non-modal so this also works correctly when opened nested inside another Modal (e.g. a
+      // "create new department" quick-add from UserForm's department Combobox) — same reasoning
+      // as DatePicker/DateRangePicker.
+      modal={false}
       icon={<Building2 className="w-5 h-5" />}
       title={isEditing ? 'Edit department' : 'New department'}
       description={
@@ -92,7 +106,7 @@ export const DepartmentForm = ({ onClose, department }: DepartmentFormProps) => 
           {/* Home Store — optional. Lets a department head (MANAGER) and a store's Senior
               resolve into each other's scoped reports instead of falling back to org-wide. */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="storeId" className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+            <label htmlFor="storeId" className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
               <Store className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
               Store (optional)
             </label>

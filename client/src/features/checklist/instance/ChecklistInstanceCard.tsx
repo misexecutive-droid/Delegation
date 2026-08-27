@@ -24,11 +24,11 @@ export const ChecklistInstanceCard = ({ instance }: ChecklistInstanceCardProps) 
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-mono font-medium text-text">{instance.title}</p>
         {isComplete ? (
-          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
             Done
           </span>
         ) : (
-          <span className={`flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full shrink-0 ${rateToneClass(progress)} bg-surface-hover`}>
+          <span className={`flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full shrink-0 ${rateToneClass(progress)} bg-surface-hover`}>
             Mark {progress}%
           </span>
         )}
@@ -39,7 +39,7 @@ export const ChecklistInstanceCard = ({ instance }: ChecklistInstanceCardProps) 
           {formatDateShort(instance.periodStart)} – {formatDateShort(instance.periodEnd)}
         </p>
         {overdue && (
-          <span className="flex items-center gap-1 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full bg-danger/10 text-danger">
+          <span className="flex items-center gap-1 text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-full bg-danger/10 text-danger">
             <Clock size={10} /> Overdue
           </span>
         )}

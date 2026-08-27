@@ -34,7 +34,7 @@ export const BuilderSchedulePanel = ({
     <h2 className="text-xs font-display font-bold uppercase tracking-wider text-text-muted">Schedule</h2>
 
     <div className="space-y-3">
-      <label className="text-xs font-display font-semibold text-text-secondary flex items-center gap-2">
+      <label className="text-xs font-display font-medium text-text-secondary flex items-center gap-2">
         <div className="text-success">
           <Store size={14} />
         </div>
@@ -53,7 +53,7 @@ export const BuilderSchedulePanel = ({
           onClick={() => onRecurrenceChange(opt.value)}
           aria-pressed={recurrence === opt.value}
           className={[
-            'px-4 py-2 rounded-full text-xs font-display font-semibold transition-all duration-200 ease-out cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+            'px-4 py-2 rounded-full text-xs font-display font-medium transition-all duration-200 ease-out cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
             recurrence === opt.value
               ? 'bg-primary-700 text-white shadow-sm'
               : 'bg-surface border border-border text-text-secondary hover:bg-surface-hover hover:border-border-hover',

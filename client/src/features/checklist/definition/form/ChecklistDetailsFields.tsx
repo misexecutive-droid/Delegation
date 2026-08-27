@@ -29,7 +29,7 @@ export const ChecklistDetailsFields = ({
 
     <Textarea
       id="checklist-description"
-      label={<>Description <span className="text-text-muted/70 font-normal">(Optional)</span></>}
+      label={<>Description <span className="text-text-muted/70 font-medium">(Optional)</span></>}
       icon={FileText}
       rows={3}
       placeholder="What is this checklist for?"

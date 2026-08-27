@@ -19,7 +19,7 @@ export const QuickActionsGrid = () => (
         <Zap size={18} className="text-primary-500" />
       </div>
       <div>
-        <h2 className="font-display text-lg font-semibold tracking-tight text-text">Quick actions</h2>
+        <h2 className="font-display text-lg font-bold tracking-tight text-text">Quick actions</h2>
         <p className="mt-0.5 font-display text-xs text-text-muted">Jump straight to the tools you use most</p>
       </div>
     </div>

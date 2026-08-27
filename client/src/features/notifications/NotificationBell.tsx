@@ -111,7 +111,7 @@ export const NotificationBell = ({ tone = 'light' }: NotificationBellProps) => {
               <button
                 onClick={() => markAllRead.mutate()}
                 className={cn(
-                  "flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400",
+                  "flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400",
                   "transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-md px-1 -mx-1"
                 )}
               >
@@ -161,7 +161,7 @@ export const NotificationBell = ({ tone = 'light' }: NotificationBellProps) => {
                       
                       <div className="flex-1 min-w-0 space-y-1">
                         <p className={cn(
-                          "text-sm font-semibold truncate",
+                          "text-sm font-medium truncate",
                           n.isRead ? "text-slate-700 dark:text-slate-300" : "text-slate-900 dark:text-white"
                         )}>
                           {n.title}

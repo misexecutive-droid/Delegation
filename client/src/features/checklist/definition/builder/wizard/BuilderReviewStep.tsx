@@ -39,7 +39,7 @@ const EditButton = ({ onClick }: { onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
-    className="flex items-center gap-1.5 text-xs font-display font-semibold px-3 py-1.5 rounded-full border border-primary-500/40 text-primary-700 hover:bg-primary-50 transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+    className="flex items-center gap-1.5 text-xs font-display font-medium px-3 py-1.5 rounded-full border border-primary-500/40 text-primary-700 hover:bg-primary-50 transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
   >
     <Pencil size={12} /> Edit
   </button>
@@ -88,7 +88,7 @@ export const BuilderReviewStep = ({
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SectionCard title="Basics" icon={<Store size={13} />} valid={sectionValidity[0]} onEdit={() => onEditSection(0)}>
-          <p className="text-sm font-display font-semibold text-text">{name.trim() || 'Untitled checklist'}</p>
+          <p className="text-sm font-display font-medium text-text">{name.trim() || 'Untitled checklist'}</p>
           <p className="text-xs font-display text-text-muted">{description.trim() || 'No description added.'}</p>
         </SectionCard>
 

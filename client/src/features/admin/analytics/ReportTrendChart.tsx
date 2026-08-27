@@ -49,7 +49,7 @@ export const ReportTrendChart = ({ data, series, valueSuffix = '', yDomain }: Re
         <div className="flex items-center justify-center text-text-light">
           <Activity className="w-6 h-6" />
         </div>
-        <p className="text-sm font-display font-semibold text-text">No data for this period</p>
+        <p className="text-sm font-display font-medium text-text">No data for this period</p>
         <p className="text-xs font-display text-text-muted -mt-2">Adjust the date range or grouping to see a trend.</p>
       </div>
     );

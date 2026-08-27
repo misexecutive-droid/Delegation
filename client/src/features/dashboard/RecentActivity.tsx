@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Ticket as TicketIcon, CheckSquare, Clock, Activity, Search, ArrowUpDown } from 'lucide-react';
-import { Skeleton } from '../../components';
+import { Skeleton, PageNav } from '../../components';
 import { TASK_STATUS_COLORS, type FeedItem } from './dashboardDisplay';
 import { STATUS_LABEL } from '../tasks/taskDisplay';
 import { STATUS_CONFIG as TICKET_STATUS_CONFIG } from '../tickets/ticketDisplay';
@@ -15,12 +15,19 @@ interface RecentActivityProps {
 
 type SortOrder = 'newest' | 'oldest';
 
+const PAGE_SIZE = 5;
+
 // A searchable, sortable table over the same recent feed — same idea as a "Recent orders" panel,
 // scoped to whatever `feed` HomePage hands it (its most recent handful of tickets/tasks, not the
 // full history), so search/sort here narrows down that window rather than the whole account.
 export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortOrder>('newest');
+  const [page, setPage] = useState(1);
+  // Tracks the search/sort combo the current `page` was set for — adjusted during render
+  // (React's recommended alternative to a setState-in-effect) so that narrowing the results
+  // to a shorter list always snaps back to page 1 instead of pointing past the end.
+  const [pagedFor, setPagedFor] = useState({ query, sort });
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -30,6 +37,14 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => {
       return sort === 'newest' ? -diff : diff;
     });
   }, [feed, query, sort]);
+
+  if (pagedFor.query !== query || pagedFor.sort !== sort) {
+    setPagedFor({ query, sort });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const paged = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div id="recent-activity" className="relative group rounded-xl border border-border/60 bg-surface flex flex-col hover:border-primary-300 transition-colors duration-300 overflow-hidden">
@@ -43,7 +58,7 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => {
             <Activity size={18} strokeWidth={2.5} />
           </div>
           <div>
-            <h2 className="text-lg font-display font-semibold text-text tracking-tight">Recent Activity</h2>
+            <h2 className="text-lg font-display font-bold text-text tracking-tight">Recent Activity</h2>
             <p className="text-xs font-display text-text-muted mt-0.5">Latest updates on tickets and tasks</p>
           </div>
         </div>
@@ -103,14 +118,14 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/40">
-                <th className="text-left font-display text-[11px] font-semibold capitalize tracking-wide text-text-muted px-4 py-2.5">Item</th>
-                <th className="text-left font-display text-[11px] font-semibold capitalize tracking-wide text-text-muted px-4 py-2.5 hidden sm:table-cell">Type</th>
-                <th className="text-left font-display text-[11px] font-semibold capitalize tracking-wide text-text-muted px-4 py-2.5">Status</th>
-                <th className="text-right font-display text-[11px] font-semibold capitalize tracking-wide text-text-muted px-4 py-2.5">Date</th>
+                <th className="text-left font-display text-[11px] font-medium capitalize tracking-wide text-text-muted px-4 py-2.5">Item</th>
+                <th className="text-left font-display text-[11px] font-medium capitalize tracking-wide text-text-muted px-4 py-2.5 hidden sm:table-cell">Type</th>
+                <th className="text-left font-display text-[11px] font-medium capitalize tracking-wide text-text-muted px-4 py-2.5">Status</th>
+                <th className="text-right font-display text-[11px] font-medium capitalize tracking-wide text-text-muted px-4 py-2.5">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {visible.map((item) => (
+              {paged.map((item) => (
                 <tr key={`${item.kind}-${item.id}`} className="group/row hover:bg-surface-hover/60 transition-colors">
                   <td className="px-4 py-3">
                     <Link to={item.kind === 'ticket' ? '/tickets' : '/tasks'} className="flex items-center gap-3 min-w-0">
@@ -133,7 +148,7 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex items-center justify-center text-[11px] font-display font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                      className={`inline-flex items-center justify-center text-[11px] font-display font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
                         item.kind === 'ticket'
                           ? TICKET_STATUS_CONFIG[item.status as TicketStatus].className
                           : TASK_STATUS_COLORS[item.status as Task['status']]
@@ -153,6 +168,13 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => {
           </table>
         )}
       </div>
+
+      {/* Pagination Footer */}
+      {!isPending && visible.length > 0 && totalPages > 1 && (
+        <div className="relative z-10 px-4 py-3 border-t border-border/40">
+          <PageNav page={page} totalPages={totalPages} onPageChange={setPage} />
+        </div>
+      )}
     </div>
   );
 };

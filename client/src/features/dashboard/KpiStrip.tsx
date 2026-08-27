@@ -1,50 +1,43 @@
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { ListChecks, TicketCheck, Clock, CheckCircle2, AlertTriangle, type LucideIcon } from 'lucide-react';
+import { ClipboardList, ListTodo, TicketCheck, ListChecks } from 'lucide-react';
 import { Skeleton } from '../../components';
-import { StatCard } from './StatCard';
-import { lastMonths, countInMonth, seriesInMonths, trendFrom } from './dashboardDisplay';
+import { StatusBreakdownCard } from './StatusBreakdownCard';
+import { isOverdueTodo } from '../todo/todoQuickFilters';
 import type { Task } from '../../api/task';
 import type { Ticket } from '../../api/ticket';
+import type { Todo } from '../../api/todos';
+
+export interface WorkflowStats {
+  pending: number;
+  approvals: number;
+  completed: number;
+  assigned: number;
+}
 
 interface KpiStripProps {
   tickets: Ticket[];
   tasks: Task[];
+  todos: Todo[];
   isPending: boolean;
+  workflowStats: WorkflowStats;
 }
 
-interface Tile {
-  key: string;
-  label: string;
-  value: number;
-  sparkline: number[];
-  trend: { direction: 'up' | 'down'; label: string };
-  caption: string;
-  icon: LucideIcon;
-  iconTint?: string;
-  onClick?: () => void;
-  highlight?: boolean;
-}
-
-export const KpiStrip = ({ tickets, tasks, isPending }: KpiStripProps) => {
+export const KpiStrip = ({ tickets, todos, isPending, workflowStats }: KpiStripProps) => {
   const navigate = useNavigate();
-  // eslint-disable-next-line react-hooks/purity
-  const now = useMemo(() => Date.now(), []);
-  const months = useMemo(() => lastMonths(6), []);
 
   if (isPending) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 md:gap-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border/60 dark:border-white/[0.06] bg-surface p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_10px_28px_-14px_rgba(0,0,0,0.65)]">
-            {/* Matches the new StatCard top row (Label + Value) */}
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-3 w-24 rounded-sm" />
-              <Skeleton className="h-8 sm:h-9 w-16 rounded-md" />
-            </div>
-            {/* Matches the new StatCard bottom row (Trend badge) */}
-            <div className="mt-1.5">
-              <Skeleton className="h-5 w-20 rounded-md" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex flex-col gap-3 rounded-2xl bg-surface-hover p-5 animate-pulse">
+            <Skeleton className="h-4 w-32 rounded-sm" />
+            <div className="flex gap-4 mt-2">
+              <div className="flex-1 flex flex-col gap-2.5">
+                <Skeleton className="h-4 w-full rounded-sm" />
+                <Skeleton className="h-4 w-full rounded-sm" />
+                <Skeleton className="h-4 w-full rounded-sm" />
+              </div>
+              <Skeleton className="h-20 w-24 rounded-xl shrink-0" />
             </div>
           </div>
         ))}
@@ -52,84 +45,57 @@ export const KpiStrip = ({ tickets, tasks, isPending }: KpiStripProps) => {
     );
   }
 
-  const [prevMonth, curMonth] = months.slice(-2);
-  const trendForDates = (dates: string[]) => {
-    const previous = countInMonth(dates, prevMonth.year, prevMonth.month);
-    const current = countInMonth(dates, curMonth.year, curMonth.month);
-    const trend = trendFrom(current, previous);
-    return { trend, caption: `${trend.direction} from ${previous}` };
-  };
+  // Todo: pending = not completed, overdue = has a due date that's passed, completed = done —
+  // same predicates TodoPage/TodoList already use (see todoQuickFilters.ts), so this card's
+  // numbers never drift from what clicking through to /todo actually shows.
+  const pendingTodos = todos.filter(t => !t.completed);
+  const overdueTodos = todos.filter(isOverdueTodo);
+  const completedTodos = todos.filter(t => t.completed);
 
-  const openTickets = tickets.filter(t => t.status !== 'CLOSED');
-  const openTasks = tasks.filter(t => t.status !== 'done');
-  const pendingTasks = tasks.filter(t => t.status !== 'done');
-  const completedTasks = tasks.filter(t => t.status === 'done');
-  const dueTasks = tasks.filter(t => t.status !== 'done' && !!t.dueDate && new Date(t.dueDate).getTime() < now);
-
-  // Every tile redirects straight to the real list, filtered where the target page's URL
-  // filter support allows it — a dashboard number should always be one click from the actual
-  // records behind it, not a dead end or a separate popup duplicating that page's own UI.
-  const tiles: Tile[] = [
-    {
-      // Leads the row as the highlighted "hero" tile — the single most central metric for this
-      // app, called out with a solid brand-gradient card instead of blending in with the rest.
-      key: 'openTasks', label: 'Open Delegations', value: openTasks.length,
-      sparkline: seriesInMonths(openTasks.map(t => t.createdAt), months),
-      ...trendForDates(openTasks.map(t => t.createdAt)),
-      icon: ListChecks,
-      onClick: () => navigate('/tasks'),
-      highlight: true,
-    },
-    {
-      key: 'openTickets', label: 'Open Tickets', value: openTickets.length,
-      sparkline: seriesInMonths(openTickets.map(t => t.createdAt), months),
-      ...trendForDates(openTickets.map(t => t.createdAt)),
-      icon: TicketCheck,
-      iconTint: 'text-primary-600 dark:text-primary-400',
-      onClick: () => navigate('/tickets'),
-    },
-    {
-      key: 'pending', label: 'Pending', value: pendingTasks.length,
-      sparkline: seriesInMonths(pendingTasks.map(t => t.createdAt), months),
-      ...trendForDates(pendingTasks.map(t => t.createdAt)),
-      icon: Clock,
-      iconTint: 'text-amber-600 dark:text-amber-400',
-      onClick: () => navigate('/tasks?status=todo'),
-    },
-    {
-      key: 'completed', label: 'Completed', value: completedTasks.length,
-      sparkline: seriesInMonths(completedTasks.map(t => t.createdAt), months),
-      ...trendForDates(completedTasks.map(t => t.createdAt)),
-      icon: CheckCircle2,
-      iconTint: 'text-emerald-600 dark:text-emerald-400',
-      onClick: () => navigate('/tasks?status=done'),
-    },
-    {
-      key: 'due', label: 'Due', value: dueTasks.length,
-      sparkline: seriesInMonths(dueTasks.map(t => t.createdAt), months),
-      ...trendForDates(dueTasks.map(t => t.createdAt)),
-      icon: AlertTriangle,
-      iconTint: 'text-danger',
-      onClick: () => navigate('/tasks'),
-    },
-  ];
+  // Tickets: OPEN stays its own row, IN_PROGRESS/IN_REVIEW/ON_HOLD fold into one "In Progress"
+  // row (all mid-lifecycle, not yet closed), CLOSED is its own row.
+  const openTickets = tickets.filter(t => t.status === 'OPEN');
+  const inProgressTickets = tickets.filter(t => t.status === 'IN_PROGRESS' || t.status === 'IN_REVIEW' || t.status === 'ON_HOLD');
+  const closedTickets = tickets.filter(t => t.status === 'CLOSED');
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 md:gap-5">
-      {tiles.map(tile => (
-        <StatCard
-          key={tile.key}
-          label={tile.label}
-          value={tile.value}
-          trend={tile.trend}
-          caption={tile.caption}
-          sparkline={tile.sparkline}
-          icon={tile.icon}
-          iconTint={tile.iconTint}
-          onClick={tile.onClick}
-          highlight={tile.highlight}
-        />
-      ))}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-5">
+      <StatusBreakdownCard
+        icon={ClipboardList}
+        title="Process & Workflow"
+        total={workflowStats.assigned}
+        onOpen={() => navigate('/tasks')}
+        rows={[
+          // "Pending" folds todo + in_progress together — no single status filter covers it, so
+          // it deep-links to the plain list instead of a status-scoped one.
+          { label: 'Pending', value: workflowStats.pending, tone: 'warning', onClick: () => navigate('/tasks') },
+          { label: 'Approvals', value: workflowStats.approvals, onClick: () => navigate('/tasks?status=pending_verification') },
+          { label: 'Completed', value: workflowStats.completed, tone: 'success', onClick: () => navigate('/tasks?status=done') },
+        ]}
+      />
+      <StatusBreakdownCard
+        icon={ListTodo}
+        title="Todo"
+        total={todos.length}
+        onOpen={() => navigate('/todo')}
+        rows={[
+          { label: 'Pending', value: pendingTodos.length, tone: 'warning', onClick: () => navigate('/todo') },
+          { label: 'Overdue', value: overdueTodos.length, onClick: () => navigate('/todo') },
+          { label: 'Completed', value: completedTodos.length, tone: 'success', onClick: () => navigate('/todo') },
+        ]}
+      />
+      <StatusBreakdownCard
+        icon={TicketCheck}
+        title="Tickets"
+        total={tickets.length}
+        onOpen={() => navigate('/tickets')}
+        rows={[
+          { label: 'Open', value: openTickets.length, tone: 'warning', onClick: () => navigate('/tickets') },
+          { label: 'In Progress', value: inProgressTickets.length, onClick: () => navigate('/tickets') },
+          { label: 'Closed', value: closedTickets.length, tone: 'success', onClick: () => navigate('/tickets') },
+        ]}
+      />
+      <StatusBreakdownCard icon={ListChecks} title="Checklist" total={0} comingSoon />
     </div>
   );
 };

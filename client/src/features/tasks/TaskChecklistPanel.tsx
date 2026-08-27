@@ -21,7 +21,7 @@ export const TaskChecklistPanel = ({ taskId, checklists, isAdmin, currentUserId 
       {/* Header Section */}
       <div className="flex items-center justify-between gap-4 flex-wrap pb-4 border-b border-border">
         <div>
-          <h3 className="text-lg font-semibold text-text tracking-tight">Checklists</h3>
+          <h3 className="text-lg font-bold text-text tracking-tight">Checklists</h3>
           <p className="text-sm text-text-muted mt-0.5">Track sub-tasks and required evidence</p>
         </div>
         {isAdmin && !adding && (
@@ -51,7 +51,7 @@ export const TaskChecklistPanel = ({ taskId, checklists, isAdmin, currentUserId 
              <CheckSquare size={24} />
           </div>
           <div className="flex flex-col gap-1">
-            <h4 className="text-base font-semibold text-text">No Checklists Active</h4>
+            <h4 className="text-base font-medium text-text">No Checklists Active</h4>
             <p className="text-sm text-text-muted max-w-sm">
               Break down this task into smaller, trackable items. Add a checklist to get started.
             </p>

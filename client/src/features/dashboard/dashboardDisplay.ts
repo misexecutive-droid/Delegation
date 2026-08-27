@@ -86,6 +86,13 @@ export const PERIOD_LABEL: Record<CompliancePeriod, string> = {
   year: 'this year',
 };
 
+export const PERIOD_END_LABEL: Record<CompliancePeriod, string> = {
+  day: 'end of day',
+  week: 'end of week',
+  month: 'end of month',
+  year: 'end of year',
+};
+
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 // ISO 8601 week-year + week-number (Thursday of the week decides the week-year) — matches the
@@ -138,3 +145,62 @@ export const shiftPeriod = (period: CompliancePeriod, date: Date, amount: number
   else d.setFullYear(d.getFullYear() + amount);
   return d;
 };
+
+// The Activity Overview chart buckets a plain client-side array (already-fetched tasks/tickets/
+// todos), never a server aggregation — unlike CompliancePeriod above, there's no `$dateToString`
+// constraint to respect here, so "quarter" is fine to offer as its own separate type rather than
+// widening CompliancePeriod (which PersonChecklistView.tsx matches against real server buckets,
+// and the server genuinely can't produce a quarter bucket).
+export type ActivityGroupBy = 'day' | 'month' | 'quarter' | 'year';
+
+export const ACTIVITY_GROUP_LABEL: Record<ActivityGroupBy, string> = {
+  day: 'Day', month: 'Month', quarter: 'Quarter', year: 'Year',
+};
+
+export const ACTIVITY_GROUP_PERIOD_LABEL: Record<ActivityGroupBy, string> = {
+  day: 'today', month: 'this month', quarter: 'this quarter', year: 'this year',
+};
+
+// How many trailing buckets the trend chart shows per granularity — e.g. the last 7 days, or the
+// last 4 quarters (a full year), rather than one fixed count regardless of grain.
+export const ACTIVITY_BUCKET_COUNT: Record<ActivityGroupBy, number> = {
+  day: 7, month: 6, quarter: 4, year: 4,
+};
+
+export interface ActivityBucket {
+  label: string;
+  start: Date;
+  end: Date;
+}
+
+const quarterStart = (year: number, quarter: number) => new Date(year, quarter * 3, 1);
+
+// `count` trailing buckets of the given granularity, ending with the one containing `now` —
+// oldest first, matching lastMonths()'s existing convention.
+export const lastActivityBuckets = (groupBy: ActivityGroupBy, count: number, now = new Date()): ActivityBucket[] => {
+  return Array.from({ length: count }, (_, i) => {
+    const offset = count - 1 - i;
+    if (groupBy === 'day') {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+      return { label: start.toLocaleDateString(undefined, { weekday: 'short' }), start, end };
+    }
+    if (groupBy === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+      return { label: MONTH_LABELS[start.getMonth()], start, end };
+    }
+    if (groupBy === 'quarter') {
+      const currentQuarterIndex = now.getFullYear() * 4 + Math.floor(now.getMonth() / 3) - offset;
+      const year = Math.floor(currentQuarterIndex / 4);
+      const quarter = ((currentQuarterIndex % 4) + 4) % 4;
+      return { label: `Q${quarter + 1} '${String(year).slice(-2)}`, start: quarterStart(year, quarter), end: quarterStart(year, quarter + 1) };
+    }
+    const start = new Date(now.getFullYear() - offset, 0, 1);
+    const end = new Date(start.getFullYear() + 1, 0, 1);
+    return { label: String(start.getFullYear()), start, end };
+  });
+};
+
+export const countInRange = (dates: string[], start: Date, end: Date) =>
+  dates.filter(d => { const t = new Date(d).getTime(); return t >= start.getTime() && t < end.getTime(); }).length;

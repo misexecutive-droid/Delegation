@@ -76,7 +76,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
           matching the spec's priority badge coding (color = urgency at a glance). */}
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${priority.stripe}`} />
       <div className="flex items-start justify-between gap-2">
-        <h4 className="text-sm font-semibold text-text truncate leading-snug">
+        <h4 className="text-sm font-medium text-text truncate leading-snug">
           {task.title}
         </h4>
         <div className="flex items-center gap-1 shrink-0">
@@ -145,7 +145,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
         <div className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
           <UserCog size={12} strokeWidth={2.5} className="text-text-light shrink-0" />
           <span className="truncate">
-            Raised by <span className="font-semibold text-text-secondary">{raisedByName}</span>
+            Raised by <span className="font-medium text-text-secondary">{raisedByName}</span>
           </span>
         </div>
       )}
@@ -153,7 +153,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
       {(fields.department || fields.priority || fields.category) && (
         <div className="flex flex-wrap items-center gap-1.5">
           {fields.department && departmentName && (
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${departmentTagClass(departmentName)}`}>
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${departmentTagClass(departmentName)}`}>
               {departmentName}
             </span>
           )}
@@ -163,7 +163,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
           {fields.category && (() => {
             const cat = CATEGORY_CONFIG[task.category];
             return (
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${cat.className}`}>
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cat.className}`}>
                 <cat.icon size={12} strokeWidth={2.5} />
                 {cat.label}
               </span>
@@ -215,7 +215,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
                   </div>
                 )}
               </div>
-              <span className="text-[11px] font-semibold text-text-secondary truncate">
+              <span className="text-[11px] font-medium text-text-secondary truncate">
                 {assigneeNames[0]}
                 {assigneeNames.length > 1 ? ` +${assigneeNames.length - 1}` : ''}
               </span>
@@ -239,18 +239,18 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
           {showVerifyActions ? (
             <TaskVerifyActions task={task} compact />
           ) : showDoneBadge ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-success/10 text-success">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-success/10 text-success">
               <CheckCircle2 size={15} strokeWidth={2.5} />
               Done
             </span>
           ) : showReviewBadge ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-warning/10 text-warning">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-warning/10 text-warning">
               <ShieldQuestion size={15} strokeWidth={2.5} />
               In review
             </span>
           ) : showDuePill ? (
             <span
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium ${
                 isOverdue ? 'bg-danger/10 text-danger' : 'bg-surface-hover text-text-secondary'
               }`}
             >

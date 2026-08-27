@@ -32,7 +32,7 @@ export const PersonRow = ({ name, subtitle, metric, metricTone = 'default', inde
       {getInitials(name)}
     </span>
     <div className="flex-1 min-w-0">
-      <p className="text-sm font-semibold text-text truncate">{name}</p>
+      <p className="text-sm font-medium text-text truncate">{name}</p>
       {subtitle && <p className="text-xs text-text-muted truncate">{subtitle}</p>}
     </div>
     {metric != null && (

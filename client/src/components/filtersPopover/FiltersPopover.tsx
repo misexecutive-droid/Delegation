@@ -18,7 +18,7 @@ export const PillButton = ({ active, onClick, children }: { active: boolean; onC
   <button
     type="button"
     onClick={onClick}
-    className={`flex items-center justify-center w-full px-3 py-2 rounded-lg text-[12px] font-semibold transition-all duration-200 cursor-pointer border ${
+    className={`flex items-center justify-center w-full px-3 py-2 rounded-lg text-[12px] font-medium transition-all duration-200 cursor-pointer border ${
       active
         ? 'bg-primary-50/80 border-primary-300 text-primary-700 shadow-sm dark:bg-primary-900/30 dark:border-primary-700/80 dark:text-primary-300'
         : 'bg-surface border-border/60 text-text-muted hover:text-text hover:bg-surface-hover hover:border-border'
@@ -207,7 +207,7 @@ export function FiltersPopover<TFilters extends object>({
                   <div className="p-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                     <Filter size={16} className="text-primary-600 dark:text-primary-400" />
                   </div>
-                  <span className="text-sm font-extrabold tracking-tight text-text">Refine View</span>
+                  <span className="text-sm font-bold tracking-tight text-text">Refine View</span>
                 </div>
                 <button
                   type="button"

@@ -25,7 +25,7 @@ export const SignalCard = ({ eyebrow, title, body, actionLabel, meta, onAction, 
       {eyebrow}
     </span>
 
-    <h3 className="relative font-display text-xl font-semibold leading-snug tracking-tight text-gray-50 mb-2">
+    <h3 className="relative font-display text-xl font-bold leading-snug tracking-tight text-gray-50 mb-2">
       {title}
     </h3>
 
@@ -37,7 +37,7 @@ export const SignalCard = ({ eyebrow, title, body, actionLabel, meta, onAction, 
       <button
         type="button"
         onClick={onAction}
-        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-white text-xs font-semibold shadow-[0_8px_24px_-12px_rgba(52,101,171,0.6)] transition-all duration-200 hover:-translate-y-0.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900"
+        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-white text-xs font-medium shadow-[0_8px_24px_-12px_rgba(52,101,171,0.6)] transition-all duration-200 hover:-translate-y-0.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900"
       >
         <span>{actionLabel}</span>
         <ArrowRight size={14} />

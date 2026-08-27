@@ -24,7 +24,7 @@ const Gauge = ({ icon: Icon, label, percent }: GaugeProps) => (
         {percent != null ? `${percent}%` : '—'}
       </span>
     </RadialGauge>
-    <span className="flex items-center gap-1.5 text-xs font-semibold text-text-muted">
+    <span className="flex items-center gap-1.5 text-xs font-medium text-text-muted">
       <Icon size={13} />
       {label}
     </span>

@@ -20,7 +20,7 @@ interface RateTileProps {
 
 const RateTile = ({ icon: Icon, label, rate, emptyLabel }: RateTileProps) => (
   <div className="flex flex-col gap-2 p-4 rounded-xl border border-border bg-surface flex-1 min-w-[10rem]">
-    <span className="flex items-center gap-1.5 text-xs font-display font-semibold text-text-muted uppercase tracking-wider">
+    <span className="flex items-center gap-1.5 text-xs font-display font-medium text-text-muted uppercase tracking-wider">
       <Icon size={13} />
       {label}
     </span>
@@ -90,7 +90,7 @@ export const ChecklistDefinitionDetail = () => {
         </button>
         <Link
           to={`/admin/scheduled-checklists/builder/${definition.id}`}
-          className="flex items-center gap-1.5 text-xs font-display font-semibold px-3 py-1.5 rounded-full border border-primary-500/40 text-primary-700 hover:bg-primary-50 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-display font-medium px-3 py-1.5 rounded-full border border-primary-500/40 text-primary-700 hover:bg-primary-50 transition-colors"
         >
           <Pencil size={12} /> Edit in Builder
         </Link>
@@ -102,7 +102,7 @@ export const ChecklistDefinitionDetail = () => {
             <Repeat size={18} />
           </div>
           <div>
-            <h1 className="text-lg font-mono font-semibold text-text">{definition.name}</h1>
+            <h1 className="text-lg font-mono font-bold text-text">{definition.name}</h1>
             {definition.description && (
               <p className="text-sm text-text-muted mt-0.5">{definition.description}</p>
             )}
@@ -118,7 +118,7 @@ export const ChecklistDefinitionDetail = () => {
           <span>{storeNames}</span>
           <span className="flex items-center gap-1"><Users size={12} /> {definition.assigneeIds.length} assigned</span>
           <span className="flex items-center gap-1"><Calendar size={12} /> Starts {formatDate(definition.startDate)}</span>
-          <span className="font-semibold text-text-secondary">v{definition.version}</span>
+          <span className="font-medium text-text-secondary">v{definition.version}</span>
         </div>
       </div>
 
@@ -128,7 +128,7 @@ export const ChecklistDefinitionDetail = () => {
       </div>
 
       <div className="flex flex-col gap-6">
-        <h2 className="text-sm font-mono font-semibold text-text-muted uppercase tracking-wider">
+        <h2 className="text-sm font-mono font-medium text-text-muted uppercase tracking-wider">
           Generated Instances ({instances.length})
         </h2>
         {instances.length === 0 && (
@@ -139,7 +139,7 @@ export const ChecklistDefinitionDetail = () => {
         {groupByStatus(instances).map(group => (
           <div key={group.status} className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-mono font-semibold text-text uppercase tracking-wider">
+              <h3 className="text-xs font-mono font-medium text-text uppercase tracking-wider">
                 {INSTANCE_STATUS_LABEL[group.status]}
               </h3>
               <span className="text-xs font-mono font-medium px-1.5 py-0.5 rounded-full bg-surface-hover text-text-muted border border-border">

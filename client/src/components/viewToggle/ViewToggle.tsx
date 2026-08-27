@@ -26,9 +26,9 @@ export function ViewToggle<V extends string>({ tabs, value, onChange }: ViewTogg
           title={`${tab.label} view`}
           aria-label={`${tab.label} view`}
           aria-pressed={value === tab.key}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
             value === tab.key
-              ? 'bg-background text-text shadow-sm ring-1 ring-border/50'
+              ? 'bg-background text-text border border-border ring-1 ring-border/50'
               : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
           }`}
         >

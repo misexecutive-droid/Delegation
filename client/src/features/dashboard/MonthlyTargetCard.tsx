@@ -31,7 +31,11 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
     : 'bg-danger/10 text-danger border-danger/20';
 
   return (
-    <div className="relative group rounded-2xl border border-border/60 bg-surface p-5 sm:p-6 lg:p-7 flex flex-col gap-2 hover:border-border hover:shadow-md transition-all duration-300 overflow-hidden">
+    // `@container` + `@lg:`/`@sm:` below size this card's internal layout off its own rendered
+    // width, not the viewport — it now shares a row with CompareDashboard in a 2-column grid, so a
+    // viewport breakpoint would flip to the wide side-by-side layout on any laptop-width screen
+    // even though the actual column is only half that wide.
+    <div className="@container relative group rounded-2xl border border-border/60 bg-surface p-5 sm:p-6 lg:p-7 flex flex-col gap-2 hover:border-border hover:shadow-md transition-all duration-300 overflow-hidden">
 
       {/* Decorative Background Glow - Adjusted for Light/Dark modes */}
       <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-500/15 dark:bg-primary-500/10 rounded-full blur-[60px] pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-60" />
@@ -55,7 +59,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
               key={opt.key}
               type="button"
               onClick={() => onPeriodChange(opt.key)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
                 period === opt.key
                   ? 'bg-surface text-text shadow-sm ring-1 ring-border/50'
                   : 'text-text-muted hover:text-text hover:bg-surface-active/50'
@@ -68,7 +72,7 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
       </div>
 
       {/* Body Layout Split */}
-      <div className="relative z-10 flex flex-col lg:flex-row items-center gap-6 lg:gap-10 mt-6">
+      <div className="relative z-10 flex flex-col @lg:flex-row items-center gap-6 @lg:gap-10 mt-6">
 
         {/* Gauge */}
         <RadialGauge percent={percent} size={220}>
@@ -83,11 +87,11 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
 
         {/* Right Details Column */}
         <div className="flex-1 w-full flex flex-col gap-5">
-          <p className="text-sm font-medium text-text-muted text-center lg:text-left leading-relaxed max-w-lg mx-auto lg:mx-0">
+          <p className="text-sm font-medium text-text-muted text-center @lg:text-left leading-relaxed max-w-lg mx-auto @lg:mx-0">
             {description}
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 @sm:grid-cols-3 gap-3">
             {stats.map(stat => {
               const TrendIcon = stat.direction === 'up' ? ArrowUp : ArrowDown;
               const trendClassName = stat.direction === 'up' ? 'text-success' : 'text-danger';
@@ -95,9 +99,9 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
               return (
                 <div
                   key={stat.label}
-                  className="flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-1.5 p-4 rounded-xl bg-surface-hover/30 border border-border/40 hover:bg-surface-hover/70 hover:border-border/80 transition-all duration-200"
+                  className="flex flex-row @sm:flex-col items-center justify-between @sm:justify-center gap-1.5 p-4 rounded-xl bg-surface-hover/30 border border-border/40 hover:bg-surface-hover/70 hover:border-border/80 transition-all duration-200"
                 >
-                  <span className="text-xs font-semibold text-text-muted capitalize tracking-wide">{stat.label}</span>
+                  <span className="text-xs font-medium text-text-muted capitalize tracking-wide">{stat.label}</span>
                   <span className="inline-flex items-center gap-1.5 text-xl font-bold text-text">
                     {stat.value}
                     <TrendIcon size={16} strokeWidth={3} className={trendClassName} />

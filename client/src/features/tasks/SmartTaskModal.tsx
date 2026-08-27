@@ -762,7 +762,7 @@ export const SmartTaskModal = ({ onClose }: SmartTaskModalProps) => {
                             <button
                                 type="button"
                                 onClick={() => setView(view === "transcript" ? "history" : "chat")}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-primary-600 transition-colors cursor-pointer"
+                                className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-primary-600 transition-colors cursor-pointer"
                             >
                                 <ArrowLeft size={13} />
                                 {view === "transcript" ? "Back to history" : "Back to chat"}
@@ -772,7 +772,7 @@ export const SmartTaskModal = ({ onClose }: SmartTaskModalProps) => {
                             <button
                                 type="button"
                                 onClick={() => setView("history")}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-primary-600 transition-colors cursor-pointer"
+                                className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-primary-600 transition-colors cursor-pointer"
                             >
                                 <HistoryIcon size={13} />
                                 History
@@ -783,7 +783,7 @@ export const SmartTaskModal = ({ onClose }: SmartTaskModalProps) => {
                                 type="button"
                                 onClick={handleClearHistory}
                                 disabled={deleteAllConversationsMutation.isPending}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-danger hover:text-danger/80 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="flex items-center gap-1.5 text-xs font-medium text-danger hover:text-danger/80 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                                 <Trash2 size={13} />
                                 Clear all
@@ -903,12 +903,12 @@ export const SmartTaskModal = ({ onClose }: SmartTaskModalProps) => {
                                         className="flex flex-col gap-1 items-start text-left rounded-lg border border-border/50 bg-surface hover:border-primary-400 transition-colors cursor-pointer px-3 py-2.5"
                                     >
                                         <div className="flex items-center justify-between gap-2 w-full">
-                                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${CONVERSATION_STATUS_CLASS[c.status]}`}>
+                                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${CONVERSATION_STATUS_CLASS[c.status]}`}>
                                                 {CONVERSATION_STATUS_LABEL[c.status]}
                                             </span>
                                             <span className="text-[10px] text-text-light shrink-0">{formatShortDateTime(c.createdAt)}</span>
                                         </div>
-                                        <p className="text-sm font-semibold text-text truncate w-full">{c.title || "New conversation"}</p>
+                                        <p className="text-sm font-medium text-text truncate w-full">{c.title || "New conversation"}</p>
                                         <span className="text-[10px] text-text-light">{c.messageCount} message{c.messageCount === 1 ? "" : "s"}</span>
                                     </button>
                                 ))

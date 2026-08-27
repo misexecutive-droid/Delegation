@@ -16,8 +16,8 @@ export const Dashboard = () => {
   const handleRefresh = useCallback(() => queryClient.invalidateQueries(), [queryClient]);
 
   return (
-    <div 
-      className="flex flex-col h-svh w-full overflow-hidden text-text transition-colors duration-300" 
+    <div
+      className="flex flex-col h-svh w-full overflow-hidden text-text transition-colors duration-300"
       style={{ background: 'var(--bg-body)' }}
     >
       <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
@@ -38,9 +38,9 @@ export const Dashboard = () => {
             <div className="absolute top-[30%] left-[15%] w-[30rem] h-[30rem] rounded-full bg-coral-500/5 dark:bg-coral-400/5 blur-[100px]" />
           </div>
 
-          
-          <PullToRefresh onRefresh={handleRefresh} className="relative z-10 h-full overflow-y-auto overscroll-contain">
-          
+
+          <PullToRefresh onRefresh={handleRefresh} className="relative z-10 h-full overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+
             <div className="p-4 sm:p-6 lg:p-8 xl:p-10 pb-44 md:pb-8 max-w-[1600px] mx-auto w-full min-h-full flex flex-col">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -50,7 +50,7 @@ export const Dashboard = () => {
                   exit={{ opacity: 0, y: -12, filter: 'blur(4px)' }}
                   transition={{
                     duration: 0.35,
-                    ease: [0.22, 1, 0.36, 1] // Custom smooth decelerating easing
+                    ease: [0.22, 1, 0.36, 1]
                   }}
                   className="flex-1 flex flex-col h-full"
                 >
@@ -64,13 +64,11 @@ export const Dashboard = () => {
 
         </main>
       </div>
-
-   
       <div className="relative z-20 hidden md:block">
         <Footer />
       </div>
 
-      <BottomNav />x
+      <BottomNav />
     </div>
   );
 };

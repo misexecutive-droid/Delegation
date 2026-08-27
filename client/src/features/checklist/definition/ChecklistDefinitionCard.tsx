@@ -83,7 +83,7 @@ export const ChecklistDefinitionCard = ({ definition }: ChecklistDefinitionCardP
       </div>
 
       <div className="space-y-1">
-        <h3 className="font-display text-base font-semibold text-text leading-snug">{definition.name}</h3>
+        <h3 className="font-display text-base font-medium text-text leading-snug">{definition.name}</h3>
         <p className="text-xs font-display text-text-muted">
           {RECURRENCE_LABEL[definition.recurrence]}
           {roleLabel ? ` · ${roleLabel}` : ''}
@@ -109,7 +109,7 @@ export const ChecklistDefinitionCard = ({ definition }: ChecklistDefinitionCardP
 
       {completionRate !== null ? (
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between text-[11px] font-display font-semibold">
+          <div className="flex items-center justify-between text-[11px] font-display font-medium">
             <span className="text-text-muted">Completion</span>
             <span className={rateToneClass(completionRate)}>{completionRate}%</span>
           </div>
@@ -122,7 +122,7 @@ export const ChecklistDefinitionCard = ({ definition }: ChecklistDefinitionCardP
           {qualityRate !== null && (
             <div className="flex items-center justify-between text-[11px] font-display">
               <span className="text-text-muted">Photo compliance</span>
-              <span className={`font-semibold ${rateToneClass(qualityRate)}`}>{qualityRate}%</span>
+              <span className={`font-medium ${rateToneClass(qualityRate)}`}>{qualityRate}%</span>
             </div>
           )}
         </div>

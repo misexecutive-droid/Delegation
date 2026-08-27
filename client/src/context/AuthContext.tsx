@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Role } from '../api/auth';
 import { tokenStore } from '../lib/tokenStore';
 
@@ -21,6 +22,7 @@ const loadUser = (): User | null => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(() => tokenStore.get());
   const [user,  setUser]  = useState<User | null>(loadUser);
 
@@ -39,6 +41,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     tokenStore.set(null);
     localStorage.removeItem(USER_KEY);
     setUser(null);
+    // Purge every cached query on sign-out — without this, whatever the previous account had
+    // already fetched (tasks, tickets, dashboard data) stays in memory and can render for
+    // whichever account logs in next in this same tab, before its own queries refetch.
+    queryClient.clear();
   };
 
   return (

@@ -62,7 +62,7 @@ export const NewChecklistForm = ({ taskId, onDone }: NewChecklistFormProps) => {
           <CheckSquare size={20} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-text tracking-tight">Create Checklist</h2>
+          <h2 className="text-xl font-bold text-text tracking-tight">Create Checklist</h2>
           <p className="text-sm text-text-secondary mt-0.5">Define tasks, assignees, and requirements</p>
         </div>
       </div>
@@ -137,8 +137,8 @@ export const NewChecklistForm = ({ taskId, onDone }: NewChecklistFormProps) => {
         {/* Task List Section */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-text uppercase tracking-wider">
-              Tasks <span className="text-text-muted font-normal ml-1">({itemDrafts.length})</span>
+            <h3 className="text-sm font-medium text-text uppercase tracking-wider">
+              Tasks <span className="text-text-muted font-medium ml-1">({itemDrafts.length})</span>
             </h3>
           </div>
 
@@ -163,7 +163,7 @@ export const NewChecklistForm = ({ taskId, onDone }: NewChecklistFormProps) => {
           <button
             type="button"
             onClick={() => setItemDrafts(d => [...d, emptyChecklistItemDraft()])}
-            className="group flex items-center justify-center gap-2 py-4 mt-2 text-sm font-semibold text-primary-600 bg-primary-500/5 hover:bg-primary-500/10 border-2 border-primary-200 hover:border-primary-300 rounded-xl border-dashed transition-all w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+            className="group flex items-center justify-center gap-2 py-4 mt-2 text-sm font-medium text-primary-600 bg-primary-500/5 hover:bg-primary-500/10 border-2 border-primary-200 hover:border-primary-300 rounded-xl border-dashed transition-all w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 text-primary-600 group-hover:scale-110 transition-transform">
               <Plus size={14} strokeWidth={2.5} />

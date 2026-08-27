@@ -35,7 +35,7 @@ export const ReportsPage = () => {
           <FileDown className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl font-display font-semibold text-text tracking-tight">Reports</h1>
+          <h1 className="text-xl font-display font-bold text-text tracking-tight">Reports</h1>
           <p className="text-xs text-text-muted font-display mt-0.5">
             Download CSV/XLSX exports for a given period.
           </p>

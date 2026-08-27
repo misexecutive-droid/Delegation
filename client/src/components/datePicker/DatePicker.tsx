@@ -14,6 +14,12 @@ interface DatePickerProps {
   className?: string;
   triggerClassName?: string;
   disabled?: boolean;
+  /** Adds a time-of-day input below the calendar (only once a date is picked), same pattern as
+   *  DateRangePicker's `showTime` — for a single due-date-and-time field instead of a range. */
+  showTime?: boolean;
+  /** Earliest selectable day — days before this are rendered disabled rather than removed, so the
+   *  month grid still reads normally. */
+  minDate?: Date;
 }
 
 const WEEKDAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
@@ -28,6 +34,7 @@ const isSameDay = (a: Date | null, b: Date | null) =>
   !!a && !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 const formatDate = (d: Date) => `${MONTH_LABELS[d.getMonth()].slice(0, 3)} ${d.getDate()}, ${d.getFullYear()}`;
+const formatTime = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, d.getDate());
@@ -68,6 +75,8 @@ export function DatePicker({
   className = '',
   triggerClassName = '',
   disabled = false,
+  showTime = false,
+  minDate,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => startOfDay(value ?? new Date()));
@@ -75,10 +84,22 @@ export function DatePicker({
 
   const grid = useMemo(() => buildMonthGrid(viewMonth), [viewMonth]);
   const today = useMemo(() => startOfDay(new Date()), []);
+  const earliestDay = minDate ? startOfDay(minDate) : null;
 
   const selectDay = (day: Date) => {
-    onChange(day);
-    setOpen(false);
+    // Preserve whatever time-of-day was already picked (or default to now) instead of resetting
+    // it to midnight — matches DateRangePicker's withTime behavior.
+    const withTime = showTime && value
+      ? new Date(day.getFullYear(), day.getMonth(), day.getDate(), value.getHours(), value.getMinutes())
+      : day;
+    onChange(withTime);
+    if (!showTime) setOpen(false);
+  };
+
+  const setTime = (hhmm: string) => {
+    if (!value) return;
+    const [h, m] = hhmm.split(':').map(Number);
+    onChange(new Date(value.getFullYear(), value.getMonth(), value.getDate(), h, m));
   };
 
   const toggleOpen = () => {
@@ -120,8 +141,8 @@ export function DatePicker({
         )}
       >
         <CalendarIcon size={16} className="text-text-light shrink-0" />
-        <span className={cn('truncate', value ? 'text-text font-semibold' : 'text-text-muted font-normal')}>
-          {value ? formatDate(value) : placeholder}
+        <span className={cn('truncate', value ? 'text-text font-medium' : 'text-text-muted font-medium')}>
+          {value ? formatDate(value) + (showTime ? ` ${formatTime(value)}` : '') : placeholder}
         </span>
         {value && (
           <X
@@ -198,6 +219,7 @@ export function DatePicker({
             <div className="grid grid-cols-7 gap-y-1 gap-x-1">
               {grid.map((day) => {
                 const inMonth = day.getMonth() === viewMonth.getMonth();
+                const isBeforeMin = !!earliestDay && day < earliestDay;
                 const isSelected = isSameDay(day, value);
                 const isToday = isSameDay(day, today);
 
@@ -206,12 +228,12 @@ export function DatePicker({
                     key={day.toISOString()}
                     type="button"
                     onClick={() => selectDay(day)}
-                    disabled={!inMonth}
+                    disabled={!inMonth || isBeforeMin}
                     className={cn(
-                      'relative h-9 text-xs rounded-md transition-colors font-semibold',
-                      !inMonth ? 'text-text-light/40 cursor-default' : 'text-text-secondary cursor-pointer',
+                      'relative h-9 text-xs rounded-md transition-colors font-medium',
+                      (!inMonth || isBeforeMin) ? 'text-text-light/40 cursor-default' : 'text-text-secondary cursor-pointer',
                       isSelected && 'bg-primary-700 text-white shadow-sm hover:bg-primary-800',
-                      inMonth && !isSelected && 'hover:bg-surface-hover hover:text-primary-700',
+                      inMonth && !isBeforeMin && !isSelected && 'hover:bg-surface-hover hover:text-primary-700',
                     )}
                   >
                     {day.getDate()}
@@ -222,6 +244,20 @@ export function DatePicker({
                 );
               })}
             </div>
+
+            {showTime && value && (
+              <div className="flex flex-col gap-1.5 pt-3 border-t border-border/60">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-text-muted">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={formatTime(value)}
+                  onChange={(e) => setTime(e.target.value)}
+                  className="w-full h-10 rounded-md border border-border px-3 text-base sm:text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

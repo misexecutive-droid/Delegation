@@ -41,12 +41,12 @@ export const MaintenancePage = ({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-lg font-display font-semibold text-text sm:text-xl">{title}</h1>
+        <h1 className="text-lg font-display font-bold text-text sm:text-xl">{title}</h1>
         <p className="text-sm text-text-muted font-display max-w-sm">{message}</p>
       </div>
 
       {estimatedReturn && (
-        <span className="inline-flex items-center justify-center rounded-full border border-border/60 bg-surface-hover px-3 py-1 text-xs font-semibold text-text-secondary">
+        <span className="inline-flex items-center justify-center rounded-full border border-border/60 bg-surface-hover px-3 py-1 text-xs font-medium text-text-secondary">
           {estimatedReturn}
         </span>
       )}

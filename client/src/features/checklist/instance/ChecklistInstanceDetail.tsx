@@ -125,8 +125,8 @@ export const ChecklistInstanceDetail = () => {
 
       <div className="flex flex-col gap-3 p-5 rounded-xl border border-border bg-surface">
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-lg font-mono font-semibold text-text">{instance.title}</h1>
-          <span className={`shrink-0 text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-surface-hover ${rateToneClass(progress)}`}>
+          <h1 className="text-lg font-mono font-bold text-text">{instance.title}</h1>
+          <span className={`shrink-0 text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-surface-hover ${rateToneClass(progress)}`}>
             Mark {progress}%
           </span>
         </div>
@@ -136,7 +136,7 @@ export const ChecklistInstanceDetail = () => {
             {formatDate(instance.periodStart)} – {formatDate(instance.periodEnd)}
           </p>
           {overdue && (
-            <span className="flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-danger/10 text-danger">
+            <span className="flex items-center gap-1 text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-danger/10 text-danger">
               <Clock size={11} /> Overdue
             </span>
           )}

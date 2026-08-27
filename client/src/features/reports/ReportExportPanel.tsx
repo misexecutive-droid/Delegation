@@ -46,7 +46,7 @@ export const ReportExportPanel = ({ reportModule, description, filters }: Report
       <p className="text-xs text-text-muted font-display">{description}</p>
 
       <div className="flex flex-col gap-2">
-        <span className="text-[11px] font-display font-semibold text-text-secondary uppercase tracking-wider">
+        <span className="text-[11px] font-display font-medium text-text-secondary uppercase tracking-wider">
           Period
         </span>
         <div className="flex flex-wrap gap-1.5">
@@ -57,7 +57,7 @@ export const ReportExportPanel = ({ reportModule, description, filters }: Report
               onClick={() => setMode(p)}
               className={`px-3 py-1.5 text-xs font-display font-medium rounded-md border transition-all cursor-pointer ${
                 mode === p
-                  ? 'border-primary-500/60 bg-primary-500/10 text-primary-500 font-semibold'
+                  ? 'border-primary-500/60 bg-primary-500/10 text-primary-500 font-medium'
                   : 'border-border/60 bg-surface text-text-secondary hover:bg-surface-hover'
               }`}
             >
@@ -69,7 +69,7 @@ export const ReportExportPanel = ({ reportModule, description, filters }: Report
             onClick={() => setMode('custom')}
             className={`px-3 py-1.5 text-xs font-display font-medium rounded-md border transition-all cursor-pointer ${
               isCustom
-                ? 'border-primary-500/60 bg-primary-500/10 text-primary-500 font-semibold'
+                ? 'border-primary-500/60 bg-primary-500/10 text-primary-500 font-medium'
                 : 'border-border/60 bg-surface text-text-secondary hover:bg-surface-hover'
             }`}
           >
@@ -86,7 +86,7 @@ export const ReportExportPanel = ({ reportModule, description, filters }: Report
 
       {/* Format Toggle */}
       <div className="flex flex-col gap-2">
-        <span className="text-[11px] font-display font-semibold text-text-secondary uppercase tracking-wider">
+        <span className="text-[11px] font-display font-medium text-text-secondary uppercase tracking-wider">
           Format
         </span>
         <div className="flex gap-1 p-1 bg-surface-hover rounded-lg w-fit">

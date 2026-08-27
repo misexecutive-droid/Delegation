@@ -14,7 +14,7 @@ export const TaskVerificationBanner = ({ task }: { task: Task }) => {
     }`}>
       {wasApproved ? <ShieldCheck size={14} className="shrink-0 mt-0.5" /> : <ShieldX size={14} className="shrink-0 mt-0.5" />}
       <div>
-        <p className="font-semibold">
+        <p className="font-medium">
           {wasApproved && task.verifiedBy ? 'Verified' : 'Sent back for changes'}
         </p>
         <p className="mt-0.5 text-text-secondary">{task.verificationNote}</p>

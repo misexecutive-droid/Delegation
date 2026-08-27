@@ -47,7 +47,7 @@ export const TicketDetailHeader = ({ ticket }: TicketDetailHeaderProps) => {
             <button
               type="button"
               onClick={handleCopyId}
-              className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-500/10 hover:bg-primary-500/15 text-primary-500 text-[11px] font-mono font-semibold border border-primary-500/20 transition-all cursor-pointer"
+              className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-500/10 hover:bg-primary-500/15 text-primary-500 text-[11px] font-mono font-medium border border-primary-500/20 transition-all cursor-pointer"
               title="Click to copy ticket ID"
               aria-label={`Copy ticket code ${ticketCode}`}
             >
@@ -68,7 +68,7 @@ export const TicketDetailHeader = ({ ticket }: TicketDetailHeaderProps) => {
         </div>
 
         {/* Title */}
-        <SheetTitle className="text-base font-semibold text-text leading-snug break-words select-text">
+        <SheetTitle className="text-base font-medium text-text leading-snug break-words select-text">
           {ticket.title}
         </SheetTitle>
       </div>

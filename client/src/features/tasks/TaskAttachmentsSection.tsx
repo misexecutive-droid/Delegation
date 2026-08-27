@@ -28,7 +28,7 @@ export const TaskAttachmentsSection = ({ taskId, attachments, canManage }: TaskA
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider select-none">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted uppercase tracking-wider select-none">
           <Paperclip size={13} className="text-primary-400" /> Attachments
         </h3>
         <span className="text-[11px] text-text-muted">{attachments.length} file{attachments.length === 1 ? '' : 's'}</span>

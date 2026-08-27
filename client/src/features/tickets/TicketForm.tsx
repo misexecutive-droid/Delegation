@@ -169,7 +169,8 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
 
         <DueDateField
           mode={assignmentMode}
-          register={register}
+          watch={watch}
+          setValue={setValue}
           errors={errors}
           categoryTatHours={selectedCategory?.tatHours}
         />

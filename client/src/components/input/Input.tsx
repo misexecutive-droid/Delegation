@@ -41,7 +41,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <label
             htmlFor={id}
             className={cn(
-              "flex items-center gap-1.5 text-xs font-semibold text-text-secondary transition-colors",
+              "flex items-center gap-1.5 text-xs font-medium text-text-secondary transition-colors",
               labelClassName
             )}
           >
@@ -95,7 +95,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <p
             id={errorId}
             role="alert"
-            className="flex items-center gap-1.5 text-xs font-semibold text-danger animate-in slide-in-from-top-1 fade-in duration-200"
+            className="flex items-center gap-1.5 text-xs font-medium text-danger animate-in slide-in-from-top-1 fade-in duration-200"
           >
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             {error}

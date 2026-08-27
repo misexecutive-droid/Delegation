@@ -32,7 +32,7 @@ const GroupHeader = ({ label, groupBy, ticketCount, stats }: GroupHeaderProps) =
     <div className="flex items-center justify-between px-1 pb-1 border-b border-border/40">
       <div className="flex items-center gap-2">
         <Icon size={13} className="text-primary-500 shrink-0" />
-        <h3 className="text-xs font-display font-semibold text-text-secondary uppercase tracking-wider">
+        <h3 className="text-xs font-display font-medium text-text-secondary uppercase tracking-wider">
           {label}
         </h3>
       </div>

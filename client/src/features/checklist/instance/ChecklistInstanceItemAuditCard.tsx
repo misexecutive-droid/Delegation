@@ -41,7 +41,7 @@ export const ChecklistInstanceItemAuditCard = ({ item, instanceId, currentUserId
           {item.isDone ? <CheckSquare size={18} /> : <Square size={18} />}
         </span>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-mono font-semibold leading-snug ${item.isDone ? 'text-text-muted' : 'text-text'}`}>
+          <p className={`text-sm font-mono font-medium leading-snug ${item.isDone ? 'text-text-muted' : 'text-text'}`}>
             {item.label}
           </p>
           <p className="text-[11px] text-text-muted font-mono mt-0.5">
@@ -108,13 +108,13 @@ const SubmissionRow = ({ item, submission, instanceId, storeName, interactive }:
     <div className="flex flex-col gap-2.5 p-2.5 rounded-lg border border-border/70 bg-background">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`flex items-center justify-center size-6 rounded-full shrink-0 text-[10px] font-mono font-semibold ${
+          <span className={`flex items-center justify-center size-6 rounded-full shrink-0 text-[10px] font-mono font-medium ${
             submission.isDone ? 'bg-emerald-500/10 text-emerald-600' : 'bg-surface-hover text-text-muted'
           }`}>
             {userLabel.slice(0, 1).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-mono font-semibold text-text truncate">{userLabel}</p>
+            <p className="text-xs font-mono font-medium text-text truncate">{userLabel}</p>
             <p className="text-[10px] text-text-muted font-mono truncate">{storeName}</p>
           </div>
         </div>

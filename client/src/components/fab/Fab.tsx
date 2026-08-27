@@ -68,7 +68,7 @@ export const Fab = ({ actions, icon: Icon = Plus, 'aria-label': ariaLabel }: Fab
                     exit={{ opacity: 0, y: 12, scale: 0.8 }}
                     transition={{ ...TRANSITION, delay: i * 0.04 }}
                   >
-                    <span className="px-2.5 py-1 rounded-full bg-surface border border-border/60 shadow-sm text-xs font-semibold text-text whitespace-nowrap">
+                    <span className="px-2.5 py-1 rounded-full bg-surface border border-border/60 shadow-sm text-xs font-medium text-text whitespace-nowrap">
                       {action.label}
                     </span>
                     <button

@@ -224,7 +224,7 @@ export const TaskActivitySection = ({ taskId }: TaskActivitySectionProps) => {
           <p className="text-xs text-text-light">No comments yet.</p>
         ) : (
           comments.map((c) => {
-            const name = c.authorId ? `${c.authorId.firstName} ${c.authorId.lastName ?? ''}`.trim() : 'Unknown';
+            const name = c.author ? `${c.author.firstName} ${c.author.lastName ?? ''}`.trim() : 'Unknown';
             return (
               <div key={c.id} className="flex gap-2.5">
                 <span className={`flex items-center justify-center size-8 rounded-full text-[11px] font-bold text-white shrink-0 ${avatarColorClass(name)}`}>
@@ -232,20 +232,20 @@ export const TaskActivitySection = ({ taskId }: TaskActivitySectionProps) => {
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-text">{name}</span>
+                    <span className="text-sm font-medium text-text">{name}</span>
                     <span className="text-[11px] text-text-light">{new Date(c.createdAt).toLocaleString()}</span>
                   </div>
 
                   {c.body && <p className="text-sm text-text-secondary whitespace-pre-wrap mt-0.5">{c.body}</p>}
 
-                  {c.location && (
+                  {c.locationLat != null && c.locationLng != null && (
                     <a
-                      href={`https://maps.google.com/?q=${c.location.lat},${c.location.lng}`}
+                      href={`https://maps.google.com/?q=${c.locationLat},${c.locationLng}`}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-1 text-xs text-primary-500 hover:underline mt-1"
                     >
-                      <MapPin size={12} /> {c.location.label ?? 'Shared location'}
+                      <MapPin size={12} /> {c.locationLabel ?? 'Shared location'}
                     </a>
                   )}
 

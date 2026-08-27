@@ -153,7 +153,7 @@ export const VoiceNoteRecorder = ({ disabled, onTranscribed, onBusyChange }: Voi
   if (status === 'recording') {
     return (
       <div className="flex items-center gap-1.5 shrink-0">
-        <span className="flex items-center gap-1.5 px-2.5 h-10 rounded-lg bg-danger/10 text-danger text-xs font-display font-semibold tabular-nums">
+        <span className="flex items-center gap-1.5 px-2.5 h-10 rounded-lg bg-danger/10 text-danger text-xs font-display font-medium tabular-nums">
           <span className="size-2 rounded-full bg-danger animate-pulse" />
           {formatDuration(elapsedMs)}
         </span>

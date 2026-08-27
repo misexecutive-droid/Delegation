@@ -17,9 +17,16 @@ type StoreFields = z.infer<typeof storeSchema>;
 interface StoreFormProps {
   onClose: () => void;
   store?: Store;
+  /** Called with the newly-created store right after a successful create (not fired when
+   *  editing) — lets a caller opening this as a nested "quick create" (e.g. from UserForm's
+   *  store Combobox) auto-select the result instead of the admin re-picking it themselves. */
+  onCreated?: (store: Store) => void;
+  /** Seeds the name field — e.g. whatever the admin had already typed into a Combobox's search
+   *  box before hitting "Create new store". */
+  prefillName?: string;
 }
 
-export const StoreForm = ({ onClose, store }: StoreFormProps) => {
+export const StoreForm = ({ onClose, store, onCreated, prefillName }: StoreFormProps) => {
   const isEditing = !!store;
   const createMutation = useCreateStoreMutation();
   const updateMutation = useUpdateStoreMutation();
@@ -31,7 +38,7 @@ export const StoreForm = ({ onClose, store }: StoreFormProps) => {
     formState: { errors },
   } = useForm<StoreFields>({
     resolver: zodResolver(storeSchema),
-    defaultValues: { name: store?.name || '', code: store?.code || '', address: store?.address || '' },
+    defaultValues: { name: store?.name || prefillName || '', code: store?.code || '', address: store?.address || '' },
   });
 
   const isPending = mutation.isPending;
@@ -40,7 +47,7 @@ export const StoreForm = ({ onClose, store }: StoreFormProps) => {
     if (isEditing && store) {
       updateMutation.mutate({ id: store.id, payload: data }, { onSuccess: onClose });
     } else {
-      createMutation.mutate(data, { onSuccess: onClose });
+      createMutation.mutate(data, { onSuccess: (created) => { onCreated?.(created); onClose(); } });
     }
   };
 
@@ -59,6 +66,10 @@ export const StoreForm = ({ onClose, store }: StoreFormProps) => {
     <Modal
       open
       onClose={() => !isPending && onClose()}
+      // Non-modal so this also works correctly when opened nested inside another Modal (e.g. a
+      // "create new store" quick-add from UserForm's store Combobox) — same reasoning as
+      // DatePicker/DateRangePicker.
+      modal={false}
       icon={<StoreIcon className="w-5 h-5" />}
       title={isEditing ? 'Edit store' : 'New store'}
       description="Stores are where checklists actually run — each recurring checklist gets deployed to one or more."

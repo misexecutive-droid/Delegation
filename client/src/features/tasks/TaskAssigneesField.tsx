@@ -32,6 +32,9 @@ export const TaskAssigneesField = ({ selectedIds, onChange, users, isLoading = f
   // PC has full parity with ADMIN throughout this app.
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PC';
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  // Reading a ref's .current during render isn't allowed (it can go stale without triggering a
+  // re-render), so the trigger's DOM node is tracked in state via a callback ref instead.
+  const [triggerEl, setTriggerEl] = useState<HTMLButtonElement | null>(null);
 
   const toggle = (id: string) => {
     onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
@@ -65,16 +68,41 @@ export const TaskAssigneesField = ({ selectedIds, onChange, users, isLoading = f
         {!disabled && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                title="Add assignee"
-                aria-label="Add assignee"
-                className="flex items-center justify-center size-8 rounded-full border border-dashed border-border-hover text-text-light hover:text-primary-600 hover:border-primary-400 transition-colors cursor-pointer shrink-0"
-              >
-                <Plus size={15} strokeWidth={2.5} />
-              </button>
+              {selectedUsers.length === 0 ? (
+                // Empty state: the "Unassigned" label is part of the clickable trigger itself,
+                // not separate inert text next to it — a plain <span> here reads as a status pill
+                // but does nothing when clicked, which is exactly what looked broken.
+                <button
+                  ref={setTriggerEl}
+                  type="button"
+                  title="Add assignee"
+                  aria-label="Add assignee"
+                  className="flex items-center gap-1.5 h-8 pl-2 pr-3 rounded-full border border-dashed border-border-hover text-text-light hover:text-primary-600 hover:border-primary-400 transition-colors cursor-pointer shrink-0"
+                >
+                  <Plus size={15} strokeWidth={2.5} />
+                  <span className="text-xs font-display">Unassigned</span>
+                </button>
+              ) : (
+                <button
+                  ref={setTriggerEl}
+                  type="button"
+                  title="Add assignee"
+                  aria-label="Add assignee"
+                  className="flex items-center justify-center size-8 rounded-full border border-dashed border-border-hover text-text-light hover:text-primary-600 hover:border-primary-400 transition-colors cursor-pointer shrink-0"
+                >
+                  <Plus size={15} strokeWidth={2.5} />
+                </button>
+              )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuContent
+              align="start"
+              className="w-56"
+              // See Combobox's identical comment: constrains flip/shift to the modal's own content
+              // element instead of the viewport, so a trigger near the bottom of the modal doesn't
+              // spill the checklist out past the modal's card.
+              collisionBoundary={triggerEl?.closest('[data-slot="dialog-content"]') ?? undefined}
+              collisionPadding={16}
+            >
               {isLoading ? (
                 <div className="px-2 py-1.5 text-xs text-text-light">Loading team…</div>
               ) : (users ?? []).length === 0 ? (
@@ -116,7 +144,8 @@ export const TaskAssigneesField = ({ selectedIds, onChange, users, isLoading = f
           </DropdownMenu>
         )}
 
-        {selectedUsers.length === 0 && (
+        {/* Disabled (read-only) view has no clickable trigger to fold this label into. */}
+        {disabled && selectedUsers.length === 0 && (
           <span className="text-xs text-text-light">Unassigned</span>
         )}
       </div>

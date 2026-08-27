@@ -61,7 +61,7 @@ export function ImageUploader({
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {label && (
-        <label className="block text-xs font-semibold text-text-secondary">
+        <label className="block text-xs font-medium text-text-secondary">
           {label}
         </label>
       )}
@@ -114,7 +114,7 @@ export function ImageUploader({
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-text">Drag &amp; drop files here</p>
+          <p className="text-sm font-medium text-text">Drag &amp; drop files here</p>
           <p className="text-xs text-text-muted mt-1">
             {hint} or{' '}
             <span className="text-coral-600 font-bold hover:text-coral-700 transition-colors">

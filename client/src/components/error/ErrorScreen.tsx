@@ -56,7 +56,7 @@ export const ErrorScreen = ({ code, title, message, onRetry }: ErrorScreenProps)
         )}
 
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-lg font-display font-semibold text-text">{title}</h1>
+          <h1 className="text-lg font-display font-bold text-text">{title}</h1>
           {message && (
             <p className="text-sm text-text-muted font-display max-w-sm">{message}</p>
           )}

@@ -30,7 +30,7 @@ export const ChecklistInstanceItemRatingCard = ({ item, instanceId, canWork, isL
     <div className={`flex flex-col gap-3 p-3 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono font-semibold leading-snug text-text">{item.label}</p>
+          <p className="text-sm font-mono font-medium leading-snug text-text">{item.label}</p>
           {item.isDone && item.completedAt && (
             <p className="text-xs text-text-muted font-mono mt-0.5">Completed {formatDate(item.completedAt)}</p>
           )}

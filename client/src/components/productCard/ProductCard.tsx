@@ -19,7 +19,7 @@ export const ProductCard = ({
 }: ProductCardProps) => (
   <div className={`bg-surface border border-border shadow-sm w-full max-w-sm rounded-2xl overflow-hidden ${className}`}>
     <div className="px-4 py-3 sm:px-6 flex items-center justify-between gap-4 flex-wrap">
-      <h3 className="text-text text-base font-display font-semibold">{title}</h3>
+      <h3 className="text-text text-base font-display font-medium">{title}</h3>
 
       <button
         type="button"
@@ -44,7 +44,7 @@ export const ProductCard = ({
         <button
           type="button"
           onClick={onOrder}
-          className="inline-flex items-center py-2 px-3.5 text-sm rounded-md font-display font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+          className="inline-flex items-center py-2 px-3.5 text-sm rounded-md font-display font-medium text-white bg-primary-500 hover:bg-primary-600 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
         >
           {ctaLabel}
         </button>

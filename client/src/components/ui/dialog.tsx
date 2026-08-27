@@ -36,8 +36,12 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        // z-[70] — above every other overlay in the app (drawers/sheets top out at z-[60]), since
-        // a modal dialog must always be able to stack on top of a drawer it was opened from.
+        // z-[70] — above every full-screen overlay in the app (drawers/sheets top out at z-[60]),
+        // since a modal dialog must always be able to stack on top of a drawer it was opened
+        // from. Dropdown/Select content goes one step higher still (z-[80]) — those are popovers
+        // spawned from *inside* a dialog (e.g. an assignee picker in a form modal) rather than a
+        // competing full-screen surface, and being portalled to document.body as siblings of the
+        // dialog, they need a higher z-index of their own to render on top of it, not beneath it.
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-300 data-[state=closed]:duration-150 fixed inset-0 z-[70] bg-black/40 backdrop-blur-xs",
         className,
       )}

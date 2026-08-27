@@ -70,7 +70,7 @@ export const TeamOverviewPage = () => {
           <Building2 className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl font-display font-semibold text-text tracking-tight">Team Overview</h1>
+          <h1 className="text-xl font-display font-bold text-text tracking-tight">Team Overview</h1>
           <p className="text-xs text-text-muted font-display mt-0.5">
             {!departmentId
               ? 'Every department, org-wide.'
@@ -96,7 +96,7 @@ export const TeamOverviewPage = () => {
           <button
             type="button"
             onClick={backToDepartments}
-            className="self-start text-xs font-semibold text-text-muted hover:text-text transition-colors cursor-pointer"
+            className="self-start text-xs font-medium text-text-muted hover:text-text transition-colors cursor-pointer"
           >
             ← All departments
           </button>

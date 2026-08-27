@@ -40,7 +40,7 @@ export const Stepper = ({ steps, current, onStepClick }: StepperProps) => (
               {isDone ? <Check size={14} strokeWidth={3} /> : i + 1}
             </span>
             <span
-              className={`hidden sm:inline text-xs font-display font-semibold whitespace-nowrap ${
+              className={`hidden sm:inline text-xs font-display font-medium whitespace-nowrap ${
                 isActive || isDone ? 'text-text' : 'text-text-muted'
               }`}
             >

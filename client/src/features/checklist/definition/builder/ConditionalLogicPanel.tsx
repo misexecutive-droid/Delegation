@@ -35,7 +35,7 @@ export const ConditionalLogicPanel = ({ itemType, trigger, actions, onTriggerCha
       <button
         type="button"
         onClick={() => onTriggerChange('NO')}
-        className="group/trigger flex items-center gap-2 px-3 py-2 mt-2 rounded-lg border border-dashed border-coral-300 bg-coral-50/50 text-xs font-display font-semibold text-coral-700 transition-all duration-200 ease-out hover:border-coral-400 hover:bg-coral-100 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 active:shadow-none cursor-pointer w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500 focus-visible:ring-offset-1"
+        className="group/trigger flex items-center gap-2 px-3 py-2 mt-2 rounded-lg border border-dashed border-coral-300 bg-coral-50/50 text-xs font-display font-medium text-coral-700 transition-all duration-200 ease-out hover:border-coral-400 hover:bg-coral-100 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 active:shadow-none cursor-pointer w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500 focus-visible:ring-offset-1"
       >
         <Zap size={14} className="transition-transform duration-200 group-hover/trigger:scale-110 group-hover/trigger:-rotate-6" />
         Add conditional logic
@@ -76,7 +76,7 @@ export const ConditionalLogicPanel = ({ itemType, trigger, actions, onTriggerCha
               onClick={() => onTriggerChange(value)}
               aria-pressed={trigger === value}
               className={[
-                'px-3 py-1.5 rounded transition-all duration-200 ease-out font-semibold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500',
+                'px-3 py-1.5 rounded transition-all duration-200 ease-out font-medium cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500',
                 trigger === value ? 'bg-surface text-coral-700 shadow-sm' : 'text-text-muted hover:text-text hover:bg-white/40',
               ].join(' ')}
             >
@@ -98,7 +98,7 @@ export const ConditionalLogicPanel = ({ itemType, trigger, actions, onTriggerCha
               onClick={() => toggleAction(opt.value)}
               aria-pressed={checked}
               className={[
-                'group/chip flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-display font-semibold transition-all duration-200 ease-out cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500',
+                'group/chip flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-display font-medium transition-all duration-200 ease-out cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500',
                 checked
                   ? 'border-coral-500 bg-coral-50 text-coral-700 shadow-sm scale-[1.02]'
                   : 'border-coral-500/30 bg-surface text-coral-700 hover:bg-coral-500/10 hover:border-coral-500/50',

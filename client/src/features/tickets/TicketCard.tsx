@@ -36,10 +36,10 @@ export const TicketCard = ({ ticket, onClick, departmentName, index = 0 }: Ticke
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${priorityInfo.stripe}`} />
       {/* Title + Department */}
       <div className="flex items-start justify-between gap-2">
-        <h3 className="flex-1 min-w-0 text-sm font-semibold text-text truncate leading-snug">
+        <h3 className="flex-1 min-w-0 text-sm font-medium text-text truncate leading-snug">
           {ticket.title}
         </h3>
-        <span className="shrink-0 max-w-[140px] truncate text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
+        <span className="shrink-0 max-w-[140px] truncate text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
           {departmentName ?? 'Ticket'}
         </span>
       </div>
@@ -64,17 +64,17 @@ export const TicketCard = ({ ticket, onClick, departmentName, index = 0 }: Ticke
       {/* Footer: Status/Priority/Due Chips + Assignee */}
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${statusInfo.className}`}>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${statusInfo.className}`}>
             {statusLabel}
           </span>
 
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${priorityInfo.className}`}>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${priorityInfo.className}`}>
             {priorityInfo.label}
           </span>
 
           {ticket.tatDueAt && (
             <span
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
                 isOverdue ? 'bg-danger/10 text-danger' : 'bg-surface-hover text-text-muted'
               }`}
             >

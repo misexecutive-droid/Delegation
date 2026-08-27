@@ -19,7 +19,7 @@ export const QuickActionButton = ({ to, icon: Icon, label, description }: QuickA
     </div>
 
     <div className="min-w-0 flex-1">
-      <p className="truncate text-sm font-display font-semibold text-text transition-colors duration-300 group-hover:text-primary-700 dark:group-hover:text-primary-400">
+      <p className="truncate text-sm font-display font-medium text-text transition-colors duration-300 group-hover:text-primary-700 dark:group-hover:text-primary-400">
         {label}
       </p>
       <p className="truncate text-xs font-display text-text-muted">{description}</p>

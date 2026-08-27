@@ -1,4 +1,5 @@
 import { Check, type LucideIcon } from 'lucide-react';
+import { AdminChromeAccents } from '../../features/admin/AdminChromeAccents';
 
 export interface QuickFilterTile<K extends string> {
   key: K;
@@ -23,13 +24,56 @@ interface QuickFilterStatsProps<K extends string> {
   onToggle: (key: K) => void;
   /** Plural noun used in the tile's tooltip, e.g. "delegations" or "tickets". */
   itemLabel: string;
+  /** 'default' (unchanged): white card, per-tile status-colored icon badge and accents — still
+   *  used by Todo's quick stats. 'navy': the Dashboard's dark navy chrome — no icon, every tile
+   *  the same uniform gradient instead of each picking up its own status color. */
+  variant?: 'default' | 'navy';
 }
 
 // A row of clickable, glanceable KPI tiles that double as one-click filters into that exact
-// subset — the shared shape behind both the Delegation and Ticket list pages' quick-stat rows.
-// Each tile carries its own status color end-to-end (icon, left accent bar, active border/ring)
-// instead of every tile lighting up the same generic primary-blue highlight when selected.
-export function QuickFilterStats<K extends string>({ tiles, counts, active, onToggle, itemLabel }: QuickFilterStatsProps<K>) {
+// subset — the shared shape behind the Delegation, Ticket, and Todo list pages' quick-stat rows.
+export function QuickFilterStats<K extends string>({ tiles, counts, active, onToggle, itemLabel, variant = 'default' }: QuickFilterStatsProps<K>) {
+  if (variant === 'navy') {
+    return (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {tiles.map(({ key, label }) => {
+          const isActive = active === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onToggle(key)}
+              aria-pressed={isActive}
+              title={isActive ? `Clear "${label}" filter` : `Show only ${label.toLowerCase()} ${itemLabel}`}
+              className={`group relative flex flex-col justify-center gap-1 overflow-hidden rounded-2xl p-3.5 md:p-5 text-left transition-all duration-300 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 bg-gradient-to-br from-slate-950 via-primary-800 to-primary-600 shadow-lg shadow-primary-900/20 ${
+                isActive ? 'ring-2 ring-white/60 -translate-y-0.5 shadow-xl' : 'hover:-translate-y-0.5 hover:shadow-xl'
+              }`}
+            >
+              <AdminChromeAccents scale="compact" />
+              <div className="relative z-10 min-w-0">
+                <p className="text-xl md:text-2xl font-display font-bold tracking-tight text-white leading-none">
+                  {counts[key]}
+                </p>
+                <p className="text-[12px] md:text-sm font-display font-medium text-white/70 mt-1.5 truncate">
+                  {label}
+                </p>
+              </div>
+
+              {isActive && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-2.5 right-2.5 md:top-3 md:right-3 flex items-center justify-center size-4 rounded-full bg-white/20 text-white shadow-sm z-10"
+                >
+                  <Check size={10} strokeWidth={3.5} />
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {tiles.map(({ key, label, icon: Icon, tint, bgTint, accentBar, accentBorder, accentRing }) => {
@@ -56,19 +100,23 @@ export function QuickFilterStats<K extends string>({ tiles, counts, active, onTo
               }`}
             />
 
+            {/* Icon glyph carries the status color; the badge itself stays the same neutral
+                surface on every tile at rest, so the four cards read as one uniform row instead
+                of each picking up its own background tint — only the active (selected) tile
+                still tints its whole card, as a deliberate "this one's picked" signal. */}
             <div
-              className={`relative flex items-center justify-center size-10 md:size-12 rounded-xl shrink-0 transition-all duration-300 ${tint} ${bgTint} ${
-                isActive ? `ring-1 ${accentRing}` : 'group-hover:shadow-sm'
+              className={`relative flex items-center justify-center size-10 md:size-12 rounded-xl shrink-0 transition-all duration-300 ${tint} ${
+                isActive ? `${bgTint} ring-1 ${accentRing}` : 'bg-surface-hover group-hover:shadow-sm'
               }`}
             >
               <Icon size={20} strokeWidth={2.5} className={isActive ? 'scale-110 transition-transform' : 'transition-transform'} />
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-xl md:text-2xl font-extrabold tracking-tight text-text leading-none">
+              <p className="text-xl md:text-2xl font-bold tracking-tight text-text leading-none">
                 {counts[key]}
               </p>
-              <p className="text-[12px] md:text-sm font-semibold text-text-muted mt-1.5 truncate">
+              <p className="text-[12px] md:text-sm font-medium text-text-muted mt-1.5 truncate">
                 {label}
               </p>
             </div>

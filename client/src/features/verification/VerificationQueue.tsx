@@ -41,7 +41,7 @@ const QueueRow = ({ icon, title, subtitle, onApprove, onReject, isPending }: Que
             {icon}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-text truncate">{title}</p>
+            <p className="text-sm font-medium text-text truncate">{title}</p>
             <p className="text-xs text-text-muted truncate mt-0.5">{subtitle}</p>
           </div>
         </div>
@@ -189,7 +189,7 @@ export const VerificationQueue = () => {
       <div className="flex items-center gap-4">
         <GradientIconTile icon={ShieldCheck} size="lg" />
         <div>
-          <h1 className="text-2xl font-display font-semibold text-text tracking-tight">Verification Queue</h1>
+          <h1 className="text-2xl font-display font-bold text-text tracking-tight">Verification Queue</h1>
           <p className="text-sm text-text-muted mt-0.5">
             {totalItems === 0 
               ? 'Your queue is completely clear' 
@@ -202,7 +202,7 @@ export const VerificationQueue = () => {
         {/* Tickets Section */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xs font-semibold text-text-muted uppercase tracking-widest">Tickets</h2>
+            <h2 className="text-xs font-medium text-text-muted uppercase tracking-widest">Tickets</h2>
             {!ticketsPending && tickets.length > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-border/50 text-[10px] font-medium text-text-muted">
                 {tickets.length}
@@ -225,7 +225,7 @@ export const VerificationQueue = () => {
         {/* Delegations Section */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xs font-semibold text-text-muted uppercase tracking-widest">Delegations</h2>
+            <h2 className="text-xs font-medium text-text-muted uppercase tracking-widest">Delegations</h2>
             {!tasksPending && tasks.length > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-border/50 text-[10px] font-medium text-text-muted">
                 {tasks.length}
@@ -248,7 +248,7 @@ export const VerificationQueue = () => {
         {/* Checklists Section */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xs font-semibold text-text-muted uppercase tracking-widest">Checklists</h2>
+            <h2 className="text-xs font-medium text-text-muted uppercase tracking-widest">Checklists</h2>
             {!checklistsPending && checklists.length > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-border/50 text-[10px] font-medium text-text-muted">
                 {checklists.length}

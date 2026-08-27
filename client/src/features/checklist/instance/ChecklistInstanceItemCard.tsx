@@ -89,7 +89,7 @@ export const ChecklistInstanceItemCard = ({ item, instanceId, canWork, isLocked 
           {item.isDone ? <CheckSquare size={18} /> : <Square size={18} />}
         </span>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-mono font-semibold leading-snug ${item.isDone ? 'line-through text-text-muted' : 'text-text'}`}>
+          <p className={`text-sm font-mono font-medium leading-snug ${item.isDone ? 'line-through text-text-muted' : 'text-text'}`}>
             {item.label}
           </p>
           {item.isDone && item.completedAt && (

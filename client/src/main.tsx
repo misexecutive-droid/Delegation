@@ -15,8 +15,12 @@ const queryClient = new QueryClient();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <AuthProvider>
-        <QueryClientProvider client={queryClient}>
+      {/* QueryClientProvider now wraps AuthProvider (was the other way round) so AuthContext's
+          logout() can reach useQueryClient() and purge every cached query on sign-out — otherwise
+          a lower-privileged account signed into afterward could see the previous session's
+          already-cached data (another user's tasks/tickets) until each query happened to refetch. */}
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
           <TooltipProvider>
             <ConfirmDialogProvider>
               <App />
@@ -24,8 +28,8 @@ createRoot(document.getElementById('root')!).render(
 
             <Toaster position="top-right" richColors closeButton />
           </TooltipProvider>
-        </QueryClientProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>,
 );

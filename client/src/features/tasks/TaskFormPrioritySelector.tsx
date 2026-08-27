@@ -1,4 +1,3 @@
-import { PRIORITY_MAP } from './taskDisplay';
 import { FIELD_LABEL_CLASS, FIELD_CARD_CLASS } from './taskFormFieldStyles';
 import type { Task } from '../../api/task';
 
@@ -16,16 +15,17 @@ interface TaskFormPrioritySelectorProps {
 }
 
 export const TaskFormPrioritySelector = ({ value, onChange, disabled = false }: TaskFormPrioritySelectorProps) => (
-  <div className={`group/field flex flex-col gap-1.5 ${FIELD_CARD_CLASS}`}>
+  <div className={`group/field @container flex flex-col gap-1.5 ${FIELD_CARD_CLASS}`}>
     <label className={FIELD_LABEL_CLASS}>
-      Priority Level 
+      Priority Level
     </label>
-    
-    {/* Segmented Control Container */}
-    <div className="grid grid-cols-3 gap-1.5 p-1 rounded border border-border bg-surface-hover focus-within:ring-primary-500/20 transition-all">
+
+    {/* Segmented control — each option is its own white bordered pill (same look as the
+        Department/Notification field triggers), not one shared gray container, so all three sit
+        on the same white background as the rest of the form instead of a separate gray box. */}
+    <div className="grid grid-cols-3 gap-1.5">
       {PRIORITIES.map((p) => {
         const isSelected = value === p.value;
-        const meta = PRIORITY_MAP[p.value];
 
         return (
           <button
@@ -34,16 +34,19 @@ export const TaskFormPrioritySelector = ({ value, onChange, disabled = false }: 
             aria-pressed={isSelected}
             onClick={() => onChange(p.value)}
             disabled={disabled}
-            className={`relative flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded border transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:cursor-not-allowed disabled:opacity-60 ${
+            // One universal accent color regardless of which priority is picked — the value
+            // itself is conveyed by the label (L/M/H), not by a different color per option.
+            className={`relative flex items-center justify-center gap-2 h-10 px-3 text-sm font-medium rounded border transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:cursor-not-allowed disabled:opacity-60 ${
               isSelected
-                ? `${meta.className} shadow-sm`
-                : 'border-transparent text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
+                ? 'bg-primary-50 text-primary-700 border-primary-300 dark:bg-primary-900/20 dark:text-primary-300 dark:border-primary-700/60'
+                : 'bg-surface border-border text-text-secondary hover:text-text hover:border-border-hover'
             }`}
           >
-            {/* Mobile: Show only first letter */}
-            <span className="sm:hidden">{p.short}</span>
-            {/* Desktop (sm and up): Show full word */}
-            <span className="hidden sm:inline truncate">{p.label}</span>
+            {/* Narrow container (e.g. a fixed sidebar column): first letter only. Wide container:
+                full word. Keyed off the control's own available width, not the viewport, since a
+                desktop-width screen can still hand this a narrow column. */}
+            <span className="@sm:hidden">{p.short}</span>
+            <span className="hidden @sm:inline truncate">{p.label}</span>
           </button>
         );
       })}

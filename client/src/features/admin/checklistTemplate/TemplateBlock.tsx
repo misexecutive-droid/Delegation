@@ -42,7 +42,7 @@ export const TemplateBlock = ({ template, departmentName }: TemplateBlockProps) 
           </div>
 
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            <span className="text-sm font-display font-semibold text-text truncate">{template.name}</span>
+            <span className="text-sm font-display font-medium text-text truncate">{template.name}</span>
 
             <div className="flex items-center gap-1.5 shrink-0">
               <span className={`text-[11px] font-display font-medium px-2 py-0.5 rounded-md flex items-center gap-1 ${

@@ -53,7 +53,7 @@ export function Button({
       className={cn(
         'press-feedback',
         // Base styles: Flexbox layout & typography
-        'inline-flex items-center justify-center font-semibold whitespace-nowrap',
+        'inline-flex items-center justify-center font-medium whitespace-nowrap',
         // Smooth transitions and micro-interactions
         'transition-all duration-200 ease-in-out cursor-pointer select-none',
         'active:scale-[0.98]',

@@ -97,7 +97,7 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
           type="button"
           onClick={onClose}
           disabled={isSaving}
-          className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-display font-semibold text-text-secondary bg-surface border border-border rounded-xl hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-display font-medium text-text-secondary bg-surface border border-border rounded-xl hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           Cancel
         </button>
@@ -106,7 +106,7 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
           type="button"
           onClick={goBack}
           disabled={isSaving}
-          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-display font-semibold text-text-secondary bg-surface border border-border rounded-xl hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-display font-medium text-text-secondary bg-surface border border-border rounded-xl hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back
@@ -117,7 +117,7 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
         <button
           type="button"
           onClick={goNext}
-          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-display font-semibold text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-display font-medium text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
         >
           Next
           <ArrowRight className="w-3.5 h-3.5" />
@@ -127,7 +127,7 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
           type="button"
           disabled={isSaving}
           onClick={handleSave}
-          className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 text-sm font-display font-semibold text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none disabled:transform-none"
+          className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 text-sm font-display font-medium text-white rounded-xl shadow-sm bg-primary-700 hover:bg-primary-800 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none disabled:transform-none"
         >
           {isSaving ? 'Creating...' : 'Create Template'}
         </button>
@@ -161,7 +161,7 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
                 <Layers className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
                 Applies To
               </label>
@@ -177,7 +177,7 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
             </div>
 
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
                 <Building2 className="w-3.5 h-3.5 text-text-light" strokeWidth={2.5} />
                 Owning Department
               </label>
@@ -251,22 +251,22 @@ export const ChecklistTemplateFormUI = ({ departments, isSaving, saveError, onSu
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-surface-hover/40 divide-y divide-border/60">
             <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-xs font-display font-semibold text-text-muted uppercase tracking-wider">Name</span>
+              <span className="text-xs font-display font-medium text-text-muted uppercase tracking-wider">Name</span>
               <span className="text-sm font-display font-bold text-text truncate max-w-[60%]">{name || '—'}</span>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-xs font-display font-semibold text-text-muted uppercase tracking-wider">Applies To</span>
+              <span className="text-xs font-display font-medium text-text-muted uppercase tracking-wider">Applies To</span>
               <span className="text-sm font-display font-medium text-text">{appliesTo === 'TASK' ? 'Delegations' : 'Tickets'}</span>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-xs font-display font-semibold text-text-muted uppercase tracking-wider">Department</span>
+              <span className="text-xs font-display font-medium text-text-muted uppercase tracking-wider">Department</span>
               <span className="text-sm font-display font-medium text-text truncate max-w-[60%]">{departmentName}</span>
             </div>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-sm font-display font-bold text-text">
-              Procedure Steps <span className="text-text-muted font-normal">({definedSteps.length})</span>
+              Procedure Steps <span className="text-text-muted font-medium">({definedSteps.length})</span>
             </h3>
 
             {definedSteps.length === 0 ? (

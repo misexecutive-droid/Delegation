@@ -50,7 +50,7 @@ export const CategoryList = () => {
                     <Tag size={18} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-display font-semibold text-text truncate" title={c.name}>
+                    <p className="text-sm font-display font-medium text-text truncate" title={c.name}>
                       {c.name}
                     </p>
                   </div>
@@ -117,7 +117,7 @@ export const CategoryList = () => {
         <div className="flex items-center gap-3">
           <GradientIconTile icon={Tag} />
           <div>
-            <h1 className="text-xl font-display font-semibold text-text">Categories</h1>
+            <h1 className="text-xl font-display font-bold text-text">Categories</h1>
             <p className="text-sm text-text-muted mt-0.5">
               {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'} — picking one on a ticket auto-fills department, assignees, and TAT
             </p>
