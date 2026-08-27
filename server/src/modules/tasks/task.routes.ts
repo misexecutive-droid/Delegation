@@ -18,7 +18,7 @@ taskRouter.patch("/:id" , taskController.update)
 taskRouter.patch("/:id/verify", requireRole("PC", "ADMIN"), taskController.verify) 
 taskRouter.delete("/:id" , requireRole("ADMIN", "PC"),taskController.remove)
 
-taskRouter.post("/", requireRole("ADMIN", "PC"), taskController.create)
+taskRouter.post("/", taskController.create)
 
 
 taskRouter.post("/:taskId/checklists", requireRole("ADMIN", "PC"), taskChecklistController.createForTask) // POST /tasks/:taskId/checklists -> create a checklist under this task
