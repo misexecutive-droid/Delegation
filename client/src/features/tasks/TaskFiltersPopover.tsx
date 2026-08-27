@@ -28,9 +28,6 @@ interface TaskFiltersPopoverProps {
   currentUserId?:   string;
   isAdmin?:         boolean;
   activeCount:      number;
-  /** Sort and card-field visibility — desktop keeps these as their own separate toolbar
-   *  dropdowns, but on mobile there's no room for four separate buttons, so they fold into this
-   *  panel as two extra sections instead. */
   sort:             TaskSortKey;
   onSortChange:     (key: TaskSortKey) => void;
   fieldVisibility:  CardFieldVisibility;
@@ -284,10 +281,6 @@ export const TaskFiltersPopover = ({
       </>
     );
   };
-
-  // Mobile-only: desktop keeps Sort and "Show only" (card fields) as their own separate toolbar
-  // dropdowns, but a phone-width toolbar has no room for four buttons — these fold into the same
-  // sheet as the rest of the filters instead of disappearing entirely.
   const renderMobileOnlySections = () => (
     <>
       <FilterSection title="Sort by">

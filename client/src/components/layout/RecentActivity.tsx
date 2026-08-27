@@ -46,10 +46,9 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => (
       </div>
     </div>
 
-    {/* Content Area */}
     <div className="relative z-10 flex flex-col p-2">
       {isPending ? (
-        // Skeleton State
+
         <div className="flex flex-col gap-1">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-4 py-3 rounded-lg">
@@ -62,7 +61,6 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => (
           ))}
         </div>
       ) : feed.length === 0 ? (
-        // Empty State
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
           <div className="p-3 rounded-full bg-surface-hover border border-border/50">
             <Clock size={20} className="text-text-muted" />
@@ -70,7 +68,6 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => (
           <p className="text-sm font-display text-text-muted font-medium">Nothing here yet — create a ticket or task to get started.</p>
         </div>
       ) : (
-        // Populated Feed
         <div className="flex flex-col gap-1">
           {feed.map(item => (
             <Link
@@ -79,7 +76,6 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => (
               className="group/item flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-3 rounded-lg hover:bg-surface-hover/60 transition-colors"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {/* Icon Box */}
                 <div className={`flex items-center justify-center size-8 rounded-lg shrink-0 transition-colors ${
                   item.kind === 'ticket'
                     ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 group-hover/item:bg-primary-500/15'
@@ -88,7 +84,6 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => (
                   {item.kind === 'ticket' ? <TicketIcon size={14} /> : <CheckSquare size={14} />}
                 </div>
                 
-                {/* Title */}
                 <p className="text-sm font-display font-medium text-text truncate">
                   {item.title}
                 </p>

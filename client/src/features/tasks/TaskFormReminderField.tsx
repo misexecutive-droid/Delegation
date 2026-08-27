@@ -47,11 +47,8 @@ export const TaskFormReminderField = ({ minutes, channel, onChange, disabled = f
         Deadline Notification
       </label>
 
-      {/* Fluid layout: Stacks on mobile, forms a clean inline row on sm+ screens */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 w-full">
 
-        {/* Channel Dropdown — themed popover instead of a native <select>, matching every other
-            menu in the app. */}
         <div className="w-full sm:flex-1 sm:max-w-[45%]">
           <SelectDropdown
             value={channel}
@@ -62,7 +59,6 @@ export const TaskFormReminderField = ({ minutes, channel, onChange, disabled = f
           />
         </div>
 
-        {/* Amount + Unit Input Group */}
         <div className="flex w-full sm:flex-1 gap-2.5">
           <div className="w-1/3 sm:w-[4.5rem]">
             <Input

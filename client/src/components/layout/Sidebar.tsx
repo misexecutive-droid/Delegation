@@ -447,8 +447,8 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
       </AnimatePresence>
 
       <motion.aside
-        className="md:hidden fixed top-0 left-0 z-50 w-[280px] max-w-[85vw] h-dvh flex flex-col px-4 pt-8 pb-5 border-r border-slate-300"
-        style={{ background: 'var(--color-surface, #1e293b)', pointerEvents: isOpen ? 'auto' : 'none' }}
+        className="md:hidden fixed top-0 left-0 z-50 w-[280px] max-w-[85vw] h-dvh flex flex-col px-4 pt-8 pb-5"
+        style={{  pointerEvents: isOpen ? 'auto' : 'none' }}
         initial={false}
         animate={{ x: isOpen ? 0 : '-100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 38, mass: 0.9 }}

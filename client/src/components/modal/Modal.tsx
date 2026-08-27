@@ -57,15 +57,10 @@ export const Modal = ({
   <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }} modal={modal}>
     <DialogContent
       showCloseButton={false}
-      // Full-bleed at the bottom-sheet mobile tier, the original 95vw/rounded centered box from
-      // sm: up — matches the mobile-vs-desktop split on DialogContent itself.
       className={`w-full sm:w-[95vw] ${SIZE_CLASS[size]} p-0 flex flex-col overflow-hidden rounded-t-2xl rounded-b-none sm:rounded max-h-[90vh] ${contentClassName}`}
     >
       <div className={`flex items-start justify-between gap-3 shrink-0 px-5 py-3.5 border-b border-border/40 ${headerClassName}`}>
-        {/* items-start (not -center) on both rows: with a description present, centering the icon
-            against the full title+description block sinks it below the title line instead of
-            sitting level with it — most visible once the description wraps to two lines on a
-            narrow phone. mt-0.5 nudges the icon down just enough to match the title's cap-height. */}
+
         <div className="flex items-start gap-3 min-w-0">
           {icon && <div className="shrink-0 mt-0.5">{icon}</div>}
           <div className="min-w-0">
@@ -86,9 +81,7 @@ export const Modal = ({
 
       <div
         className={`flex flex-col gap-5 px-5 py-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0 ${
-          // No footer means the body is the last thing before the device's home-indicator area
-          // when this renders as a mobile bottom sheet, so it needs the safe-area clearance
-          // instead — with a footer present, the footer below already carries it.
+
           !footer ? 'pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4' : ''
         } ${bodyClassName}`}
       >

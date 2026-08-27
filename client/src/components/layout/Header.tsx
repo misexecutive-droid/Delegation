@@ -105,7 +105,7 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
 
           <div className="flex items-center gap-3 sm:gap-4 ml-auto">
 
-            <div className="flex items-center gap-1 p-1 rounded-full bg-surface-hover/60 border border-slate-300">
+            <div className="flex items-center gap-1 p-1 rounded-full  border-1 border-slate-200">
               {user && <NotificationBell />}
 
               <button
@@ -124,7 +124,7 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
               </button>
             </div>
 
-            {user && (
+            {/* {user && (
               <Dropdown
                 items={accountActions}
                 trigger={
@@ -146,7 +146,7 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
                   </button>
                 }
               />
-            )}
+            )} */}
           </div>
         </div>
       </div>

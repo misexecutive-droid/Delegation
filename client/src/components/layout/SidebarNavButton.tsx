@@ -81,8 +81,7 @@ export const SidebarNavButton = ({
       </>
     )}
 
-    {/* Collapsed-rail active indicator — a thin gold pip, so the active item still reads even
-        when the label/badge are hidden in icon-only mode. */}
+
     {isCollapsed && isActive && (
       <span className="absolute left-0 top-1/2 h-4 w-1 -translate-y-1/2 rounded-r-full bg-coral-500" />
     )}
