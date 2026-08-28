@@ -6,6 +6,7 @@ export type Notification = {
     title : string;
     message : string;
     ticketId : string | null;
+    taskId : string | null;
     isRead : boolean;
     createdAt : string;
 }

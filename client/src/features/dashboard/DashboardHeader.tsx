@@ -4,29 +4,21 @@ import { Button } from '../../components/button';
 import { LightBeams } from '../../components/lightBeams';
 import { greeting } from './dashboardDisplay';
 
-// How often the date/time pill refreshes while the dashboard sits open in a tab — frequent enough
-// that the displayed minute is never stale for long, without re-rendering every second for a
-// display that only ever shows minute-level precision anyway.
 const CLOCK_REFRESH_MS = 30_000;
 
 interface DashboardHeaderProps {
   userName?: string;
-  /** Opens the shared To-Do drawer — the trigger for it lives here on desktop (md and up); on
-   *  mobile it's a floating action button instead (see HomePage), so this button is hidden there. */
   onOpenTodo: () => void;
 }
 
 export const DashboardHeader = ({ userName, onOpenTodo }: DashboardHeaderProps) => {
-  // Was computed once per render with no way to trigger a re-render on its own — so once mounted,
-  // this pill just froze at whatever time the dashboard happened to load, no matter how long the
-  // tab stayed open or how much the user scrolled. Ticking it via its own interval keeps it live.
+
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), CLOCK_REFRESH_MS);
     return () => clearInterval(id);
   }, []);
 
-  // Using 'short' for weekday saves critical horizontal space on small mobile screens
   const currentDate = now.toLocaleDateString(undefined, {
     weekday: 'short',
     month: 'long',
@@ -36,21 +28,15 @@ export const DashboardHeader = ({ userName, onOpenTodo }: DashboardHeaderProps) 
   const currentTime = now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
   return (
-    // lg:flex-row + lg:justify-between pushes the "New Todo" button all the way to the header's
-    // right edge on large screens instead of it sitting cramped right next to the date pill —
-    // below lg it stays in its original spot beside the pill.
+  
     <div className="relative isolate overflow-hidden flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-3 mb-2.5 md:mb-3 pb-2.5 md:pb-3 border-b border-border/40">
-      {/* Constrained to a short strip pinned to the header's top edge — LightBeams positions its
-          beams at percentages of *this* box's height, not the full header, so they stay clear of
-          the date pill and the greeting text below instead of one sweeping straight across it. */}
+
       <div className="absolute inset-x-0 top-0 h-8 -z-10 overflow-hidden pointer-events-none">
         <LightBeams />
       </div>
 
       <div className="flex flex-row flex-wrap items-center gap-2 sm:gap-3 relative z-10 w-full sm:w-auto">
-        {/* Main Greeting — kept on one line with the date/time pill instead of stacked above it,
-            and capped at a single compact size across breakpoints, so this header takes a lot
-            less vertical room on a laptop screen than a full hero heading would. */}
+    
         <h1 className="text-base sm:text-lg font-display font-bold text-text tracking-tight leading-tight">
           {greeting()}
           {userName && (

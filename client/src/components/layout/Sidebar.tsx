@@ -204,7 +204,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                 isDrawer ? 'px-3 py-3' : 'px-3 py-2.5',
                 showLabel ? 'justify-start' : 'md:justify-center md:px-0',
                 isActive || hasActiveChild
-                  ? 'text-primary-700 font-bold dark:text-primary-300'
+                  ? 'text-white font-bold dark:text-primary-300'
                   : 'text-text-secondary font-semibold hover:bg-surface-hover hover:text-text',
               ].join(' ')
             }
@@ -214,7 +214,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                 {(isActive || hasActiveChild) && (
                   <motion.span
                     layoutId={`sidebar-active-pill-${isDrawer ? 'drawer' : 'desktop'}`}
-                    className="absolute inset-0 rounded-xl bg-primary-50/80 dark:bg-primary-900/20"
+                    className="absolute inset-0 rounded-xl bg-primary-700 dark:bg-primary-900/20"
                     transition={{ type: 'spring', stiffness: 500, damping: 40, mass: 0.5 }}
                   />
                 )}
@@ -458,7 +458,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
 
       <div className="hidden md:block relative shrink-0 h-full z-20">
         <motion.aside
-          className="flex flex-col h-full border-r border-slate-300 overflow-hidden py-5"
+          className="flex flex-col h-full border-r border-slate-200 overflow-hidden py-5"
           style={{ background: 'var(--color-surface)' }}
           initial={false}
           animate={{

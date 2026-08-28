@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ShieldQuestion,
   Clock,
-  SquarePen,
   CalendarPlus,
   History,
 } from "lucide-react";
@@ -32,9 +31,12 @@ interface TaskCardProps {
   raisedByName?: string;
   departmentName?: string;
   isVerifier: boolean;
-  onOpen: (task: Task) => void;
+  onOpen: (task: Task, mode?: 'view' | 'edit') => void;
   index?: number;
   fields: CardFieldVisibility;
+  /** True when this task has an unread "you were just assigned this" notification — shows a small
+   *  callout naming who raised it, until the card is opened. */
+  isNewlyAssigned?: boolean;
 }
 
 const MAX_VISIBLE_AVATARS = 3;
@@ -47,7 +49,7 @@ const daysLeftLabel = (dueDate: string) => {
   return `${days} day${days === 1 ? '' : 's'} left`;
 };
 
-export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentName, isVerifier, onOpen, fields }: TaskCardProps) => {
+export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentName, isVerifier, onOpen, fields, isNewlyAssigned }: TaskCardProps) => {
   const deleteMutation = useDeleteTaskMutation();
   const priority = PRIORITY_MAP[task.priority];
   const coverPhoto = coverPhotoFor(task.attachments);
@@ -72,27 +74,19 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
       tabIndex={0}
       className="group relative flex flex-col gap-2.5 p-4 pl-4 rounded-xl bg-surface shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 overflow-hidden"
     >
-      {/* Priority stripe — instant "glanceable" triage cue without having to read the badge text,
-          matching the spec's priority badge coding (color = urgency at a glance). */}
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${priority.stripe}`} />
+      {isNewlyAssigned && raisedByName && (
+        <div className="flex items-center gap-1.5 -mt-1 -mx-1 px-2.5 py-1.5 rounded-lg bg-info/10 text-[11px] font-medium text-info">
+          <UserCog size={12} strokeWidth={2.5} className="shrink-0" />
+          <span className="truncate">New delegation from {raisedByName} — kindly review</span>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-2">
         <h4 className="text-sm font-medium text-text truncate leading-snug">
           {task.title}
         </h4>
         <div className="flex items-center gap-1 shrink-0">
           <TaskSourceBadge aiMeta={task.aiMeta} />
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen(task);
-            }}
-            aria-label="Open delegation"
-            title="Open delegation"
-            className="flex items-center justify-center size-9 rounded-md text-text-light hover:text-primary-600 hover:bg-primary-500/10 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
-          >
-            <SquarePen size={15} strokeWidth={2.5} />
-          </button>
           {isVerifier && (
             <button
               type="button"

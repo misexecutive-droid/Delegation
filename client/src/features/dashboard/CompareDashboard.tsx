@@ -138,12 +138,7 @@ const ChartTooltip = ({ active, payload }: ChartTooltipProps) => {
   );
 };
 
-// Period-over-period trend of your whole workload (delegations + tickets + todos combined — same
-// pooling the Compliance gauges use): Completion and On-time rate plotted across the last several
-// buckets of the selected granularity, so "compare" reads as an actual trajectory rather than a
-// single before/after number. Quality Rate needs proof/photo-compliance data that isn't loaded on
-// this page (that lives in the admin-only compliance report), and Checklist isn't a real feature
-// for regular users yet — both show as "Soon" rather than a fabricated number.
+
 export const CompareDashboard = ({ tasks, tickets, todos, period, onPeriodChange }: CompareDashboardProps) => {
   const gradientId = useId();
 
@@ -180,8 +175,7 @@ export const CompareDashboard = ({ tasks, tickets, todos, period, onPeriodChange
 
     const currentStart = buckets[buckets.length - 1].start;
     const currentEnd = buckets[buckets.length - 1].end;
-    // Straight-line pace projection from progress-so-far — not a forecast model, just "if this
-    // rate holds for the rest of the period". Skipped once the period is basically over already.
+
     const elapsedFraction = Math.min(1, Math.max(0.02, (now - currentStart.getTime()) / (currentEnd.getTime() - currentStart.getTime())));
     const projectedCompleted =
       currentRates.total > 0 && elapsedFraction < 0.98 ? Math.round(currentRates.completedCount / elapsedFraction) : null;

@@ -1,4 +1,4 @@
-import { Loader2, AlertCircle, Trash2, Clock, User, ListChecks, CalendarPlus, History, MoreVertical, SquarePen } from "lucide-react";
+import { Loader2, AlertCircle, Trash2, Clock, User, UserCog, ListChecks, CalendarPlus, History, MoreVertical, SquarePen } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useUpdateTaskMutation, useDeleteTaskMutation } from "./hook";
 import { PRIORITY_MAP, STATUS_ICON, STATUS_CONFIG, NEXT_STATUS } from "./taskDisplay";
@@ -15,13 +15,17 @@ interface TaskRowProps {
     task: Task;
     assigneeName?: string;
     departmentName?: string;
+    raisedByName?: string;
     isVerifier: boolean;
-    onOpen: (task: Task) => void;
+    onOpen: (task: Task, mode?: 'view' | 'edit') => void;
     index?: number;
     fields: CardFieldVisibility;
+    /** True when this task has an unread "you were just assigned this" notification — shows a small
+     *  callout naming who raised it, until the row is opened. */
+    isNewlyAssigned?: boolean;
 }
 
-export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen, index = 0, fields }: TaskRowProps) => {
+export const TaskRow = ({ task, assigneeName, departmentName, raisedByName, isVerifier, onOpen, index = 0, fields, isNewlyAssigned }: TaskRowProps) => {
     const updateMutation = useUpdateTaskMutation();
     const deleteMutation = useDeleteTaskMutation();
 
@@ -38,6 +42,13 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
     const subtasks = subtaskProgress(task);
 
     return (
+        <div className="flex flex-col gap-1.5">
+        {isNewlyAssigned && raisedByName && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-info/10 text-[11px] font-medium text-info">
+                <UserCog size={12} strokeWidth={2.5} className="shrink-0" />
+                <span className="truncate">New delegation from {raisedByName} — kindly review</span>
+            </div>
+        )}
         <div
             className="group relative flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 pl-4 pr-3.5 py-3 rounded-lg bg-surface hover:shadow-sm transition-shadow duration-200 animate-in fade-in slide-in-from-bottom-2 overflow-hidden"
             style={{ animationDelay: `${Math.min(index, 10) * 35}ms`, animationFillMode: 'both' }}
@@ -189,10 +200,10 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
                                     : <MoreVertical size={17} strokeWidth={2.5} />}
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-36" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem onClick={() => onOpen(task)} className="gap-2">
+                        <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem onClick={() => onOpen(task, 'edit')} className="gap-2">
                                 <SquarePen size={14} className="text-text-light" />
-                                Edit
+                                Edit Delegation
                             </DropdownMenuItem>
                             {isVerifier && (
                                 <DropdownMenuItem
@@ -207,6 +218,7 @@ export const TaskRow = ({ task, assigneeName, departmentName, isVerifier, onOpen
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
+        </div>
         </div>
     );
 };

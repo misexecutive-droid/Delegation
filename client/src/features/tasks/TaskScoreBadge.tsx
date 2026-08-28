@@ -1,12 +1,12 @@
 import { TASK_SCORE, taskScorePercent } from './taskDisplay';
 import type { Task } from '../../api/task';
 
-// Same three-tier coloring language as PRIORITY_MAP/STATUS_CONFIG (success/warning/muted) rather
-// than a new palette, so this reads as "part of the same system" wherever it shows up.
+// Done gets the success tint; anything still in progress uses the app's single navy-blue accent
+// (not a warning/yellow tier) rather than reading as an alert.
 const scoreBadgeClass = (status: Task['status']) => {
   const score = TASK_SCORE[status];
   if (score >= 1) return 'bg-success/10 text-success';
-  if (score > 0) return 'bg-warning/10 text-warning';
+  if (score > 0) return 'bg-primary-500/10 text-primary-600';
   return 'bg-surface-hover text-text-muted';
 };
 

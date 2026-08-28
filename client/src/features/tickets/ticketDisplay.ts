@@ -6,15 +6,15 @@ import type { Ticket, TicketStatus } from '../../api/ticket';
 // reads a different color depending on which screen shows it.
 export const STATUS_CONFIG: Record<TicketStatus, { label: string; className: string; dot: string }> = {
   OPEN: { label: 'Open', className: 'bg-surface-hover text-text-secondary', dot: 'bg-text-light' },
-  IN_PROGRESS: { label: 'In Progress', className: 'bg-warning/10 text-warning', dot: 'bg-warning' },
-  IN_REVIEW: { label: 'In Review', className: 'bg-primary-500/10 text-primary-600 dark:text-primary-400', dot: 'bg-primary-500' },
-  CLOSED: { label: 'Closed', className: 'bg-success/10 text-success', dot: 'bg-success' },
+  IN_PROGRESS: { label: 'In Progress', className: 'bg-warning/10 text-warning', dot: 'bg-warning/35' },
+  IN_REVIEW: { label: 'In Review', className: 'bg-primary-500/10 text-primary-600', dot: 'bg-primary-500/35' },
+  CLOSED: { label: 'Closed', className: 'bg-success/10 text-success', dot: 'bg-success/35' },
   ON_HOLD: { label: 'On Hold', className: 'bg-surface text-text-muted', dot: 'bg-text-light' },
 };
 
 export const PRIORITY_CONFIG: Record<Ticket['priority'], { label: string; className: string; accent: string; stripe: string }> = {
   LOW: { label: 'Low', className: 'bg-surface-hover text-text-muted', accent: 'bg-text-light', stripe: 'bg-text-light/40' },
-  MEDIUM: { label: 'Medium', className: 'bg-warning/10 text-warning', accent: 'bg-warning', stripe: 'bg-warning' },
-  HIGH: { label: 'High', className: 'bg-danger/10 text-danger', accent: 'bg-danger', stripe: 'bg-danger' },
-  CRITICAL: { label: 'Critical', className: 'bg-danger/15 text-danger font-bold', accent: 'bg-danger', stripe: 'bg-danger' },
+  MEDIUM: { label: 'Medium', className: 'bg-warning/10 text-warning', accent: 'bg-warning/35', stripe: 'bg-warning/35' },
+  HIGH: { label: 'High', className: 'bg-danger/10 text-danger', accent: 'bg-danger/35', stripe: 'bg-danger/35' },
+  CRITICAL: { label: 'Critical', className: 'bg-danger/15 text-danger font-bold', accent: 'bg-danger/35', stripe: 'bg-danger/35' },
 };

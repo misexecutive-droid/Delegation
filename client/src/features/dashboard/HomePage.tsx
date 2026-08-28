@@ -33,18 +33,11 @@ export const HomePage = () => {
   const isPending = ticketsPending || tasksPending;
   const activityPending = isPending || todosPending;
 
-  // This is everyone's dashboard homepage, not just admin's — regardless of role, it should only
-  // ever reflect the signed-in user's own work (raised by them or assigned to them), never
-  // org-wide totals. ADMIN/PC's queries above return every ticket/task server-side, so the "mine"
-  // filter has to happen here rather than relying on server-side role scoping.
   const tickets = (ticketPage?.data ?? []).filter((t) => t.userId === user?.id || t.assigneeId === user?.id);
   const tasks = (allTasks ?? []).filter(
     (t) => t.userId === user?.id || t.assigneeId === user?.id || t.additionalAssigneeIds?.includes(user?.id ?? ''),
   );
 
-  // Process & Workflow card: ADMIN/PC see org-wide totals (that's literally their job — the
-  // verification queue is everyone's, not just their own) — everyone else sees the same
-  // mine-only `tasks` already used by the rest of this page.
   const isOrgWideRole = user?.role === 'ADMIN' || user?.role === 'PC';
   const workflowTasks = isOrgWideRole ? (allTasks ?? []) : tasks;
   const workflowStats = {
@@ -54,8 +47,8 @@ export const HomePage = () => {
     assigned: workflowTasks.length,
   };
 
-  // "now" only needs to be approximately current for the overdue checks below; memoized so
-  // it's read once per mount, not on every render.
+  // "now" only needs to be approximately current for the overdue/period checks below; memoized
+  // so it's read once per mount, not on every render.
   // eslint-disable-next-line react-hooks/purity
   const now = useMemo(() => Date.now(), []);
 
@@ -65,11 +58,6 @@ export const HomePage = () => {
   ]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
-
-  // Target gauge — weighted completion of MY delegations for the selected period. Each task
-  // contributes TASK_SCORE[status] — Done = 1, In Progress/Pending Verification = 0.5, Todo = 0,
-  // regardless of whether it's overdue — so the percent reflects real progress, not just a binary
-  // done/not-done count.
   const nowDate = useMemo(() => new Date(now), [now]);
   const tasksCreatedIn = (periodDate: Date) => {
     const start = periodStartDate(period, periodDate).getTime();

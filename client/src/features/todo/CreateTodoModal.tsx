@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { ListTodo, CalendarDays } from 'lucide-react';
+import { ListTodo } from 'lucide-react';
 import { Button, Modal, Input, DatePicker } from '../../components';
 import { TaskFormPrioritySelector } from '../tasks/TaskFormPrioritySelector';
-import { FIELD_LABEL_ICON_CLASS, FIELD_CARD_CLASS } from '../tasks/taskFormFieldStyles';
+import { FIELD_CARD_CLASS } from '../tasks/taskFormFieldStyles';
 import { TODO_INPUT_CLASS, TODO_TRIGGER_CLASS, TODO_LABEL_CLASS, TODO_BUTTON_CLASS } from './todoFormStyles';
 import { useCreateTodoMutation } from './hook';
 import type { TodoPriority } from '../../api/todos';

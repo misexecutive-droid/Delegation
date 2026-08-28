@@ -65,7 +65,7 @@ const Column = ({ status, tickets, draggable, onOpen, departmentNames }: ColumnP
       <div className="flex items-center justify-between px-2 py-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className={`size-2 rounded-full shrink-0 ${config.dot}`} aria-hidden="true" />
-          <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wide truncate">
+          <h3 className="text-xs font-bold text-text-secondary truncate">
             {config.label}
           </h3>
           <span className={`flex items-center justify-center min-w-[1.5rem] h-5 px-2 text-xs font-bold rounded-full border border-border/60 ${config.className}`}>

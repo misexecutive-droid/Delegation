@@ -1,20 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  Activity, Paperclip, MapPin, Image as ImageIcon, FileText, Smile,
-  Calendar as CalendarIcon, Loader2, X, AlertCircle,
+  Activity, MapPin, Smile,
+  Calendar as CalendarIcon, Loader2, AlertCircle,
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from '@/components/ui/dropdown-menu';
-import { Textarea, Button } from '../../components';
+import { Button } from '../../components';
 import { useTaskCommentsQuery, useCreateTaskCommentMutation } from './hook';
 import { avatarColorClass } from './avatarColors';
 import { getInitials } from '../../lib/getInitials';
-import { attachmentIconFor, attachmentTypeLabel, formatFileSize, isImageAttachment } from './taskAttachmentDisplay';
+import { attachmentIconFor, attachmentTypeLabel, isImageAttachment } from './taskAttachmentDisplay';
 import { UPLOADS_BASE } from '../../lib/uploadsBase';
 import { FIELD_LABEL_CLASS, FIELD_LABEL_ICON_CLASS } from './taskFormFieldStyles';
+import { AttachFilesToolbar } from './AttachFilesToolbar';
+import { StagedFileChips } from './StagedFileChips';
 
 const EMOJIS = ['😀', '😂', '😍', '👍', '🙏', '🎉', '🔥', '✅', '❌', '⚠️', '📌', '⏰', '💡', '👏', '🚀', '😢'];
 
@@ -35,8 +37,6 @@ export const TaskActivitySection = ({ taskId }: TaskActivitySectionProps) => {
   const [files, setFiles] = useState<File[]>([]);
   const [isLocating, setIsLocating] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Inserts at the current cursor position rather than always appending, so picking an emoji or
   // date mid-sentence lands where you were actually typing.
@@ -52,20 +52,9 @@ export const TaskActivitySection = ({ taskId }: TaskActivitySectionProps) => {
     });
   };
 
-  const handleFiles = (list: FileList | null) => {
-    if (!list?.length) return;
-    setFiles((prev) => [...prev, ...Array.from(list)]);
-  };
+  const handleFiles = (list: FileList) => setFiles((prev) => [...prev, ...Array.from(list)]);
 
   const removeFile = (index: number) => setFiles((prev) => prev.filter((_, i) => i !== index));
-
-  // Thumbnail previews for staged images — without this, an added image looked identical to any
-  // other staged file (plain filename text), which read as "nothing happened" when you attached one.
-  const previewUrls = useMemo(
-    () => files.map((f) => (isImageAttachment(f.type) ? URL.createObjectURL(f) : '')),
-    [files]
-  );
-  useEffect(() => () => previewUrls.forEach((u) => u && URL.revokeObjectURL(u)), [previewUrls]);
 
   const shareLocation = () => {
     if (!navigator.geolocation) return;
@@ -104,38 +93,27 @@ export const TaskActivitySection = ({ taskId }: TaskActivitySectionProps) => {
       </h3>
 
       <div className="flex flex-col gap-2">
-        <Textarea
-          id="task-comment-body"
-          label="Add a comment"
-          labelClassName={FIELD_LABEL_CLASS}
-          ref={textareaRef}
-          rows={3}
-          placeholder="Write a comment…"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
+        <label htmlFor="task-comment-body" className={FIELD_LABEL_CLASS}>
+          Add a comment
+        </label>
 
-        {files.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {files.map((f, i) => {
-              const Icon = attachmentIconFor(f.type);
-              return (
-                <span key={i} className="flex items-center gap-1.5 text-xs bg-surface-hover border border-border rounded-full pl-1.5 pr-1.5 py-1">
-                  {previewUrls[i] ? (
-                    <img src={previewUrls[i]} alt="" className="size-5 rounded-full object-cover shrink-0" />
-                  ) : (
-                    <Icon size={14} className="text-text-light shrink-0" />
-                  )}
-                  <span className="font-medium text-text">{f.name}</span>
-                  <span className="text-text-light">({formatFileSize(f.size)})</span>
-                  <button type="button" onClick={() => removeFile(i)} className="text-text-light hover:text-danger cursor-pointer">
-                    <X size={12} />
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-        )}
+        <div className="flex flex-col rounded-md border border-border bg-surface transition-colors focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-coral-400/30 overflow-hidden">
+          <textarea
+            id="task-comment-body"
+            ref={textareaRef}
+            rows={3}
+            placeholder="Write a comment…"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="w-full px-3 py-2.5 min-h-[100px] text-base sm:text-sm bg-transparent text-text placeholder:text-text-light outline-none resize-y border-0"
+          />
+
+          {files.length > 0 && (
+            <div className="px-3 pb-2.5">
+              <StagedFileChips files={files} onRemove={removeFile} />
+            </div>
+          )}
+        </div>
 
         {createMutation.isError && (
           <div className="flex items-center gap-2 text-xs text-danger">
@@ -146,33 +124,10 @@ export const TaskActivitySection = ({ taskId }: TaskActivitySectionProps) => {
 
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-0.5">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }}
-            />
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }}
-            />
+            <AttachFilesToolbar onFiles={handleFiles} />
 
-            <button type="button" title="Attach file" className={ICON_BTN_CLASS} onClick={() => fileInputRef.current?.click()}>
-              <Paperclip size={16} />
-            </button>
             <button type="button" title="Share location" disabled={isLocating} className={ICON_BTN_CLASS} onClick={shareLocation}>
               {isLocating ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
-            </button>
-            <button type="button" title="Attach photo" className={ICON_BTN_CLASS} onClick={() => photoInputRef.current?.click()}>
-              <ImageIcon size={16} />
-            </button>
-            <button type="button" title="Attach document" className={ICON_BTN_CLASS} onClick={() => fileInputRef.current?.click()}>
-              <FileText size={16} />
             </button>
 
             <DropdownMenu>

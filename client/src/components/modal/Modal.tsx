@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import {
   Dialog,
   DialogContent,
@@ -8,12 +10,18 @@ import {
   DialogClose,
 } from '../ui/dialog';
 
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 const SIZE_CLASS = {
   sm: 'sm:max-w-sm',
   md: 'sm:max-w-md',
   lg: 'sm:max-w-lg',
   xl: 'sm:max-w-2xl',
   '2xl': 'sm:max-w-4xl',
+  '3xl': 'sm:max-w-5xl',
+  '4xl': 'sm:max-w-6xl',
 } as const;
 
 interface ModalProps {
@@ -54,25 +62,36 @@ export const Modal = ({
   modal = true,
   children,
 }: ModalProps) => (
-  <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }} modal={modal}>
+  <Dialog 
+    open={open} 
+    onOpenChange={(next) => { 
+      if (!next) onClose(); 
+    }} 
+    modal={modal}
+  >
     <DialogContent
       showCloseButton={false}
-      className={`w-full sm:w-[95vw] ${SIZE_CLASS[size]} p-0 flex flex-col overflow-hidden rounded-t-2xl rounded-b-none sm:rounded max-h-[90vh] ${contentClassName}`}
+      className={cn('w-full sm:w-[95vw]', SIZE_CLASS[size], 'p-0 flex flex-col overflow-hidden rounded-t-2xl rounded-b-none sm:rounded max-h-[90vh]', contentClassName)}
     >
-      <div className={`flex items-start justify-between gap-3 shrink-0 px-5 py-3.5 border-b border-border/40 ${headerClassName}`}>
-
+      <div className={cn('flex items-start justify-between gap-3 shrink-0 px-5 py-3.5 border-b border-border/40', headerClassName)}>
+        
         <div className="flex items-start gap-3 min-w-0">
           {icon && <div className="shrink-0 mt-0.5">{icon}</div>}
           <div className="min-w-0">
             <DialogTitle className="truncate">{title}</DialogTitle>
-            {description && <DialogDescription>{description}</DialogDescription>}
+            {description ? (
+              <DialogDescription>{description}</DialogDescription>
+            ) : (
+              // Satisfies Radix accessibility requirement when description is undefined
+              <DialogDescription className="sr-only" />
+            )}
           </div>
         </div>
 
         {showCloseButton && (
           <DialogClose
             className="shrink-0 p-1.5 rounded-full text-text-light hover:text-text hover:bg-surface-hover transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 cursor-pointer"
-            aria-label="Close"
+            aria-label="Close modal"
           >
             <X size={16} />
           </DialogClose>
@@ -80,17 +99,21 @@ export const Modal = ({
       </div>
 
       <div
-        className={`flex flex-col gap-5 px-5 py-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0 ${
-
-          !footer ? 'pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4' : ''
-        } ${bodyClassName}`}
+        className={cn(
+          'flex flex-col gap-5 px-5 py-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0',
+          !footer && 'pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4',
+          bodyClassName,
+        )}
       >
         {children}
       </div>
 
       {footer && (
         <div
-          className={`shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end px-5 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:pb-3.5 bg-surface-hover/40 border-t border-border/40 ${footerClassName}`}
+          className={cn(
+            'shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end px-5 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:pb-3.5 bg-surface-hover/40 border-t border-border/40',
+            footerClassName,
+          )}
         >
           {footer}
         </div>

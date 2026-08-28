@@ -35,7 +35,7 @@ export const SidebarNavButton = ({
       'px-3 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
       isCollapsed ? 'justify-center px-0' : 'justify-start',
       isActive
-        ? 'bg-primary-700 text-white shadow-sm shadow-primary-700/20'
+        ? ' text-white'
         : 'text-text-secondary hover:bg-surface-hover hover:text-text active:scale-[0.98]',
     ].join(' ')}
   >
@@ -60,7 +60,7 @@ export const SidebarNavButton = ({
           <span
             className={[
               'shrink-0 min-w-5 rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold tabular-nums leading-none',
-              isActive ? 'bg-white/20 text-white' : 'bg-surface-hover text-text-muted',
+              isActive ? ' text-white' : 'text-text-muted',
             ].join(' ')}
           >
             {badge}

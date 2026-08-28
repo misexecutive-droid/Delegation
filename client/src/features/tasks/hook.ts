@@ -71,6 +71,22 @@ export const useCreateTaskMutation = () =>
         errorFallback: 'Failed to create task',
     });
 
+// Create + upload any files staged in the form, as one mutation — there's no task id to upload
+// attachments against until create() has actually returned one, so this awaits that first, then
+// uploads (if any files were staged) before resolving. Lets TaskForm's own attach toolbar work
+// the same way the Activity composer's does: pick files while writing, they land once you submit.
+export const useCreateTaskWithAttachmentsMutation = () =>
+    useEntityMutation({
+        mutationFn: async ({ payload, files }: { payload: CreateTaskPayload; files: File[] }) => {
+            const created = await taskApi.create(payload);
+            if (files.length) await taskApi.uploadAttachments(created.id, files);
+            return created;
+        },
+        invalidateKeys: [['tasks']],
+        successMessage: 'Task created',
+        errorFallback: 'Failed to create task',
+    });
+
 // General files (pdf/csv/image/video) attached directly to a task — separate from checklist
 // items' own required-photo evidence flow, so these only ever touch this one task's detail query.
 export const useUploadTaskAttachmentsMutation = (taskId: string) =>

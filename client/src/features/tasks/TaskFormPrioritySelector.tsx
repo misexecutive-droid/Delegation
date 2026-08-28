@@ -11,13 +11,18 @@ interface TaskFormPrioritySelectorProps {
   value: Task['priority'];
   onChange: (value: Task['priority']) => void;
   disabled?: boolean;
+  /** Suppress the built-in "Priority Level" label — for callers that already provide their own
+   *  label next to this field (e.g. an icon-led row layout). */
+  hideLabel?: boolean;
 }
 
-export const TaskFormPrioritySelector = ({ value, onChange, disabled = false }: TaskFormPrioritySelectorProps) => (
+export const TaskFormPrioritySelector = ({ value, onChange, disabled = false, hideLabel = false }: TaskFormPrioritySelectorProps) => (
   <div className={`group/field @container flex flex-col gap-1.5 ${FIELD_CARD_CLASS}`}>
-    <label className={FIELD_LABEL_CLASS}>
-      Priority Level
-    </label>
+    {!hideLabel && (
+      <label className={FIELD_LABEL_CLASS}>
+        Priority Level
+      </label>
+    )}
     <div className="grid grid-cols-3 gap-1.5">
       {PRIORITIES.map((p) => {
         const isSelected = value === p.value;

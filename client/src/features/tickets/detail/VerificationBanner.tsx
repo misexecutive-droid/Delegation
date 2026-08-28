@@ -14,8 +14,8 @@ export const VerificationBanner = ({ ticket }: VerificationBannerProps) => {
   return (
     <div className={`flex items-start gap-2 p-3 rounded-xl border text-xs ${
       isClosed
-        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-        : 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
+        ? 'bg-success/10 border-success/20 text-success'
+        : 'bg-warning/10 border-warning/20 text-warning'
     }`}>
       {isClosed ? <ShieldCheck size={14} className="shrink-0 mt-0.5" /> : <ShieldX size={14} className="shrink-0 mt-0.5" />}
       <div>

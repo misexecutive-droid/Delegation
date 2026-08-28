@@ -46,7 +46,7 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
         className={`group relative flex items-center gap-3.5 rounded-2xl border p-3.5 sm:p-4 transition-all duration-200 ${
           todo.completed
             ? 'border-border/50 bg-surface-hover/30 opacity-70'
-            : `border-border/60 ${priorityMeta.accent}/5 hover:shadow-md hover:-translate-y-0.5 hover:border-border`
+            : `border-border/60 ${priorityMeta.className} hover:shadow-md hover:-translate-y-0.5 hover:border-border`
         } ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
       >
         {/* Doubles as the priority cue (soft-tinted when open) and the "mark done" control (solid
@@ -78,7 +78,7 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
           </p>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex items-center gap-1 text-[10px] font-display font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${priorityMeta.className}`}>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-display font-bold px-1.5 py-0.5 rounded-full ${priorityMeta.className}`}>
               {priorityMeta.label}
             </span>
             {todo.dueDate ? (
@@ -143,7 +143,7 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
 
       {completed.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-display font-medium uppercase tracking-wide text-text-light px-1">
+          <p className="text-xs font-display font-medium text-text-light px-1">
             Completed ({completed.length})
           </p>
           {completed.map(renderRow)}

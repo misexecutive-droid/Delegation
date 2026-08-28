@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { Wand2, AlertCircle, LayoutList, Kanban, Check, Save, Inbox, X, Plus, Settings2, ChevronDown, UserCheck, Send, FileDown } from "lucide-react";
-import { Button, Skeleton, Fab, ViewToggle, type ViewTab } from "../../components";
+import { Wand2, AlertCircle, Check, Save, Inbox, X, Plus, Settings2, ChevronDown, UserCheck, Send, FileDown } from "lucide-react";
+import { Button, Skeleton, Fab } from "../../components";
 import { ExportDialog } from "../reports";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { useTasksQuery, useAssignableUsersQuery } from "./hook";
@@ -11,7 +11,6 @@ import type { Task } from '../../api/task';
 import { TaskForm } from "./TaskForm";
 import { TaskDetail } from "./TaskDetail";
 import { TaskBoard } from "./TaskBoard";
-import { TaskRow } from "./TaskRow";
 import { SmartTaskModal } from "./SmartTaskModal";
 import { TaskFiltersPopover, type TaskFilters } from "./TaskFiltersPopover";
 import { TaskQuickStats, type QuickFilterKey } from "./TaskQuickStats";
@@ -19,40 +18,12 @@ import { CATEGORY_PREDICATES, SORT_LABEL, SORT_ICON, SORT_COMPARATORS, type Cate
 import { STATUS_LABEL, PRIORITY_MAP } from "./taskDisplay";
 import { useCardFieldVisibility, CARD_FIELD_CONFIG, taskAssigneeIds } from "./cardFields";
 import { useAuth } from "../../context/AuthContext";
-
-const groupByDueDate = (tasks: Task[]) => {
-  const groups = new Map<string, { key: string; label: string; sortValue: number; tasks: Task[] }>();
-
-  for (const task of tasks) {
-    const due = task.dueDate ? new Date(task.dueDate) : null;
-    const key = due ? due.toDateString() : '__none__';
-    if (!groups.has(key)) {
-      groups.set(key, {
-        key,
-        label: due
-          ? due.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
-          : 'No due date',
-        sortValue: due ? due.setHours(0, 0, 0, 0) : Number.MAX_SAFE_INTEGER,
-        tasks: [],
-      });
-    }
-    groups.get(key)!.tasks.push(task);
-  }
-
-  return [...groups.values()].sort((a, b) => a.sortValue - b.sortValue);
-};
+import { useNotificationsQuery, useMarkNotificationReadMutation } from "../notifications/hooks";
 
 interface TaskListProps {
   userId?: string;
   hideHeader?: boolean;
 }
-
-type TaskView = 'list' | 'board';
-
-const VIEW_TABS: ViewTab<TaskView>[] = [
-  { key: 'list', label: 'List', icon: LayoutList },
-  { key: 'board', label: 'Board', icon: Kanban },
-];
 
 const DEFAULT_FILTERS: TaskFilters = { category: 'all', status: 'all', priority: [], departmentId: '', assigneeIds: [], raisedByIds: [] };
 
@@ -77,12 +48,6 @@ const filtersFromUrl = (searchParams: URLSearchParams): Partial<TaskFilters> => 
 
 const filtersStorageKey = (userId?: string) => `task-filters:${userId ?? 'anon'}`;
 
-const viewFromUrl = (searchParams: URLSearchParams): TaskView | null => {
-  if (searchParams.get('mine') === '1') return 'list';
-  if (searchParams.get('category') === 'delegation') return 'board';
-  return null;
-};
-
 export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => {
   const { user } = useAuth();
   const isVerifier = user?.role === "PC" || user?.role === "ADMIN";
@@ -90,11 +55,47 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
   const [showSmartModal, setShowSmartModal] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [selected, setSelected] = useState<Task | null>(null);
-  
+  const [selected, setSelected] = useState<{ task: Task; mode: 'view' | 'edit' } | null>(null);
+
   const { data: tasks, isPending, isError } = useTasksQuery(userId);
   const { data: assignableUsers } = useAssignableUsersQuery();
   const { data: departments } = useDepartmentsQuery();
+  const { data: notifications } = useNotificationsQuery();
+  const markNotificationRead = useMarkNotificationReadMutation();
+
+  // Ids of tasks with an unread "you were just assigned this" notification, and the notification
+  // id to mark read once that task is actually opened — drives the "New delegation from X" callout
+  // on the row/card below.
+  const unreadAssignmentByTaskId = new Map(
+    (notifications ?? [])
+      .filter(n => n.type === 'TASK_ASSIGNED' && !n.isRead && n.taskId)
+      .map(n => [n.taskId as string, n.id]),
+  );
+
+  const handleOpen = (task: Task, mode: 'view' | 'edit' = 'view') => {
+    setSelected({ task, mode });
+    const notificationId = unreadAssignmentByTaskId.get(task.id);
+    if (notificationId) markNotificationRead.mutate(notificationId);
+  };
+
+  // Lands here from a notification click (`/tasks?open=<id>`) — open that task the same way a
+  // row/card click would (view mode), then drop the param so it doesn't reopen on every render.
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId || !tasks) return;
+    const match = tasks.find(t => t.id === openId);
+    // Syncing from an external system (the URL, set by a notification click elsewhere) into local
+    // state, not reacting to React state — and the param is stripped right after, so this only
+    // ever fires once per navigation instead of looping.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (match) handleOpen(match);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('open');
+      return next;
+    }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, tasks]);
 
   const [filters, setFilters] = useState<TaskFilters>(() => {
     const fromUrl = filtersFromUrl(searchParams);
@@ -125,17 +126,7 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
   }, [searchParams]);
 
   const [sort, setSort] = useState<TaskSortKey>('dueDate');
-  const [view, setView] = useState<TaskView>(() => viewFromUrl(searchParams) ?? 'board');
   const [quickFilter, setQuickFilter] = useState<QuickFilterKey | null>(null);
-
-  const isFirstViewRun = useRef(true);
-  useEffect(() => {
-    if (isFirstViewRun.current) {
-      isFirstViewRun.current = false;
-      return;
-    }
-    setView(prev => viewFromUrl(searchParams) ?? prev);
-  }, [searchParams]);
 
   const { visibility: fieldVisibility, toggle: toggleField } = useCardFieldVisibility();
 
@@ -239,7 +230,6 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
   const filtered = quickFilter ? statusFiltered.filter(quickFilterPredicates[quickFilter]) : statusFiltered;
 
   const sorted = [...filtered].sort(SORT_COMPARATORS[sort]);
-  const dateGroups = groupByDueDate(sorted);
 
   const QUICK_FILTER_LABEL: Record<QuickFilterKey, string> = {
     pending: 'Pending', completed: 'Completed', due: 'Due', delayed: 'Delayed',
@@ -272,7 +262,6 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
   ];
 
   const isEmpty = sorted.length === 0;
-  const effectiveView: TaskView = isVerifier ? view : 'list';
 
   return (
     <div className="flex flex-col gap-6 mx-auto w-full max-w-[1400px] transition-all duration-300">
@@ -415,10 +404,6 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
                 onToggleField={toggleField}
               />
             )}
-
-            {isVerifier && (
-              <ViewToggle tabs={VIEW_TABS} value={view} onChange={setView} />
-            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap ml-auto">
@@ -543,25 +528,8 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
         </div>
       )}
 
-      {/* Loading States */}
-      {isPending && effectiveView === 'list' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-5 py-4 rounded-xl border border-border/60 bg-surface shadow-sm">
-              <Skeleton className="w-5 h-5 rounded-md shrink-0" />
-              <div className="flex flex-col gap-2 flex-1 max-w-md">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-              <Skeleton className="h-6 w-20 rounded-md shrink-0" />
-              <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* (Other Skeletons truncated for brevity - leaving your original skeleton structures intact but slightly rounded) */}
-      {isPending && effectiveView === 'board' && (
+      {/* Loading State */}
+      {isPending && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
               {Array.from({ length: 4 }).map((_, col) => (
                   <div key={col} className="flex flex-col gap-4 p-3 bg-surface-hover/30 border border-border/50 rounded-xl">
@@ -612,60 +580,18 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
         </div>
       )}
 
-      {/* List View Render */}
-      {!isPending && !isError && !isEmpty && effectiveView === 'list' && (() => {
-        let rowIndex = 0;
-        return (
-          <div className="flex flex-col gap-8 pb-12">
-            {dateGroups.map(group => (
-              <div key={group.key} className="flex flex-col gap-4">
-                {/* Sticky Date Header for smooth scrolling context */}
-                <div className="sticky top-0 z-10 flex items-center gap-3 bg-background/80 backdrop-blur-md py-2 -mx-2 px-2 rounded-lg">
-                  <h3 className="text-sm font-bold text-text tracking-tight">
-                    {group.label}
-                  </h3>
-                  <span className="flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-[10px] font-bold text-text-muted bg-surface border border-border/80 shadow-sm rounded-full">
-                    {group.tasks.length}
-                  </span>
-                  <div className="flex-1 h-px bg-border/40" />
-                </div>
-                
-                {/* TaskRow is a full-width horizontal row (flex, left content + right meta/actions
-                    spread across the whole line), not a card — a multi-column grid here squeezes
-                    each row down to ~1/3 width and cascades into every badge inside it wrapping
-                    onto multiple lines. Board view below (which uses the card-shaped TaskCard) is
-                    the one that's meant to be a multi-column grid. */}
-                <div className="flex flex-col gap-3 md:gap-4">
-                  {group.tasks.map(task => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      isVerifier={isVerifier}
-                      onOpen={setSelected}
-                      index={rowIndex++}
-                      assigneeName={task.assigneeId ? assigneeNames.get(task.assigneeId) : undefined}
-                      departmentName={task.departmentId ? departmentNames.get(task.departmentId) : undefined}
-                      fields={fieldVisibility}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
-
       {/* Board View Render */}
-      {!isPending && !isError && !isEmpty && effectiveView === 'board' && (
+      {!isPending && !isError && !isEmpty && (
         <div className="pb-12">
           <TaskBoard
             tasks={sorted}
             assigneeNames={assigneeNames}
             departmentNames={departmentNames}
             isVerifier={isVerifier}
-            onOpen={setSelected}
+            onOpen={handleOpen}
             onAddTask={() => setShowForm(true)}
             fields={fieldVisibility}
+            newlyAssignedTaskIds={new Set(unreadAssignmentByTaskId.keys())}
           />
         </div>
       )}
@@ -674,7 +600,6 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
       {showForm && (
         <TaskForm
           onClose={() => setShowForm(false)}
-          onCreated={(task) => setSelected(task)}
         />
       )}
       {showSmartModal && <SmartTaskModal onClose={() => setShowSmartModal(false)} />}
@@ -688,8 +613,9 @@ export const TaskList = ({ userId, hideHeader = false }: TaskListProps = {}) => 
       )}
       {selected && (
         <TaskDetail
-          key={selected.id}
-          task={selected}
+          key={selected.task.id}
+          task={selected.task}
+          initialMode={selected.mode}
           onClose={() => setSelected(null)}
         />
       )}

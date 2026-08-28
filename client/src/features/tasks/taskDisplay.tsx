@@ -12,14 +12,14 @@ export const PRIORITY_MAP = {
   medium: {
     label: 'Medium',
     className: 'bg-warning/10 text-warning transition-colors duration-200',
-    accent: 'bg-warning',
-    stripe: 'bg-warning',
+    accent: 'bg-warning/35',
+    stripe: 'bg-warning/35',
   },
   high: {
     label: 'High',
     className: 'bg-danger/10 text-danger transition-colors duration-200',
-    accent: 'bg-danger',
-    stripe: 'bg-danger',
+    accent: 'bg-danger/35',
+    stripe: 'bg-danger/35',
   },
 } satisfies Record<Task['priority'], { label: string; className: string; accent: string; stripe: string }>;
 
@@ -44,22 +44,22 @@ export const STATUS_CONFIG = {
   todo: {
     label: 'To Do',
     badge: 'bg-status-todo/10 text-status-todo border-status-todo/20 transition-all duration-200 ease-in-out',
-    indicator: 'bg-status-todo transition-colors duration-200',
+    indicator: 'bg-status-todo/35 transition-colors duration-200',
   },
   in_progress: {
     label: 'In Progress',
     badge: 'bg-status-progress/10 text-status-progress border-status-progress/20 transition-all duration-200 ease-in-out',
-    indicator: 'bg-status-progress transition-colors duration-200',
+    indicator: 'bg-status-progress/35 transition-colors duration-200',
   },
   pending_verification: {
     label: 'Pending Verification',
     badge: 'bg-status-verify/10 text-status-verify border-status-verify/20 transition-all duration-200 ease-in-out',
-    indicator: 'bg-status-verify transition-colors duration-200',
+    indicator: 'bg-status-verify/35 transition-colors duration-200',
   },
   done: {
     label: 'Done',
     badge: 'bg-status-done/10 text-status-done border-status-done/20 transition-all duration-200 ease-in-out',
-    indicator: 'bg-status-done transition-colors duration-200',
+    indicator: 'bg-status-done/35 transition-colors duration-200',
   },
 } satisfies Record<
   Task['status'],

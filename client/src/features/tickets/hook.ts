@@ -94,11 +94,15 @@ export const useTicketsByStatusQuery = (status: TicketStatus, limit = 100) => {
 // paginating further — acceptable for now, a one-line constant bump if it becomes a real issue.
 const BOARD_LIMIT = 500;
 
-export const useTicketsBoardQuery = (enabled = true) => {
+// Fetches (up to BOARD_LIMIT) tickets unpaginated, so search/filter/sort can run against the
+// whole matching set instead of just whatever 20-row page the server-paginated list happens to
+// be showing. Used by both the Board view (always needed all-at-once to bucket into columns)
+// and the List view (which paginates the *filtered* result client-side — see TicketList.tsx).
+export const useTicketsBoardQuery = (enabled = true, assigneeId?: string) => {
   const { token } = useAuth();
   return useQuery({
-    queryKey: ['tickets', 'board'],
-    queryFn: () => ticketApi.getAll(1, BOARD_LIMIT).then(r => r.data),
+    queryKey: ['tickets', 'board', assigneeId],
+    queryFn: () => ticketApi.getAll(1, BOARD_LIMIT, undefined, assigneeId).then(r => r.data),
     enabled: !!token && enabled,
     retry: handleQueryRetry,
   });

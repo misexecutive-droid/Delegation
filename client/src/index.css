@@ -222,6 +222,17 @@ body {
   }
 }
 
+/* Fully hides the scrollbar (still scrollable) for spots where even the thin themed one above
+   would clutter a tight, content-forward layout — e.g. a modal's inner scroll panes. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @theme inline {
   --color-foreground: var(--color-text);
   --color-card: var(--color-surface);

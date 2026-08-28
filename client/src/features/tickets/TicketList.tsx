@@ -4,7 +4,7 @@ import { Plus, AlertCircle, Inbox, RotateCcw, Building2, User, FileDown, X, Layo
 import { Button, PageNav, Fab, ViewToggle, type ViewTab } from '../../components';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
-import { useTicketsQuery, useDepartmentsQuery, useAssignableUsersQuery, useTicketsBoardQuery } from './hook';
+import { useDepartmentsQuery, useAssignableUsersQuery, useTicketsBoardQuery } from './hook';
 import { TicketForm } from './TicketForm';
 import { TicketDetail } from './TicketDetail';
 import { TicketBoard } from './TicketBoard';
@@ -51,9 +51,11 @@ export const TicketList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const assigneeIdFilter = searchParams.get('assigneeIds') ?? undefined;
 
-  const { data, isPending, isError } = useTicketsQuery(page, 20, assigneeIdFilter);
-  const tickets = data?.data ?? [];
-  const meta = data?.meta;
+  // Search/filter/sort/pagination all need to see the FULL matching set, not just whatever
+  // 20-row page the server happens to hand back — see PAGE_SIZE/pagedSorted below for how the
+  // list view still paginates, just against the already-filtered result instead of before it.
+  const { data: allTicketsData, isPending, isError } = useTicketsBoardQuery(true, assigneeIdFilter);
+  const allTickets = allTicketsData ?? [];
   const { data: departments } = useDepartmentsQuery();
   const departmentNames = new Map((departments ?? []).map(d => [d.id, d.name]));
 
@@ -68,18 +70,16 @@ export const TicketList = () => {
   // scope/status/search filters below rather than replacing them. Click the active tile again to
   // clear it.
   const [quickFilter, setQuickFilter] = useState<TicketQuickFilterKey | null>(null);
-  const toggleQuickFilter = (key: TicketQuickFilterKey) => setQuickFilter((prev) => (prev === key ? null : key));
+  const toggleQuickFilter = (key: TicketQuickFilterKey) => {
+    setQuickFilter((prev) => (prev === key ? null : key));
+    setPage(1);
+  };
 
   const { data: assignableUsers } = useAssignableUsersQuery();
-  // Board view needs to see effectively all tickets at once to bucket into status columns —
-  // fundamentally different from the list view's 20-per-page pagination above, so it's a
-  // separate fetch, only enabled while the board is actually on screen.
-  const { data: boardData, isPending: boardPending, isError: boardError } = useTicketsBoardQuery(view === 'board');
-  const boardTickets = boardData ?? [];
 
   const scopeFiltered = user
-    ? tickets.filter(t => SCOPE_FILTER_PREDICATES[scopeFilter](t, user.id))
-    : tickets;
+    ? allTickets.filter(t => SCOPE_FILTER_PREDICATES[scopeFilter](t, user.id))
+    : allTickets;
 
   // Quick-stat tiles — "Delayed" mirrors the server-computed ticket.isOverdue (excluding CLOSED,
   // same as the badge shown on each card); "Due" is everything else that still has an open TAT
@@ -99,10 +99,9 @@ export const TicketList = () => {
     delayed: scopeFiltered.filter(quickFilterPredicates.delayed).length,
   };
 
-  // Shared filter/sort pipeline, reused for both the paginated list view (`tickets`, 20/page)
-  // and the unpaginated board view (`boardTickets`) so Filters/Sort/quick-filter/search behave
-  // identically regardless of which view is on screen — board filtering stays independent of the
-  // list view's server-side pagination params.
+  // Shared filter/sort pipeline, run once against the full `allTickets` set so Filters/Sort/
+  // quick-filter/search all see every matching ticket — the list view then paginates the
+  // *result* of this (see pagedSorted below) instead of filtering only within one server page.
   const applyPipeline = (list: Ticket[]) => {
     const scoped = user ? list.filter(t => SCOPE_FILTER_PREDICATES[scopeFilter](t, user.id)) : list;
     const statusFiltered = filters.status === 'all' ? scoped : scoped.filter(t => t.status === filters.status);
@@ -121,18 +120,30 @@ export const TicketList = () => {
     return [...quickFiltered].sort(SORT_COMPARATORS[sort]);
   };
 
-  const sorted = applyPipeline(tickets);
-  const boardSorted = applyPipeline(boardTickets);
+  const sorted = applyPipeline(allTickets);
+
+  // List view paginates the already-filtered result client-side (20/page), so a match on page 3
+  // of the old server-paginated data no longer reads as "not found" just because search/filters
+  // only ever looked inside whatever 20 rows the server handed back for the *unfiltered* page.
+  const PAGE_SIZE = 20;
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  // Clamped rather than reset via effect: if a filter change shrinks the result set out from
+  // under the page the user was on, this simply renders page 1 of the new set instead of an
+  // empty "page 3 of 1" — while still remembering page 3 if they widen the filters back out.
+  const safePage = Math.min(page, totalPages);
+  const pagedSorted = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   // Lookup map instead of a ternary — each grouping mode has its own builder function, so
   // adding a third grouping mode later is one more entry, not another branch.
+  // Groups the current page's rows (list view groups within a page, same as before); the Board
+  // view groups by status column itself and reads straight off `sorted` (unpaginated) instead.
   const GROUP_BUILDERS: Record<'department' | 'assignee', () => { key: string; label: string; tickets: Ticket[] }[]> = {
-    department: () => groupByDepartment(sorted, departmentNames).map(g => ({
+    department: () => groupByDepartment(pagedSorted, departmentNames).map(g => ({
       key: g.departmentId ?? '__none__',
       label: g.departmentName,
       tickets: g.tickets,
     })),
-    assignee: () => groupByAssignee(sorted).map(g => ({
+    assignee: () => groupByAssignee(pagedSorted).map(g => ({
       key: g.assigneeId ?? '__unassigned__',
       label: g.assigneeName,
       tickets: g.tickets,
@@ -169,8 +180,8 @@ export const TicketList = () => {
               Support Tickets
             </h1>
             <p className="text-xs sm:text-sm font-medium text-text-muted mt-0.5 flex items-center gap-1.5">
-              <span>{meta?.total ?? 0} total record{meta?.total !== 1 ? 's' : ''}</span>
-              {activeCount > 0 && (
+              <span>{allTickets.length} total record{allTickets.length !== 1 ? 's' : ''}</span>
+              {hasActiveFilters && (
                 <span className="text-primary-500 font-medium">({sorted.length} matching filter)</span>
               )}
             </p>
@@ -342,12 +353,12 @@ export const TicketList = () => {
             )}
           </div>
 
-          <TicketSearchInput value={search} onChange={setSearch} />
+          <TicketSearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
         </div>
 
         {assigneeIdFilter && (
           <div className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-primary-50 text-primary-700 text-xs font-medium w-fit">
-            Showing tickets for {tickets[0]?.assignee?.firstName ?? 'this person'}
+            Showing tickets for {allTickets[0]?.assignee?.firstName ?? 'this person'}
             <button
               type="button"
               onClick={() => setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('assigneeIds'); return p; })}
@@ -361,10 +372,10 @@ export const TicketList = () => {
       </div>
 
       {/* Loading Skeletons */}
-      {((view === 'list' && isPending) || (view === 'board' && boardPending)) && <TicketListSkeleton />}
+      {isPending && <TicketListSkeleton />}
 
       {/* Error State */}
-      {((view === 'list' && isError) || (view === 'board' && boardError)) && (
+      {isError && (
         <div className="flex items-center gap-2.5 p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs font-display">
           <AlertCircle size={16} className="shrink-0" />
           <span>Failed to load tickets. Please check your network connection and try again.</span>
@@ -372,8 +383,7 @@ export const TicketList = () => {
       )}
 
       {/* Empty State */}
-      {((view === 'list' && !isPending && !isError && sorted.length === 0) ||
-        (view === 'board' && !boardPending && !boardError && boardSorted.length === 0)) && (
+      {!isPending && !isError && sorted.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-border/70 rounded-xl bg-surface/30 text-center">
           <div className="mb-3 text-text-muted">
             <Inbox size={26} />
@@ -399,7 +409,7 @@ export const TicketList = () => {
         </div>
       )}
 
-      {/* Ticket List Grouped by Department or Person */}
+      {/* Ticket List Grouped by Department or Person — paginated (pagedSorted) */}
       {view === 'list' && !isPending && !isError && sorted.length > 0 && (
         <TicketGroupedList
           groups={groups}
@@ -409,10 +419,10 @@ export const TicketList = () => {
         />
       )}
 
-      {/* Ticket Board */}
-      {view === 'board' && !boardPending && !boardError && boardSorted.length > 0 && (
+      {/* Ticket Board — unpaginated, buckets the full filtered set into status columns */}
+      {view === 'board' && !isPending && !isError && sorted.length > 0 && (
         <TicketBoard
-          tickets={boardSorted}
+          tickets={sorted}
           departmentNames={departmentNames}
           isVerifier={isVerifier}
           onOpen={setSelected}
@@ -420,9 +430,9 @@ export const TicketList = () => {
       )}
 
       {/* Pagination Footer — list view only, Board view isn't paginated */}
-      {view === 'list' && meta && meta.totalPages > 1 && (
+      {view === 'list' && totalPages > 1 && (
         <div className="pt-4 border-t border-border/40 flex justify-center">
-          <PageNav page={page} totalPages={meta.totalPages} onPageChange={setPage} />
+          <PageNav page={safePage} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
 

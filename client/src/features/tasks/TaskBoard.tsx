@@ -1,13 +1,13 @@
 import {
   DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
-  type DragStartEvent, type DragEndEvent,
+  defaultDropAnimationSideEffects, type DropAnimation, type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Sparkles, Plus } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { useUpdateTaskMutation } from "./hook";
-import { STATUS_LABEL, STATUS_CONFIG } from "./taskDisplay";
+import { STATUS_LABEL } from "./taskDisplay";
 import { taskAssigneeIds, type CardFieldVisibility } from "./cardFields";
 import type { Task } from "../../api/task";
 
@@ -21,24 +21,39 @@ const resolveRaisedByName = (task: Task, assigneeNames: Map<string, string>) =>
 
 const COLUMNS: Task['status'][] = ['todo', 'in_progress', 'pending_verification', 'done'];
 
+// A slower, smoother ease-out (dnd-kit's default is a flat 250ms ease) so the card visibly
+// settles into its new spot instead of just snapping there, plus a gentle fade so the overlay
+// doesn't hard-cut away the instant the drop lands.
+const DROP_ANIMATION: DropAnimation = {
+  duration: 250,
+  easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: { active: { opacity: '0.4' } },
+  }),
+};
+
 interface TaskBoardProps {
   tasks: Task[];
   assigneeNames: Map<string, string>;
   departmentNames?: Map<string, string>;
   isVerifier?: boolean;
-  onOpen: (task: Task) => void;
+  onOpen: (task: Task, mode?: 'view' | 'edit') => void;
   onAddTask?: () => void;
   fields: CardFieldVisibility;
+  /** Ids of tasks with an unread "you were just assigned this" notification — surfaces the same
+   *  "New delegation from X" callout TaskRow shows in list view, so the cue isn't list-view-only. */
+  newlyAssignedTaskIds?: Set<string>;
 }
 
 interface CardProps {
   task: Task;
   isVerifier: boolean;
-  onOpen: (task: Task) => void;
+  onOpen: (task: Task, mode?: 'view' | 'edit') => void;
   assigneeNames?: string[];
   raisedByName?: string;
   departmentName?: string;
   fields: CardFieldVisibility;
+  isNewlyAssigned?: boolean;
 }
 
 // Wraps TaskCard so the whole card can be picked up and dropped on another column. dnd-kit only
@@ -58,7 +73,7 @@ const DraggableCard = ({ task, ...cardProps }: CardProps) => {
     <div
       ref={setNodeRef}
       {...listeners}
-      className={isDragging ? 'opacity-40 cursor-grabbing touch-none' : 'cursor-grab touch-none'}
+      className={`transition-opacity duration-200 ease-out ${isDragging ? 'opacity-40 cursor-grabbing touch-none' : 'cursor-grab touch-none'}`}
     >
       <TaskCard task={task} {...cardProps} />
     </div>
@@ -71,12 +86,13 @@ interface ColumnProps {
   assigneeNames: Map<string, string>;
   departmentNames?: Map<string, string>;
   isVerifier: boolean;
-  onOpen: (task: Task) => void;
+  onOpen: (task: Task, mode?: 'view' | 'edit') => void;
   onAddTask?: () => void;
   fields: CardFieldVisibility;
+  newlyAssignedTaskIds?: Set<string>;
 }
 
-const Column = ({ status, tasks, assigneeNames, departmentNames, isVerifier, onOpen, onAddTask, fields }: ColumnProps) => {
+const Column = ({ status, tasks, assigneeNames, departmentNames, isVerifier, onOpen, onAddTask, fields, newlyAssignedTaskIds }: ColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
@@ -89,11 +105,10 @@ const Column = ({ status, tasks, assigneeNames, departmentNames, isVerifier, onO
       {/* Column Header */}
       <div className="flex items-center justify-between px-2 py-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`size-2 rounded-full shrink-0 ${STATUS_CONFIG[status].indicator}`} aria-hidden="true" />
-          <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wide truncate">
+          <h3 className="text-xs font-bold text-text-secondary truncate">
             {STATUS_LABEL[status]}
           </h3>
-          <span className={`flex items-center justify-center min-w-[1.5rem] h-5 px-2 text-xs font-bold rounded-full border ${STATUS_CONFIG[status].badge}`}>
+          <span className="flex items-center justify-center min-w-[1.5rem] h-5 px-2 text-xs font-bold rounded-full border bg-primary-500/10 text-primary-600 border-primary-500/20">
             {tasks.length}
           </span>
         </div>
@@ -116,6 +131,7 @@ const Column = ({ status, tasks, assigneeNames, departmentNames, isVerifier, onO
               raisedByName={resolveRaisedByName(task, assigneeNames)}
               departmentName={task.departmentId ? departmentNames?.get(task.departmentId) : undefined}
               fields={fields}
+              isNewlyAssigned={newlyAssignedTaskIds?.has(task.id)}
             />
           ))
         )}
@@ -137,7 +153,7 @@ const Column = ({ status, tasks, assigneeNames, departmentNames, isVerifier, onO
   );
 };
 
-export const TaskBoard = ({ tasks, assigneeNames, departmentNames, isVerifier = false, onOpen, onAddTask, fields }: TaskBoardProps) => {
+export const TaskBoard = ({ tasks, assigneeNames, departmentNames, isVerifier = false, onOpen, onAddTask, fields, newlyAssignedTaskIds }: TaskBoardProps) => {
   const updateMutation = useUpdateTaskMutation();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -185,6 +201,7 @@ export const TaskBoard = ({ tasks, assigneeNames, departmentNames, isVerifier = 
             onOpen={onOpen}
             onAddTask={status === 'todo' ? onAddTask : undefined}
             fields={fields}
+            newlyAssignedTaskIds={newlyAssignedTaskIds}
           />
         ))}
       </div>
@@ -192,9 +209,9 @@ export const TaskBoard = ({ tasks, assigneeNames, departmentNames, isVerifier = 
       {/* Renders the dragged card in a top-level portal with its own transform, instead of
           translating the source node in place — keeps it visually above every column
           regardless of stacking context, and gives it a "lifted" tilt/shadow as feedback. */}
-      <DragOverlay>
+      <DragOverlay dropAnimation={DROP_ANIMATION}>
         {activeTask && (
-          <div className="w-60 rotate-1 shadow-xl cursor-grabbing">
+          <div className="w-60 rotate-1 scale-105 shadow-xl cursor-grabbing">
             <TaskCard
               task={activeTask}
               isVerifier={isVerifier}

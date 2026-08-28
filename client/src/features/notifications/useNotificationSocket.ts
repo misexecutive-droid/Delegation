@@ -12,7 +12,7 @@ export const useNotificationSocket = () => {
         const socket = connectSocket(token);
         const handleNew = () => queryClient.invalidateQueries({queryKey : ["notifications"]});
 
-        socket.on("notifcation:new", handleNew)
+        socket.on("notification:new", handleNew)
 
         return () => {
             socket.off("notification:new", handleNew)

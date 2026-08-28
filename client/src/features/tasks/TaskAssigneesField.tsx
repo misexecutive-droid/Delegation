@@ -21,13 +21,16 @@ interface TaskAssigneesFieldProps {
   users?: AssignableUser[];
   isLoading?: boolean;
   disabled?: boolean;
+  /** Suppress the built-in "Assignees" label — for callers (e.g. an icon-led row layout) that
+   *  already provide their own label next to this field. */
+  hideLabel?: boolean;
 }
 
 // Shows only the currently-assigned people as solid avatars, plus a dashed "+" trigger that
 // opens a checklist of everyone else — instead of always showing every assignable user inline.
 // The caller (TaskForm/TaskDetail) is responsible for splitting the result back into assigneeId
 // (primary) + additionalAssigneeIds (extras) before saving.
-export const TaskAssigneesField = ({ selectedIds, onChange, users, isLoading = false, disabled = false }: TaskAssigneesFieldProps) => {
+export const TaskAssigneesField = ({ selectedIds, onChange, users, isLoading = false, disabled = false, hideLabel = false }: TaskAssigneesFieldProps) => {
   const { user: currentUser } = useAuth();
   // PC has full parity with ADMIN throughout this app.
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PC';
@@ -45,9 +48,11 @@ export const TaskAssigneesField = ({ selectedIds, onChange, users, isLoading = f
 
   return (
     <div className={`group/field flex flex-col gap-1.5 ${FIELD_CARD_CLASS}`}>
-      <label className={FIELD_LABEL_CLASS}>
-        Assignees
-      </label>
+      {!hideLabel && (
+        <label className={FIELD_LABEL_CLASS}>
+          Assignees
+        </label>
+      )}
       <div className="flex flex-wrap items-center gap-1.5 min-h-10">
         {selectedUsers.map((u) => {
           const name = nameOf(u);
