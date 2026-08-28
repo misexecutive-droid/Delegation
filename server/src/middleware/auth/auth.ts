@@ -5,10 +5,16 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken';
 // Import environment configurations (specifically your private JWT secrets)
 import { env } from "../../config/index.js";
-// Import your custom AppError class to trigger clean, structured error handling responses
-import { AppError } from "../../utils/index.js";
+// Import your custom AppError class to trigger clean, structured error handling responses,
+// plus asyncHandler so this middleware can safely `await` a DB call below
+import { AppError, asyncHandler } from "../../utils/index.js";
 // Import the Role type from the Drizzle schema to enforce TypeScript type safety on user roles
 import type { Role } from "../../db/schema/core.js";
+// DB access to re-check the user's *current* role/active-status on every request instead of
+// trusting whatever was baked into the JWT at issue time (see authenticate below)
+import { db } from "../../config/db.js";
+import { users } from "../../db/schema/core.js";
+import { eq } from "drizzle-orm";
 
 // 2. JWT PAYLOAD TYPE DEFINITION
 // Define the shape of the decoded data hidden inside the JWT access token
@@ -29,7 +35,7 @@ declare global {
 
 // 4. AUTHENTICATION MIDDLEWARE
 // Middleware function to intercept requests, read headers, and validate the user's identity token
-export const authenticate = (req: Request, _res: Response, next: NextFunction) => {
+export const authenticate = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
     // Read the incoming Authorization header from the client request
     const header = req.headers.authorization;
 
@@ -38,17 +44,45 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction) =
 
     // Strip away the string "Bearer " to extract only the raw cryptographic token string
     const token = header.slice('Bearer '.length);
-    
+
+    let payload: AccessTokenPayload;
     try {
-        // Verify the token signature using your secret key and cast the decoded object to our payload type
-        req.user = jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload;
-        // The token is valid! Move cleanly to the next middleware or route handler function
-        next();
+        // Verify the token signature using your secret key and cast the decoded object to our payload type.
+        // `algorithms` is pinned to what signAccessToken actually uses (HS256, the default for a
+        // plain string secret) rather than left to jsonwebtoken's default accepted set — so a
+        // token signed any other way is rejected outright instead of merely "not accepted today".
+        payload = jwt.verify(token, env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] }) as AccessTokenPayload;
     } catch {
         // If jwt.verify throws an error (expired signature, tampered token, etc.), catch it and return a 401
-        next(AppError.unauthorized('Invalid or expired access token'));
+        return next(AppError.unauthorized('Invalid or expired access token'));
     }
-};
+
+    // Re-check the user's CURRENT role/active-status/department/store from the DB on every
+    // request rather than trusting the JWT payload for its whole lifetime. Without this, an
+    // admin demoting or deactivating a user has no effect until that user's access token
+    // naturally expires — this closes that gap at the cost of one indexed primary-key lookup
+    // per request (acceptable at this app's scale; there's no distributed session store like
+    // Redis this app can depend on being available, so the DB is the source of truth here).
+    const [currentUser] = await db.select({
+        role: users.role,
+        isActive: users.isActive,
+        departmentId: users.departmentId,
+        storeId: users.storeId,
+    }).from(users).where(eq(users.id, payload.sub)).limit(1);
+
+    if (!currentUser || !currentUser.isActive) {
+        return next(AppError.unauthorized('Account is no longer active'));
+    }
+
+    req.user = {
+        sub: payload.sub,
+        role: currentUser.role,
+        departmentId: currentUser.departmentId ?? undefined,
+        storeId: currentUser.storeId ?? undefined,
+    };
+    // The token is valid! Move cleanly to the next middleware or route handler function
+    next();
+});
 
 // 5. ROLE-BASED AUTHORIZATION MIDDLEWARE (RBAC)
 // A higher-order function (curried function) that accepts allowed roles and returns an Express middleware

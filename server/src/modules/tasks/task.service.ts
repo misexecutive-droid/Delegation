@@ -1,5 +1,5 @@
 import { db } from "../../config/db.js"
-import { tasks, taskAdditionalAssignees, taskAttachments, taskChecklists, taskChecklistItems, taskImages } from "../../db/schema/index.js"
+import { tasks, taskAdditionalAssignees, taskAttachments, taskChecklists, taskChecklistItems, taskImages, taskComments, taskReviews, smartTaskConversations } from "../../db/schema/index.js"
 import { users } from "../../db/schema/core.js"
 import { eq, and, or, inArray, desc, sql } from "drizzle-orm"
 import { DATE_FORMATS } from "../../utils/dateBucket.js"
@@ -235,6 +235,16 @@ export const taskService = {
             return created!;
         });
 
+        if (task.assigneeId) {
+            await notificationService.notifyTaskAssigned({
+                _id: task.id,
+                title: task.title,
+                userId: task.userId,
+                assigneeId: task.assigneeId,
+                additionalAssigneeIds,
+            });
+        }
+
         return task;
     },
 
@@ -249,11 +259,28 @@ export const taskService = {
         const [existing] = await db.select().from(tasks).where(where).limit(1);
         if (!existing) throw AppError.notFound("Delegation not found");
 
+        // Reassigning who owns/handles a delegation is a routing decision, not ordinary
+        // field-editing — even a caller who can mutate this task at all (e.g. an AGENT/USER who
+        // merely created or was assigned it) shouldn't be able to redirect it to an arbitrary
+        // assignee or department on their own; only someone with actual authority over routing
+        // should (mirrors the equivalent guard in ticket.service.ts's update()).
+        if ((input.assigneeId !== undefined || input.departmentId !== undefined) && (user.role === "AGENT" || user.role === "USER")) {
+            throw AppError.forbidden("Only a manager or above can reassign a delegation's assignee or department.")
+        }
+
         const beforeStatus = existing.status;
 
         if (input.status === "done" && beforeStatus !== "done") {
             if (user.role !== "ADMIN") {
                 throw AppError.forbidden("Only a verifier can mark a delegation done — send it for review instead.")
+            }
+        } else if (beforeStatus === "done" && input.status !== undefined && input.status !== "done") {
+            // Symmetric with the guard above: only a verifier can move a task OUT of "done" too —
+            // otherwise the creator/assignee (who already has ordinary mutate rights) could reopen
+            // an already-verified task themselves, silently discarding PC's decision with no
+            // re-verification gate.
+            if (user.role !== "ADMIN") {
+                throw AppError.forbidden("Only a verifier can reopen a delegation that's already been verified.")
             }
         } else if (input.status === "pending_verification" && beforeStatus !== "pending_verification") {
             const checklistRows = await db.select().from(taskChecklists).where(eq(taskChecklists.taskId, existing.id));
@@ -281,6 +308,15 @@ export const taskService = {
         if (dueDate !== undefined) update.dueDate = dueDate ? new Date(dueDate) : null;
         if ("dueDate" in input || "reminderMinutesBefore" in input) {
             update.reminderSentAt = null;
+        }
+        // Reopening an already-verified task (ADMIN-only, per the guard above) makes the old
+        // verification fields stale/misleading — clear them so the record doesn't keep showing a
+        // verifiedBy/verifiedAt/verificationNote for a decision that no longer describes the
+        // task's current state.
+        if (beforeStatus === "done" && input.status !== undefined && input.status !== "done") {
+            update.verifiedBy = null;
+            update.verifiedAt = null;
+            update.verificationNote = null;
         }
 
         // wrapped in a transaction (source had none)
@@ -324,7 +360,14 @@ export const taskService = {
             update.status = "in_progress";
             update.verificationNote = input.note ?? null;
         }
-        await db.update(tasks).set(update).where(eq(tasks.id, id));
+        // Optimistic-concurrency guard: the WHERE clause re-checks status === "pending_verification"
+        // atomically inside the UPDATE itself (mirrors advanceConversation's pattern), so two
+        // concurrent verify calls can't both "win" — only the first write matches and the second
+        // gets affectedRows === 0 instead of silently re-applying its own status/verifiedBy on top.
+        const [result] = await db.update(tasks).set(update).where(and(eq(tasks.id, id), eq(tasks.status, "pending_verification")));
+        if (result.affectedRows === 0) {
+            throw AppError.badRequest("This delegation isn't pending verification.")
+        }
 
         const [updated] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
         const additionalAssigneeIds = (await db.select({ userId: taskAdditionalAssignees.userId })
@@ -350,10 +393,25 @@ export const taskService = {
         const [task] = await db.select().from(tasks).where(where).limit(1);
         if (!task) throw AppError.notFound("Delegation not found");
 
-        // wrapped in a transaction (source had none) — clears junction/child rows that have no
-        // cascading FK before deleting the task itself.
+        // wrapped in a transaction — clears every child/junction row that has no cascading FK
+        // before deleting the task itself (mirrors ticketService.remove's approach).
         await db.transaction(async (tx) => {
+            const childChecklists = await tx.select({ id: taskChecklists.id }).from(taskChecklists).where(eq(taskChecklists.taskId, id));
+            const checklistIds = childChecklists.map((c) => c.id);
+            if (checklistIds.length) {
+                const childItems = await tx.select({ id: taskChecklistItems.id }).from(taskChecklistItems).where(inArray(taskChecklistItems.taskChecklistId, checklistIds));
+                const itemIds = childItems.map((i) => i.id);
+                if (itemIds.length) {
+                    await tx.delete(taskImages).where(inArray(taskImages.taskChecklistItemId, itemIds));
+                }
+                await tx.delete(taskChecklistItems).where(inArray(taskChecklistItems.taskChecklistId, checklistIds));
+                await tx.delete(taskChecklists).where(eq(taskChecklists.taskId, id));
+            }
+            await tx.delete(taskAttachments).where(eq(taskAttachments.taskId, id));
+            await tx.delete(taskComments).where(eq(taskComments.taskId, id));
+            await tx.delete(taskReviews).where(eq(taskReviews.taskId, id));
             await tx.delete(taskAdditionalAssignees).where(eq(taskAdditionalAssignees.taskId, id));
+            await tx.update(smartTaskConversations).set({ resultingTaskId: null }).where(eq(smartTaskConversations.resultingTaskId, id));
             await tx.delete(tasks).where(eq(tasks.id, id));
         });
 

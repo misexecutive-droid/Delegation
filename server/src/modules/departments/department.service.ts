@@ -72,6 +72,17 @@ export const departmentService = {
         const clean = name.replace(/\b(department|dept|team)\b/gi, "").trim().toLowerCase();
         if (!clean) return null;
         const active = await db.select().from(departments).where(eq(departments.isActive, true));
-        return active.find((d) => d.name.toLowerCase().includes(clean)) ?? null;
+
+        // Prefer an exact (case-insensitive) match over a substring match — otherwise "IT" could
+        // resolve to whichever of "IT" / "IT Support" happens to come first in query order, and a
+        // message meant for one department silently routes to the other.
+        const exact = active.find((d) => d.name.toLowerCase() === clean);
+        if (exact) return exact;
+
+        // Among ambiguous substring matches, prefer the shortest department name — the tightest
+        // match to what was actually extracted, instead of picking by array/insertion order.
+        const substringMatches = active.filter((d) => d.name.toLowerCase().includes(clean));
+        if (substringMatches.length === 0) return null;
+        return substringMatches.reduce((best, d) => (d.name.length < best.name.length ? d : best));
     }
 };

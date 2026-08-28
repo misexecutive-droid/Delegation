@@ -173,7 +173,7 @@ const isSameDeptOrStore = (user: AccessTokenPayload, ticket: Pick<TicketRow, "de
   return sameDept || sameStore
 }
 
-const assertCanMutate = (user: AccessTokenPayload, ticket: Pick<TicketRow, "userId" | "assigneeId" | "departmentId" | "storeId">) => {
+export const assertCanMutate = (user: AccessTokenPayload, ticket: Pick<TicketRow, "userId" | "assigneeId" | "departmentId" | "storeId">) => {
   if (user.role === "ADMIN" || user.role === "PC") return
   if (user.role === "AGENT" || user.role === "USER") {
     const ownTicket = ticket.assigneeId === user.sub || ticket.userId === user.sub
@@ -296,6 +296,14 @@ export const ticketService = {
     if (!ticket) throw AppError.notFound("Ticket not found")
     assertCanMutate(user, ticket)
 
+    // Reassigning who owns/handles a ticket is a routing decision, not ordinary field-editing —
+    // even a caller who can mutate this ticket at all (e.g. an AGENT/USER who merely raised or
+    // was assigned it) shouldn't be able to redirect it to an arbitrary assignee or department
+    // on their own; only someone with actual authority over routing should.
+    if ((input.assigneeId !== undefined || input.departmentId !== undefined) && (user.role === "AGENT" || user.role === "USER")) {
+      throw AppError.forbidden("Only a manager or above can reassign a ticket's assignee or department.")
+    }
+
     const before = ticket;
 
     const patch: Partial<typeof tickets.$inferInsert> = { updatedAt: new Date() }
@@ -321,7 +329,19 @@ export const ticketService = {
       const checklistsWithItems = await getTicketChecklistsWithItems(id)
       assertChecklistsResolved(checklistsWithItems, "sending this ticket for review")
     } else if (input.status && input.status !== "CLOSED" && before.status === "CLOSED") {
+      // Symmetric with the CLOSE guard above: only a verifier can reopen an already-closed
+      // ticket too — otherwise the raiser/assignee (who already has ordinary mutate rights via
+      // assertCanMutate) could reopen it themselves, silently discarding PC's decision.
+      if (user.role !== "ADMIN" && user.role !== "PC") {
+        throw AppError.forbidden("Only a verifier can reopen a ticket that's already been closed.")
+      }
       patch.closedAt = null;
+      // The old verification is no longer valid for whatever state the ticket moves back into —
+      // clear it so the record doesn't keep showing a verifiedBy/verifiedAt/verificationNote for
+      // a decision that no longer describes the ticket's current state.
+      patch.verifiedBy = null;
+      patch.verifiedAt = null;
+      patch.verificationNote = null;
     }
 
     if (input.tatHours !== undefined && input.tatHours !== before.tatHours) {
@@ -453,7 +473,13 @@ export const ticketService = {
       patch.status = "IN_PROGRESS";
       patch.verificationNote = input.note ?? null;
     }
-    await db.update(tickets).set(patch).where(eq(tickets.id, id))
+    // Optimistic-concurrency guard: the WHERE clause re-checks status === "IN_REVIEW" atomically
+    // inside the UPDATE itself, so two concurrent verify calls can't both "win" — only the first
+    // write matches and the second gets affectedRows === 0 instead of racing to a bad final state.
+    const [result] = await db.update(tickets).set(patch).where(and(eq(tickets.id, id), eq(tickets.status, "IN_REVIEW")))
+    if (result.affectedRows === 0) {
+      throw AppError.badRequest("This ticket isn't pending verification.")
+    }
 
     const [afterRow] = await db.select().from(tickets).where(eq(tickets.id, id)).limit(1)
 

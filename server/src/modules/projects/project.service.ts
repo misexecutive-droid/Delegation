@@ -37,10 +37,11 @@ const getRawById = async (id: string) => {
 };
 
 // Builds the Drizzle `where` condition for "which projects can this user see":
-// admins see everything (no condition), everyone else only sees projects where they are the
-// owner OR listed as a member (via the ProjectMember junction table).
+// admins/PC see everything (no condition — PC has full parity with ADMIN throughout this app),
+// everyone else only sees projects where they are the owner OR listed as a member (via the
+// ProjectMember junction table).
 const visibilityCondition = async (user: AccessTokenPayload) => {
-    if (user.role === "ADMIN") return undefined;
+    if (user.role === "ADMIN" || user.role === "PC") return undefined;
 
     const memberOf = await db.select({ projectId: projectMembers.projectId })
         .from(projectMembers)
@@ -68,7 +69,7 @@ export const projectService = {
 
         const [mapped] = await attachMemberIds([project]);
         const isMember = mapped.memberIds.includes(user.sub);
-        if (user.role !== "ADMIN" && project.ownerId !== user.sub && !isMember) {
+        if (user.role !== "ADMIN" && user.role !== "PC" && project.ownerId !== user.sub && !isMember) {
             // Same as the original Mongoose query filter silently returning nothing for a
             // project this user can't see — don't leak whether the id exists at all.
             throw AppError.notFound("Project not found");
@@ -108,8 +109,8 @@ export const projectService = {
     async update(id: string, input: UpdateProjectInput, user: AccessTokenPayload) {
         const [project] = await db.select({ ownerId: projects.ownerId }).from(projects).where(eq(projects.id, id)).limit(1);
         if (!project) throw AppError.notFound("Project not found");
-        if (user.role !== "ADMIN" && project.ownerId !== user.sub) {
-            // if you're not an admin and you're not the owner, you're not allowed to update this project
+        if (user.role !== "ADMIN" && user.role !== "PC" && project.ownerId !== user.sub) {
+            // if you're not an admin/PC and you're not the owner, you're not allowed to update this project
             throw AppError.forbidden("Only the project owner can update this project")
         }
 
@@ -141,7 +142,7 @@ export const projectService = {
     async remove(id: string, user: AccessTokenPayload) {
         const project = await getRawById(id);
         if (!project) throw AppError.notFound("Project not found");
-        if (user.role !== "ADMIN" && project.ownerId !== user.sub) {
+        if (user.role !== "ADMIN" && user.role !== "PC" && project.ownerId !== user.sub) {
             throw AppError.forbidden("Only the project owner can delete this project")
         }
         const [mapped] = await attachMemberIds([project]);

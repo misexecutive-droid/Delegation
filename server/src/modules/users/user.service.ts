@@ -112,10 +112,20 @@ export const userService = {
         // Password changes aren't handled through this endpoint (see user.validation.ts), so
         // there's no passwordHash to touch here — just the plain profile/admin-management fields.
         const { email, ...rest } = input;
+        const normalizedEmail = email !== undefined ? email.trim().toLowerCase() : undefined;
+
+        // Same pre-check create() does — without it, changing a user's email to one already in
+        // use hits the DB's unique index instead, which throws a raw ER_DUP_ENTRY the caller sees
+        // as a generic 500-ish error rather than a clean, expected 409.
+        if (normalizedEmail !== undefined && normalizedEmail !== before.email) {
+            const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, normalizedEmail)).limit(1);
+            if (existing) throw AppError.conflict('Email already registered');
+        }
+
         await db.update(users)
             .set({
                 ...rest,
-                ...(email !== undefined ? { email: email.trim().toLowerCase() } : {}),
+                ...(normalizedEmail !== undefined ? { email: normalizedEmail } : {}),
                 updatedAt: new Date(),
             })
             .where(eq(users.id, id));
@@ -234,20 +244,22 @@ export const userService = {
         return updated;
     },
 
+
     async listAssignable(user: AccessTokenPayload, departmentId?: string, storeId?: string) {
-        const isManager = user.role === "MANAGER";
-        const effectiveDepartmentId = isManager && departmentId !== user.departmentId ? undefined : departmentId;
-        const effectiveStoreId = isManager && storeId !== user.storeId ? undefined : storeId;
+        const isScoped = user.role !== "ADMIN" && user.role !== "PC";
+        const effectiveDepartmentId = isScoped && departmentId !== user.departmentId ? undefined : departmentId;
+        const effectiveStoreId = isScoped && storeId !== user.storeId ? undefined : storeId
 
         const conditions = [eq(users.isActive, true)];
-        if (effectiveDepartmentId) conditions.push(eq(users.departmentId, effectiveDepartmentId));
-        if (effectiveStoreId) conditions.push(eq(users.storeId, effectiveStoreId));
+        if (effectiveDepartmentId) conditions.push(eq(users.departmentId, effectiveDepartmentId))
+        if (effectiveStoreId) conditions.push(eq(users.storeId, effectiveStoreId))
 
-        if (isManager && !effectiveDepartmentId && !effectiveStoreId) {
-            const orConditions = [eq(users.id, user.sub)];
-            if (user.departmentId) orConditions.push(eq(users.departmentId, user.departmentId));
-            if (user.storeId) orConditions.push(eq(users.storeId, user.storeId));
-            conditions.push(or(...orConditions)!);
+        if (isScoped && !effectiveDepartmentId && !effectiveStoreId) {
+            const onConditions = [eq(users.id, user.sub)];
+            if (user.departmentId) onConditions.push(eq(users.departmentId, user.departmentId))
+            if (user.storeId) onConditions.push(eq(users.storeId, user.storeId))
+
+            conditions.push(or(...onConditions)!)
         }
 
         return db.select({

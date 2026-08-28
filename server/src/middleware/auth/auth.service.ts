@@ -49,8 +49,11 @@ const issueRefreshToken = async (userId: string): Promise<string> => {
   await db.insert(refreshTokens).values({
     userId,
     tokenHash,
-    // Refresh tokens are long-lived (here: 7 days) compared to short-lived access tokens.
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    // Refresh tokens are long-lived compared to short-lived access tokens. Must stay in sync
+    // with the cookie's maxAge (auth.controller.ts) — both read the same env var so raising or
+    // lowering JWT_REFRESH_EXPIRES_IN_DAYS actually changes the real session lifetime instead of
+    // only changing how long the browser keeps a cookie for a token that's already expired in the DB.
+    expiresAt: new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN_DAYS * 24 * 60 * 60 * 1000),
   });
 
   // Return the RAW (unhashed) token - this is the only moment it exists outside the DB;
@@ -229,13 +232,19 @@ export const authService = {
       console.log(`[auth] Reset link: ${resetLink}`);
     }
 
-    await sendMail({
+    // Deliberately NOT awaited: awaiting the actual SMTP round-trip here would make this
+    // function's (and so the controller's) response time depend on whether a real account was
+    // found — a timing side-channel letting an attacker distinguish registered emails from
+    // unregistered ones even though the HTTP response body is identical either way. Any send
+    // failure is caught and logged here instead of propagating out, so it can never surface as a
+    // different response (or a different error) than the "email doesn't exist" case does.
+    void sendMail({
       to: user.email,
       subject: 'Reset your Task Matrix password',
       html: `<p>Someone requested a password reset for your Task Matrix account.</p>
              <p><a href="${resetLink}">Click here to reset your password</a> (expires in 1 hour).</p>
              <p>If you didn't request this, you can safely ignore this email.</p>`,
-    });
+    }).catch((err) => console.error('[auth] Failed to send password reset email:', err));
   },
 
   // Handles the actual password reset once the user clicks the emailed link and submits a new password.

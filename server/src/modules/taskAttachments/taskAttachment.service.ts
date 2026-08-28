@@ -54,6 +54,9 @@ export const taskAttachmentService = {
 
         const [task] = await db.select().from(tasks).where(eq(tasks.id, attachment.taskId)).limit(1);
         if (task) await assertCanAttach(user, task);
+        if (!task && user.role !== "ADMIN" && user.role !== "PC" && attachment.uploadedBy !== user.sub) {
+            throw AppError.forbidden("You don't have access to this delegation's attachments");
+        }
 
         const absolutePath = path.resolve(process.cwd(), "uploads", "task-attachments", path.basename(attachment.url));
         fs.unlink(absolutePath, (err) => {

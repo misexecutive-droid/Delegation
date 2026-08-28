@@ -24,7 +24,8 @@ export const initSocket = async (httpServer: HttpServer, useRedisAdapter: boolea
         const token = socket.handshake.auth?.token as string | undefined;
         if (!token) return next(new Error("Missing access token"));
         try {
-            socket.data.user = jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload;
+            // Pinned to HS256 (what signAccessToken actually uses) — same hardening as auth.ts's authenticate.
+            socket.data.user = jwt.verify(token, env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] }) as AccessTokenPayload;
             next()
         } catch {
             next(new Error("Invalid access token"))

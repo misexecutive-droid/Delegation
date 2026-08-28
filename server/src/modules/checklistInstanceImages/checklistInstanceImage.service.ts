@@ -76,6 +76,9 @@ export const checklistInstanceImageService = {
 
         const [item] = await db.select().from(checklistInstanceItems).where(eq(checklistInstanceItems.id, image.checklistInstanceItemId)).limit(1);
         if (item) await assertCanUpload(user, item);
+        if (!item && user.role !== "ADMIN" && user.role !== "PC" && image.uploadedBy !== user.sub) {
+            throw AppError.forbidden("Only an assignee of this checklist can upload evidence for it");
+        }
 
         const absolutePath = path.resolve(process.cwd(), "uploads", "checklist-instances", path.basename(image.url));
         fs.unlink(absolutePath, (err) => {

@@ -6,21 +6,13 @@ import { tickets, ticketAttachments } from "../../db/schema/index.js";
 import { eq, inArray } from "drizzle-orm";
 import { AppError } from "../../utils/AppError.js";
 import type { AccessTokenPayload } from "../../middleware/auth/auth.js";
-
-type TicketRow = typeof tickets.$inferSelect;
-
-const assertCanAttach = (user: AccessTokenPayload, ticket: Pick<TicketRow, "userId" | "assigneeId">) => {
-    if (user.role === "ADMIN" || user.role === "PC" || user.role === "MANAGER") return;
-    if (ticket.userId === user.sub) return;
-    if (ticket.assigneeId && ticket.assigneeId === user.sub) return;
-    throw AppError.forbidden("You don't have access to this ticket's attachments");
-};
+import { assertCanMutate } from "../tickets/ticket.service.js";
 
 export const ticketAttachmentService = {
     async upload(ticketId: string, files: Express.Multer.File[], user: AccessTokenPayload) {
         const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId)).limit(1);
         if (!ticket) throw AppError.notFound("Ticket not found");
-        assertCanAttach(user, ticket);
+        assertCanMutate(user, ticket);
 
         if (!files.length) {
             throw AppError.badRequest("No valid image files were received (check file type and size)");
@@ -44,7 +36,10 @@ export const ticketAttachmentService = {
         if (!attachment) throw AppError.notFound("Attachment not found");
 
         const [ticket] = await db.select().from(tickets).where(eq(tickets.id, attachment.ticketId)).limit(1);
-        if (ticket) assertCanAttach(user, ticket);
+        if (ticket) assertCanMutate(user, ticket);
+        if (!ticket && user.role !== "ADMIN" && user.role !== "PC" && attachment.uploadedBy !== user.sub) {
+            throw AppError.forbidden("You don't have access to this ticket's attachments");
+        }
 
         const absolutePath = path.resolve(process.cwd(), "uploads", "ticket-attachments", path.basename(attachment.url));
         fs.unlink(absolutePath, (err) => {

@@ -1,9 +1,14 @@
 import cron from 'node-cron';
-import { and, eq, ne, isNull, isNotNull, inArray } from 'drizzle-orm';
+import { and, asc, eq, ne, isNull, isNotNull, inArray, sql } from 'drizzle-orm';
 import { db } from '../config/db.js';
 import { tasks, taskAdditionalAssignees, users } from '../db/schema/index.js';
 import { notificationService } from '../modules/notifications/notification.service.js';
 import { sendMail } from '../config/mailer.js';
+
+// Caps how many due reminders get processed in a single 5-minute tick, same rationale as
+// slaSweep.job.ts's batch cap. Ordered soonest-due-first so, if the cap is ever hit, the most
+// urgent reminders fire first and the remainder is picked up on the next tick.
+const REMINDER_BATCH_SIZE = 500;
 
 // Mirrors slaSweep.job.ts's shape: a recurring background sweep, since nothing else would ever
 // check "is it time to remind someone about this deadline" — nobody has to be looking at the
@@ -13,21 +18,24 @@ export const startTaskDeadlineReminder = () => {
     try {
       const now = new Date();
 
-      // Only tasks that asked for a reminder, haven't already gotten one, and aren't already
-      // finished (a done task has nothing left to be reminded about).
-      const candidates = await db.select().from(tasks).where(and(
+      // Only tasks that asked for a reminder, haven't already gotten one, aren't already finished
+      // (a done task has nothing left to be reminded about), and whose reminder is actually due
+      // now — pushed into the WHERE clause (dueDate <= now + reminderMinutesBefore) instead of
+      // fetching every reminder-enabled task in the system and filtering in JS, so a task whose
+      // reminder doesn't fire for weeks isn't loaded into memory on every single tick.
+      const due = await db.select().from(tasks).where(and(
         isNotNull(tasks.dueDate),
         isNotNull(tasks.reminderMinutesBefore),
         isNull(tasks.reminderSentAt),
         ne(tasks.status, 'done'),
-      ));
-
-      const due = candidates.filter((task) => {
-        const fireAt = new Date(task.dueDate!.getTime() - task.reminderMinutesBefore! * 60_000);
-        return fireAt <= now;
-      });
+        sql`${tasks.dueDate} <= DATE_ADD(${now}, INTERVAL ${tasks.reminderMinutesBefore} MINUTE)`,
+      )).orderBy(asc(tasks.dueDate)).limit(REMINDER_BATCH_SIZE);
 
       if (!due.length) return;
+
+      if (due.length === REMINDER_BATCH_SIZE) {
+        console.warn(`Task deadline reminder: hit the ${REMINDER_BATCH_SIZE}-task batch cap — there may be more due reminders still waiting; they'll be picked up on the next tick.`);
+      }
 
       // additionalAssigneeIds used to be an embedded array on the Task document; it's a junction
       // table now (TaskAdditionalAssignee) — batch-fetch every due task's additional assignees in

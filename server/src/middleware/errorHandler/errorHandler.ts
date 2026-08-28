@@ -39,7 +39,16 @@ export const errorHandler = (err: unknown, _req: Request, res: Response, _next: 
   // relational equivalent of MongoDB's error code 11000. Same response shape as before, minus
   // Mongo's structured `keyValue` (mysql2 only gives a formatted message naming the key).
   if (isMySqlError(err) && err.code === 'ER_DUP_ENTRY') {
-    return res.status(409).json({ success: false, message: 'Duplicate value', detail: err.sqlMessage });
+    // err.sqlMessage is raw MySQL text — can include internal table/key names and the actual
+    // conflicting value. Masked in production the same way the generic 500 branch below is;
+    // most call sites should never hit this at all now that user.service.ts pre-checks email
+    // uniqueness, but any other unique index without an equivalent pre-check would otherwise
+    // still leak here.
+    return res.status(409).json({
+      success: false,
+      message: 'Duplicate value',
+      detail: env.NODE_ENV === 'production' ? undefined : err.sqlMessage,
+    });
   }
 
   // D. OTHER MYSQL CONSTRAINT ERRORS (e.g. a required FK row was missing/deleted concurrently)

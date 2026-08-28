@@ -68,7 +68,7 @@ export const checklistImageService = {
         if (!image) throw AppError.notFound("Image not found");
 
         const [item] = await db.select().from(checklistItems).where(eq(checklistItems.id, image.checklistItemId)).limit(1);
-        if (item) assertCanUpload(user, item);
+        assertCanUpload(user, item ?? { assigneeId: image.uploadedBy });
 
         const absolutePath = path.resolve(process.cwd(), "uploads", "tickets", path.basename(image.url));
         fs.unlink(absolutePath, (err) => {

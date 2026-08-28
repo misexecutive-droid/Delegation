@@ -110,6 +110,35 @@ export const notificationService = {
     });
   },
 
+  // Called whenever a delegation (task) gets assigned to someone - notifies the assignee(s) (the
+  // primary assigneeId plus any additionalAssigneeIds) so they know a new delegation is waiting on
+  // them, naming who raised it. Unlike notifyTicketAssigned this doesn't also notify department
+  // managers - that wasn't asked for here and tasks don't carry the same "department oversight"
+  // expectation tickets do.
+  async notifyTaskAssigned(task: { _id: any; title: string; userId: any; assigneeId?: any; additionalAssigneeIds?: any[] }) {
+    const creatorId = task.userId.toString();
+    const recipientIds = [
+      ...(task.assigneeId ? [task.assigneeId.toString()] : []),
+      ...(task.additionalAssigneeIds ?? []).map((id) => id.toString()),
+    ].filter((id) => id !== creatorId); // no need to notify someone they assigned a delegation to themselves
+
+    if (!recipientIds.length) return [];
+
+    const [creator] = await db
+      .select({ firstName: users.firstName, lastName: users.lastName })
+      .from(users)
+      .where(eq(users.id, creatorId))
+      .limit(1);
+    const creatorName = creator ? `${creator.firstName} ${creator.lastName ?? ''}`.trim() : 'Someone';
+
+    return notificationService.notifyMany(recipientIds, {
+      type: 'TASK_ASSIGNED',
+      title: 'New delegation assigned',
+      message: `${creatorName} assigned you a new delegation: "${task.title}". Kindly review.`,
+      taskId: task._id.toString(),
+    });
+  },
+
   // Called when a ticket/task is handed off for PC verification (ticket -> IN_REVIEW, task ->
   // pending_verification) - notifies every PC scoped to that department/store that something's
   // waiting on them. Mirrors notifyTicketAssigned's "look up the right people, notifyMany" shape.

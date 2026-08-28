@@ -1,9 +1,15 @@
 // node-cron lets us run a function automatically on a repeating schedule,
 // kind of like a built-in alarm clock for our server code.
 import cron from 'node-cron';
-import { and, eq, lt, ne, inArray } from 'drizzle-orm';
+import { and, asc, eq, lt, ne, inArray } from 'drizzle-orm';
 import { db } from '../config/db.js';
 import { tickets } from '../db/schema/index.js';
+
+// Caps how many newly-overdue tickets get processed in a single 5-minute tick. Without this, a
+// large backlog (e.g. after an outage, or just at scale) would load every matching row into
+// memory in one pass. Ordered oldest-deadline-first so, if the cap is ever hit, the most overdue
+// tickets get flagged first and the remainder simply gets picked up on the next tick.
+const SLA_SWEEP_BATCH_SIZE = 500;
 // A helper that broadcasts real-time events (over sockets) to connected
 // clients, so the frontend can update instantly without refreshing.
 import { emitTicketEvent } from '../sockets/ticketEvent.js';
@@ -47,9 +53,13 @@ export const startSlaSweep = () => {
         // ne() means "not equal" - skip tickets that are already CLOSED, since
         // a closed ticket doesn't need to be marked overdue anymore.
         ne(tickets.status, 'CLOSED'),
-      ));
+      )).orderBy(asc(tickets.tatDueAt)).limit(SLA_SWEEP_BATCH_SIZE);
 
       if (!overdue.length) return;
+
+      if (overdue.length === SLA_SWEEP_BATCH_SIZE) {
+        console.warn(`SLA sweep: hit the ${SLA_SWEEP_BATCH_SIZE}-ticket batch cap — there may be more overdue tickets still waiting; they'll be picked up on the next tick.`);
+      }
 
       // Flag every overdue ticket as overdue in a single bulk update instead
       // of one save() per ticket - one round-trip to the database no matter

@@ -21,6 +21,12 @@ import type { ChecklistRecurrence } from "../db/schema/checklistDefinition.js"
 import { getCurrentPeriod, type Period } from "../utils/period.js"
 import { env } from "../config/env.js"
 
+// Caps how many due checklist definitions get processed in a single hourly sweep, same rationale
+// as the batch caps in slaSweep.job.ts/taskDeadlineReminder.job.ts. In practice the number of
+// admin-configured definitions is small and slow-growing, but this keeps the guarantee uniform
+// across every unattended sweep job rather than leaving this one as the exception.
+const GENERATOR_BATCH_SIZE = 500;
+
 // Plain-object shape carrying everything generateInstanceForDefinition needs, decoupled from
 // wherever the caller got it from — the sweep below loads it fresh off the DB (loadDefinitionForGeneration),
 // while checklistDefinition.service.ts's create()/update() load it the same way right after their
@@ -266,6 +272,12 @@ const generateDueInstances = async () => {
     const localNow = new Date(now.getTime() + env.CHECKLIST_TIMEZONE_OFFSET_MINUTES * 60_000)
     const definitionRows = await db.select({ id: checklistDefinitions.id }).from(checklistDefinitions)
         .where(and(eq(checklistDefinitions.isActive, true), lte(checklistDefinitions.startDate, localNow)))
+        .orderBy(asc(checklistDefinitions.startDate))
+        .limit(GENERATOR_BATCH_SIZE)
+
+    if (definitionRows.length === GENERATOR_BATCH_SIZE) {
+        console.warn(`Checklist instance generator: hit the ${GENERATOR_BATCH_SIZE}-definition batch cap — there may be more due definitions still waiting; they'll be picked up on the next sweep.`)
+    }
 
     for (const { id } of definitionRows) {
         // Each definition is isolated in its own try/catch — one bad/malformed definition must
