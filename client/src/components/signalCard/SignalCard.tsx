@@ -1,4 +1,10 @@
 import { ArrowRight } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface SignalCardProps {
   eyebrow: string;
@@ -10,40 +16,68 @@ interface SignalCardProps {
   className?: string;
 }
 
-
-export const SignalCard = ({ eyebrow, title, body, actionLabel, meta, onAction, className = '' }: SignalCardProps) => (
+export const SignalCard = ({ 
+  eyebrow, 
+  title, 
+  body, 
+  actionLabel, 
+  meta, 
+  onAction, 
+  className 
+}: SignalCardProps) => (
   <div
-    className={`relative flex flex-col w-80 max-w-full p-6 rounded-2xl border border-primary-700/60 bg-primary-900 text-gray-50 shadow-[0_20px_48px_-24px_rgba(0,0,0,0.6)] overflow-hidden ${className}`}
+    className={cn(
+      "group relative flex flex-col w-80 max-w-full p-6 sm:p-7 rounded-[1.5rem] overflow-hidden",
+      "bg-slate-950 border border-primary-800/60 shadow-xl",
+      "transition-all duration-400 ease-out hover:shadow-2xl hover:shadow-primary-900/40 hover:-translate-y-1 hover:border-primary-700/80",
+      className
+    )}
   >
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_70%_at_0%_0%,rgba(52,101,171,0.22),transparent_55%)]"
+    {/* Ambient Background Glow */}
+    <div 
+      aria-hidden="true" 
+      className="absolute inset-0 bg-gradient-to-br from-primary-900/30 to-transparent pointer-events-none" 
+    />
+    <div 
+      aria-hidden="true" 
+      className="absolute -top-24 -left-24 size-64 bg-primary-500/20 rounded-full blur-3xl pointer-events-none transition-colors duration-500 group-hover:bg-primary-500/30" 
     />
 
-    <span className="relative inline-flex items-center gap-2 self-start px-2.5 py-1 mb-4 rounded-full border border-primary-700/60 bg-primary-500/15 font-mono text-[11px] uppercase tracking-wider text-primary-300">
-      <span className="size-1.5 rounded-full bg-primary-400 shadow-[0_0_8px_rgba(52,101,171,0.7)]" />
+    {/* Eyebrow Badge */}
+    <span className="relative inline-flex items-center gap-2.5 self-start px-3 py-1.5 mb-5 rounded-full border border-primary-700/50 bg-primary-900/50 backdrop-blur-sm text-[10px] font-bold uppercase tracking-widest text-primary-300">
+      <span className="size-1.5 rounded-full bg-primary-400 shadow-[0_0_8px_rgba(var(--color-primary-400),0.8)] animate-pulse" />
       {eyebrow}
     </span>
 
-    <h3 className="relative font-display text-xl font-bold leading-snug tracking-tight text-gray-50 mb-2">
+    {/* Content */}
+    <h3 className="relative font-display text-xl sm:text-2xl font-bold leading-tight tracking-tight text-white mb-2.5">
       {title}
     </h3>
 
-    <p className="relative text-[13px] leading-relaxed text-gray-400">
+    <p className="relative text-[14px] leading-relaxed text-primary-100/70">
       {body}
     </p>
 
-    <div className="relative flex items-center justify-between gap-3 mt-6">
+    {/* Footer Actions */}
+    <div className="relative flex items-center justify-between gap-4 mt-8 pt-2">
       <button
         type="button"
         onClick={onAction}
-        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-white text-xs font-medium shadow-[0_8px_24px_-12px_rgba(52,101,171,0.6)] transition-all duration-200 hover:-translate-y-0.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900"
+        className={cn(
+          "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-bold transition-all duration-200 cursor-pointer outline-none",
+          "shadow-lg shadow-primary-600/20 hover:bg-primary-500 hover:shadow-primary-600/30 hover:-translate-y-0.5",
+          "focus-visible:ring-4 focus-visible:ring-primary-500/50 active:scale-95 active:translate-y-0"
+        )}
       >
         <span>{actionLabel}</span>
-        <ArrowRight size={14} />
+        <ArrowRight size={16} strokeWidth={2.5} className="transition-transform group-hover/btn:translate-x-0.5" />
       </button>
 
-      {meta && <span className="font-mono text-[11px] tracking-wide text-gray-500">{meta}</span>}
+      {meta && (
+        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+          {meta}
+        </span>
+      )}
     </div>
   </div>
 );

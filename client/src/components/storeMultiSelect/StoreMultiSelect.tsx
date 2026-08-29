@@ -1,14 +1,17 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check, Store } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { useStoresQuery } from '../../features/tickets/hook';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface StoreMultiSelectProps {
   selected: string[];
   onChange: (ids: string[]) => void;
 }
 
-// Picks every store a checklist definition is live in — a checklist can run in several stores at
-// once, so this is a checkbox list rather than a single-value dropdown (same shape as
-// UserMultiSelect, just scoped to stores instead of department-scoped users).
 export const StoreMultiSelect = ({ selected, onChange }: StoreMultiSelectProps) => {
   const { data: stores, isLoading } = useStoresQuery();
 
@@ -17,29 +20,69 @@ export const StoreMultiSelect = ({ selected, onChange }: StoreMultiSelectProps) 
   };
 
   return (
-    <div className="flex flex-col gap-1 max-h-48 overflow-y-auto p-2.5 bg-surface border border-border rounded-lg">
+    <div className="flex flex-col gap-1 w-full max-h-56 overflow-y-auto custom-scrollbar p-2 bg-slate-50 border border-slate-200 rounded-xl shadow-inner shadow-slate-100/50">
+      
       {isLoading && (
-        <p className="flex items-center gap-2 text-xs font-display text-text-muted px-2 py-2">
-          <Loader2 size={13} className="animate-spin" /> Loading stores…
-        </p>
+        <div className="flex items-center gap-2.5 text-sm font-medium text-slate-500 px-3 py-4 animate-pulse">
+          <Loader2 size={16} className="animate-spin text-slate-400" /> 
+          Loading stores…
+        </div>
       )}
+
       {!isLoading && !stores?.length && (
-        <p className="text-xs font-display text-text-muted px-2 py-2">No stores configured yet.</p>
+        <div className="flex flex-col items-center justify-center gap-2 px-3 py-6 text-center">
+          <div className="flex items-center justify-center size-10 rounded-full bg-slate-100 text-slate-400 mb-1">
+            <Store size={18} strokeWidth={2} />
+          </div>
+          <p className="text-sm font-medium text-slate-600">No stores configured yet.</p>
+        </div>
       )}
+
       {stores?.map(s => {
         const checked = selected.includes(s.id);
+        
         return (
           <label
             key={s.id}
-            className="flex items-center gap-2 px-2 py-2 rounded-md text-sm font-display text-text cursor-pointer hover:bg-surface-hover transition-colors"
+            className={cn(
+              "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 active:scale-[0.98]",
+              checked 
+                ? "bg-primary-50 text-primary-900" 
+                : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900"
+            )}
           >
+            {/* 
+              Visually hidden native checkbox ensures keyboard accessibility and form semantics, 
+              while `peer` allows us to style the custom visual box below based on its state. 
+            */}
             <input
               type="checkbox"
-              className="accent-primary-600 size-3.5"
+              className="peer sr-only"
               checked={checked}
               onChange={() => toggle(s.id)}
             />
-            {s.name}
+            
+            {/* Custom Visual Checkbox */}
+            <div 
+              className={cn(
+                "flex items-center justify-center size-5 rounded-md border transition-all duration-200 shadow-sm shrink-0",
+                "peer-focus-visible:ring-4 peer-focus-visible:ring-primary-100 peer-focus-visible:border-primary-400",
+                checked
+                  ? "bg-primary-600 border-primary-600 text-white shadow-primary-600/20"
+                  : "bg-white border-slate-300 text-transparent group-hover:border-primary-400"
+              )}
+            >
+              <Check 
+                size={14} 
+                strokeWidth={3} 
+                className={cn(
+                  "transition-all duration-200",
+                  checked ? "opacity-100 scale-100" : "opacity-0 scale-50"
+                )} 
+              />
+            </div>
+
+            <span className="truncate">{s.name}</span>
           </label>
         );
       })}

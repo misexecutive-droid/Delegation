@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -9,16 +11,16 @@ import {
   DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
 
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 export interface DropdownAction {
   label: string;
-  // A route renders as a NavLink; omitting `to` and using `onClick` instead
-  // renders a plain action button (e.g. "Sign out").
   to?: string;
   icon?: LucideIcon;
   onClick?: () => void;
   variant?: 'default' | 'destructive';
-  // Draws a separator line above this item — used to set an action like
-  // "Sign out" apart from the navigation links above it.
   separatorBefore?: boolean;
 }
 
@@ -28,23 +30,43 @@ interface DropdownProps {
   align?: 'start' | 'center' | 'end';
 }
 
-// Reusable "button that opens a menu of links/actions" — create once, used
-// everywhere (Header's account menu today, any future action menu later).
-// Built on shadcn's DropdownMenu (Radix) so it's themed, animated, and
-// keyboard-accessible out of the box.
 export const Dropdown = ({ trigger, items, align = 'end' }: DropdownProps) => (
   <DropdownMenu>
-    <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-    <DropdownMenuContent align={align} className="w-48">
-      {items.map(item => {
+    <DropdownMenuTrigger asChild className="focus:outline-none">
+      {trigger}
+    </DropdownMenuTrigger>
+    
+    <DropdownMenuContent 
+      align={align} 
+      className="w-56 p-1.5 rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 animate-in fade-in-80 zoom-in-95 duration-200"
+    >
+      {items.map((item, index) => {
         const Icon = item.icon;
+        const isDestructive = item.variant === 'destructive';
+        
+        // Base classes applied to the item row for consistent hover/focus states
+        const itemClasses = cn(
+          "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer outline-none active:scale-[0.98]",
+          isDestructive 
+            ? "text-red-600 focus:bg-red-50 focus:text-red-700" 
+            : "text-slate-700 focus:bg-slate-100 focus:text-slate-900"
+        );
+
+        const iconClasses = cn(
+          "shrink-0 transition-colors", 
+          isDestructive ? "text-red-500" : "text-slate-400 group-focus:text-slate-500"
+        );
+
         return (
-          <div key={item.label}>
-            {item.separatorBefore && <DropdownMenuSeparator />}
+          <Fragment key={`${item.label}-${index}`}>
+            {item.separatorBefore && (
+              <DropdownMenuSeparator className="my-1.5 bg-slate-100" />
+            )}
+            
             {item.to ? (
-              <DropdownMenuItem asChild variant={item.variant}>
-                <NavLink to={item.to} className="flex items-center gap-2 w-full">
-                  {Icon && <Icon size={15} />}
+              <DropdownMenuItem asChild variant={item.variant} className="group p-0">
+                <NavLink to={item.to} className={itemClasses}>
+                  {Icon && <Icon size={16} strokeWidth={2.5} className={iconClasses} />}
                   {item.label}
                 </NavLink>
               </DropdownMenuItem>
@@ -52,13 +74,13 @@ export const Dropdown = ({ trigger, items, align = 'end' }: DropdownProps) => (
               <DropdownMenuItem
                 onClick={item.onClick}
                 variant={item.variant}
-                className="flex items-center gap-2 cursor-pointer"
+                className={cn("group", itemClasses)}
               >
-                {Icon && <Icon size={15} />}
+                {Icon && <Icon size={16} strokeWidth={2.5} className={iconClasses} />}
                 {item.label}
               </DropdownMenuItem>
             )}
-          </div>
+          </Fragment>
         );
       })}
     </DropdownMenuContent>

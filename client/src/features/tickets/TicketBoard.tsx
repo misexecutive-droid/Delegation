@@ -25,9 +25,7 @@ interface CardProps {
   departmentName?: string;
 }
 
-// Wraps TicketCard so the whole card can be picked up and dropped on another column — same
-// wrapper-div-carries-`listeners` pattern as TaskBoard's DraggableCard, so dnd-kit's pointer
-// handlers never sit on TicketCard's own <button> root, only on this outer div.
+
 const DraggableCard = ({ ticket, onOpen, departmentName }: CardProps) => {
   const { listeners, setNodeRef, isDragging } = useDraggable({ id: ticket.id });
 
@@ -104,12 +102,6 @@ const Column = ({ status, tickets, draggable, onOpen, departmentNames }: ColumnP
   );
 };
 
-// Non-verifiers can't validly drag-and-drop at all: every status change they're allowed to make
-// (IN_PROGRESS/ON_HOLD/IN_REVIEW) requires a mandatory remark via the ticket detail's status-update
-// flow, so there's no raw {status} PATCH a drag gesture could represent for them — the board is
-// read-only (click to open, no drag) for that role. Verifiers (PC/ADMIN) get full drag between all
-// columns; dropping into CLOSED only succeeds from IN_REVIEW (routed through the verify/approve
-// flow), matching CLOSED's real business rule instead of a raw status overwrite.
 export const TicketBoard = ({ tickets, departmentNames, isVerifier = false, onOpen }: TicketBoardProps) => {
   const updateMutation = useUpdateTicketMutation();
   const verifyMutation = useVerifyTicketMutation();

@@ -1,4 +1,4 @@
-import  { type FormHTMLAttributes, type FormEventHandler } from 'react';
+import { type FormHTMLAttributes, type FormEventHandler } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -29,27 +29,33 @@ export function Form({
     <form
       onSubmit={handleSubmit}
       className={cn(
-        'w-full max-w-lg p-7 bg-surface border border-border rounded-lg shadow-sm space-y-5',
+        // Premium card styling with fluid responsive padding and beautiful soft shadows
+        'w-full max-w-lg p-6 sm:p-8 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/40 flex flex-col gap-6',
+        // Smooth entrance animation
+        'animate-in fade-in zoom-in-[0.98] slide-in-from-bottom-4 duration-500 ease-out',
         className
       )}
       {...props}
     >
       {(title || description) && (
-        <div className="flex flex-col gap-1.5 mb-2">
+        <div className="flex flex-col gap-2 pb-2 border-b border-slate-100/80">
           {title && (
-            <h2 className="font-display text-lg font-bold text-primary-700">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {title}
             </h2>
           )}
           {description && (
-            <p className="text-sm text-text-secondary leading-relaxed">
+            <p className="text-[15px] font-medium text-slate-500 leading-relaxed">
               {description}
             </p>
           )}
         </div>
       )}
 
-      {children}
+      {/* Form content wrapper with consistent spacing */}
+      <div className="flex flex-col gap-5">
+        {children}
+      </div>
     </form>
   );
 }

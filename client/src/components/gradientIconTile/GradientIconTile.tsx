@@ -1,9 +1,27 @@
 import type { LucideIcon } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 const SIZE_CONFIG = {
-  sm: { tile: 'size-9', icon: 16, shadow: 'shadow-sm shadow-primary-600/20' },
-  md: { tile: 'size-10', icon: 18, shadow: 'shadow-sm shadow-primary-600/20' },
-  lg: { tile: 'size-12', icon: 22, shadow: 'shadow-md shadow-primary-500/20 border border-primary-400/20' },
+  sm: { 
+    tile: 'size-10 rounded-xl', 
+    icon: 20, 
+    shadow: 'shadow-md shadow-primary-600/20 ring-1 ring-inset ring-white/20' 
+  },
+  md: { 
+    tile: 'size-12 rounded-2xl', 
+    icon: 24, 
+    shadow: 'shadow-lg shadow-primary-600/25 ring-1 ring-inset ring-white/20' 
+  },
+  lg: { 
+    tile: 'size-14 rounded-2xl', 
+    icon: 28, 
+    shadow: 'shadow-xl shadow-primary-600/30 ring-1 ring-inset ring-white/25' 
+  },
 } as const;
 
 interface GradientIconTileProps {
@@ -12,16 +30,25 @@ interface GradientIconTileProps {
   className?: string;
 }
 
-// The page-header "brand mark" tile — a gradient-filled rounded-xl square with a white icon —
-// used identically across every page/modal header that wants one, instead of each hand-rolling
-// the same gradient+shadow combination.
-export const GradientIconTile = ({ icon: Icon, size = 'md', className = '' }: GradientIconTileProps) => {
+// The page-header "brand mark" tile — a beautiful, glowing gradient-filled square
+// used identically across every page/modal header that wants one.
+export const GradientIconTile = ({ icon: Icon, size = 'md', className }: GradientIconTileProps) => {
   const { tile, icon, shadow } = SIZE_CONFIG[size];
+  
   return (
     <div
-      className={`${tile} rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shrink-0 ${shadow} ${className}`}
+      className={cn(
+        'flex items-center justify-center shrink-0 relative overflow-hidden',
+        'bg-gradient-to-br from-primary-500 to-primary-600 text-white',
+        tile,
+        shadow,
+        className
+      )}
     >
-      <Icon size={icon} className="text-white" />
+      <Icon size={icon} strokeWidth={2.5} className="relative z-10" />
+      
+      {/* Optional: Subtle top-left glare effect for extra depth */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
     </div>
   );
 };

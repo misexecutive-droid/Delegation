@@ -21,6 +21,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme}
       className="toaster group"
+      closeButton
+      toastOptions={{
+        classNames: {
+          toast: "rounded-xl border shadow-lg",
+          title: "font-display font-semibold",
+          description: "!text-text-muted",
+          closeButton: "!bg-surface !border-border !text-text-light hover:!text-text hover:!bg-surface-hover",
+        },
+      }}
       style={
         {
           "--normal-bg": "var(--color-surface)",
@@ -28,10 +37,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-border": "var(--color-border)",
           "--success-bg": "var(--color-surface)",
           "--success-text": "var(--color-success)",
-          "--success-border": "var(--color-border)",
+          "--success-border": "var(--color-success)",
           "--error-bg": "var(--color-surface)",
           "--error-text": "var(--color-danger)",
-          "--error-border": "var(--color-border)",
+          "--error-border": "var(--color-danger)",
         } as CSSProperties
       }
       {...props}

@@ -52,13 +52,13 @@ export const PageNav = ({ page, totalPages, onPageChange, className }: PageNavPr
             disabled={page <= 1}
             aria-label="Go to previous page"
             className={cn(
-              "flex items-center gap-1 h-9 sm:h-10 px-2 sm:px-3 text-sm font-display font-medium rounded-xl transition-all duration-200 cursor-pointer",
-              "text-text-secondary hover:bg-surface-hover hover:text-text",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface",
-              "disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
+              "flex items-center gap-1.5 h-10 sm:h-11 px-3 sm:px-4 text-[13px] sm:text-sm font-bold tracking-wide rounded-xl transition-all duration-200 cursor-pointer active:scale-95",
+              "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+              "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-100",
+              "disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed"
             )}
           >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+            <ChevronLeft className="size-4 sm:size-5" strokeWidth={2.5} />
             <span className="hidden sm:inline">Previous</span>
           </button>
         </li>
@@ -67,8 +67,8 @@ export const PageNav = ({ page, totalPages, onPageChange, className }: PageNavPr
         {pages.map((p, i) =>
           p === 'ellipsis' ? (
             <li key={`ellipsis-${i}`} aria-hidden="true">
-              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 text-text-light">
-                <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="flex items-center justify-center h-10 sm:h-11 min-w-[2.5rem] sm:min-w-[2.75rem] text-slate-400">
+                <MoreHorizontal className="size-5" strokeWidth={2.5} />
               </div>
             </li>
           ) : (
@@ -79,11 +79,11 @@ export const PageNav = ({ page, totalPages, onPageChange, className }: PageNavPr
                 aria-current={p === page ? 'page' : undefined}
                 aria-label={`Page ${p}`}
                 className={cn(
-                  "flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 text-sm font-display font-medium rounded-xl transition-all duration-200 cursor-pointer",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface",
+                  "flex items-center justify-center h-10 sm:h-11 min-w-[2.5rem] sm:min-w-[2.75rem] px-2 text-[13px] sm:text-sm font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95",
+                  "focus-visible:outline-none focus-visible:ring-4",
                   p === page
-                    ? "bg-primary-600 text-white shadow-sm hover:bg-primary-700"
-                    : "text-text-secondary hover:bg-surface-hover hover:text-text active:scale-95"
+                    ? "bg-primary-600 text-white shadow-md shadow-primary-600/30 hover:bg-primary-700 focus-visible:ring-primary-100/50"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-100"
                 )}
               >
                 {p}
@@ -100,14 +100,14 @@ export const PageNav = ({ page, totalPages, onPageChange, className }: PageNavPr
             disabled={page >= totalPages}
             aria-label="Go to next page"
             className={cn(
-              "flex items-center gap-1 h-9 sm:h-10 px-2 sm:px-3 text-sm font-display font-medium rounded-xl transition-all duration-200 cursor-pointer",
-              "text-text-secondary hover:bg-surface-hover hover:text-text",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface",
-              "disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
+              "flex items-center gap-1.5 h-10 sm:h-11 px-3 sm:px-4 text-[13px] sm:text-sm font-bold tracking-wide rounded-xl transition-all duration-200 cursor-pointer active:scale-95",
+              "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+              "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-100",
+              "disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed"
             )}
           >
             <span className="hidden sm:inline">Next</span>
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+            <ChevronRight className="size-4 sm:size-5" strokeWidth={2.5} />
           </button>
         </li>
         

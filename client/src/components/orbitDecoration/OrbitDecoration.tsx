@@ -12,26 +12,42 @@ interface OrbitDecorationProps {
 }
 
 const CORNER_CLASS: Record<OrbitDecorationProps['corner'], string> = {
-  'top-left': '-top-14 -left-14',
-  'top-right': '-top-14 -right-14',
-  'bottom-left': '-bottom-14 -left-14',
-  'bottom-right': '-bottom-14 -right-14',
+  'top-left': '-top-16 -left-16',
+  'top-right': '-top-16 -right-16',
+  'bottom-left': '-bottom-16 -left-16',
+  'bottom-right': '-bottom-16 -right-16',
 };
 
-// A decorative "orbit" — three concentric rings sharing one center (each just an inset % of the
-// same square box, so they stay perfectly centered) plus one dot that revolves around them by
-// spinning a full-size wrapper offset to the ring's edge. Purely ornamental — aria-hidden.
+// A highly polished, purely decorative "orbit" component.
+// Features progressive opacity, delicate dashed accents, and a glowing revolving dot.
 export const OrbitDecoration = ({ corner, tone = 'primary', className }: OrbitDecorationProps) => {
-  const ring = tone === 'coral' ? 'border-coral-400/30 dark:border-coral-400/20' : 'border-primary-400/30 dark:border-primary-400/20';
-  const dot = tone === 'coral' ? 'bg-coral-500/70' : 'bg-primary-500/70';
+  // Delicate, progressive ring colors
+  const outerRing = tone === 'coral' ? 'border-coral-200/40' : 'border-primary-200/40';
+  const midRing = tone === 'coral' ? 'border-coral-200/60' : 'border-primary-200/60';
+  const innerRing = tone === 'coral' ? 'border-coral-200/80 bg-coral-50/30' : 'border-primary-200/80 bg-primary-50/30';
+  
+  // Glowing satellite dot
+  const dot = tone === 'coral' 
+    ? 'bg-coral-500 shadow-md shadow-coral-500/40' 
+    : 'bg-primary-500 shadow-md shadow-primary-500/40';
 
   return (
-    <div aria-hidden="true" className={cn('absolute -z-10 w-48 h-48 pointer-events-none', CORNER_CLASS[corner], className)}>
-      <div className={cn('absolute inset-0 rounded-full border', ring)} />
-      <div className={cn('absolute inset-[24%] rounded-full border', ring)} />
-      <div className={cn('absolute inset-[44%] rounded-full border', ring)} />
+    <div 
+      aria-hidden="true" 
+      className={cn('absolute -z-10 w-56 h-56 pointer-events-none transition-opacity duration-700 opacity-80', CORNER_CLASS[corner], className)}
+    >
+      {/* Outer Ring - Soft and subtle */}
+      <div className={cn('absolute inset-0 rounded-full border', outerRing)} />
+      
+      {/* Middle Ring - Delicate dashed accent */}
+      <div className={cn('absolute inset-[22%] rounded-full border border-dashed opacity-80', midRing)} />
+      
+      {/* Inner Ring - Solid with a soft inner glow */}
+      <div className={cn('absolute inset-[44%] rounded-full border', innerRing)} />
+      
+      {/* Revolving Satellite Dot */}
       <div className="absolute inset-0 animate-orbit-slow">
-        <span className={cn('absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full', dot)} />
+        <span className={cn('absolute -top-1 left-1/2 -translate-x-1/2 size-2.5 rounded-full', dot)} />
       </div>
     </div>
   );

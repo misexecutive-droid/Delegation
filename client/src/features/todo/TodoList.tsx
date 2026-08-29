@@ -6,7 +6,16 @@ import { useTodosQuery, useUpdateTodoMutation, useDeleteTodoMutation } from './h
 import { isSameDay, relativeDayLabel } from './todoDate';
 import { TODO_QUICK_FILTER_PREDICATES } from './todoQuickFilters';
 import type { TodoQuickFilterKey } from './TodoQuickStats';
-import type { Todo } from '../../api/todos';
+import type { Todo, TodoPriority } from '../../api/todos';
+
+// Outline chip style for the priority badge here — white bg, colored border + text — rather than
+// the tinted-bg PRIORITY_MAP.className used on Task cards elsewhere; kept local to Todo like the
+// rest of todoFormStyles.ts's overrides, so Task board styling is untouched.
+const PRIORITY_OUTLINE_CLASS: Record<TodoPriority, string> = {
+  low: 'border-border text-text-muted',
+  medium: 'border-warning text-warning',
+  high: 'border-danger text-danger',
+};
 
 interface TodoListProps {
   // When set, only todos due on this exact day are shown (both pending and completed) — used by
@@ -34,20 +43,20 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
     updateMut.mutate({ id, payload: { completed: !completed } });
   };
 
-  const renderRow = (todo: Todo) => {
+  const renderRow = (todo: Todo, index: number) => {
     const isToggling = updateMut.isPending && updateMut.variables?.id === todo.id;
     const isDeleting = deleteMut.isPending && deleteMut.variables === todo.id;
     const priorityMeta = PRIORITY_MAP[todo.priority];
-    const overdue = !!todo.dueDate && !todo.completed && new Date(todo.dueDate) < new Date();
 
     return (
       <div
         key={todo.id}
-        className={`group relative flex items-center gap-3.5 rounded-2xl border p-3.5 sm:p-4 transition-all duration-200 ${
+        className={`group relative flex items-center gap-3.5 rounded-2xl border p-3.5 sm:p-4 transition-all duration-200 animate-in fade-in slide-in-from-bottom-1 ${
           todo.completed
             ? 'border-border/50 bg-surface-hover/30 opacity-70'
-            : `border-border/60 ${priorityMeta.className} hover:shadow-md hover:-translate-y-0.5 hover:border-border`
+            : 'border-border bg-surface hover:shadow-md hover:-translate-y-0.5 hover:border-border-hover'
         } ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
+        style={{ animationFillMode: 'backwards', animationDelay: `${index * 40}ms` }}
       >
         {/* Doubles as the priority cue (soft-tinted when open) and the "mark done" control (solid
             fill once completed) — same soft-chip language used for icons across the app. */}
@@ -78,11 +87,11 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
           </p>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex items-center gap-1 text-[10px] font-display font-bold px-1.5 py-0.5 rounded-full ${priorityMeta.className}`}>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-display font-bold px-1.5 py-0.5 rounded-full border bg-surface ${PRIORITY_OUTLINE_CLASS[todo.priority]}`}>
               {priorityMeta.label}
             </span>
             {todo.dueDate ? (
-              <span className={`inline-flex items-center gap-1 text-[11px] font-display font-medium ${overdue ? 'text-danger' : 'text-text-muted'}`}>
+              <span className="inline-flex items-center gap-1 text-[11px] font-display font-medium text-text-muted">
                 <CalendarClock size={11} />
                 {relativeDayLabel(new Date(todo.dueDate))}
               </span>
@@ -138,7 +147,7 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        {pending.map(renderRow)}
+        {pending.map((todo, i) => renderRow(todo, i))}
       </div>
 
       {completed.length > 0 && (
@@ -146,7 +155,7 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
           <p className="text-xs font-display font-medium text-text-light px-1">
             Completed ({completed.length})
           </p>
-          {completed.map(renderRow)}
+          {completed.map((todo, i) => renderRow(todo, i))}
         </div>
       )}
     </div>

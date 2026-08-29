@@ -1,10 +1,13 @@
-export const LABEL_CLASS = 'text-xs font-display font-medium text-text-secondary uppercase tracking-wider flex items-center gap-1.5';
+export const LABEL_CLASS = 'text-xs font-display font-medium text-text-secondary flex items-center gap-1.5';
 
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
-export const PRIORITIES: { value: TicketPriority; label: string; activeClass: string }[] = [
-  { value: 'LOW', label: 'Low', activeClass: 'border-blue-500/60 bg-blue-500/10 text-blue-400 ring-2 ring-blue-500/20' },
-  { value: 'MEDIUM', label: 'Medium', activeClass: 'border-amber-500/60 bg-amber-500/10 text-amber-400 ring-2 ring-amber-500/20' },
-  { value: 'HIGH', label: 'High', activeClass: 'border-orange-500/60 bg-orange-500/10 text-orange-400 ring-2 ring-orange-500/20' },
-  { value: 'CRITICAL', label: 'Critical', activeClass: 'border-rose-500/60 bg-rose-500/10 text-rose-400 ring-2 ring-rose-500/20' },
+// Same outline-chip colors as PRIORITY_CONFIG in ticketDisplay.ts (the source of truth for every
+// other ticket priority badge) — built from theme tokens only, no raw blue/amber/orange/rose.
+// CRITICAL shares HIGH's danger color but adds bold weight to stay visually distinct once selected.
+export const PRIORITIES: { value: TicketPriority; label: string; outlineClass: string; selectedClass: string }[] = [
+  { value: 'LOW', label: 'Low', outlineClass: 'border-border text-text-secondary', selectedClass: 'bg-surface-hover border-border-hover text-text' },
+  { value: 'MEDIUM', label: 'Medium', outlineClass: 'border-warning/60 text-warning', selectedClass: 'bg-warning/10 border-warning text-warning' },
+  { value: 'HIGH', label: 'High', outlineClass: 'border-danger/60 text-danger', selectedClass: 'bg-danger/10 border-danger text-danger' },
+  { value: 'CRITICAL', label: 'Critical', outlineClass: 'border-danger/60 text-danger font-bold', selectedClass: 'bg-danger/10 border-danger text-danger font-bold' },
 ];

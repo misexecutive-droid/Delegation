@@ -12,6 +12,7 @@ import { AttachFilesToolbar } from './AttachFilesToolbar';
 import { TaskAttachmentsGrid } from './TaskAttachmentsGrid';
 import { TaskVerificationBanner } from './TaskVerificationBanner';
 import { STATUS_LABEL, PRIORITY_MAP, NEXT_STATUS } from './taskDisplay';
+import { PRIORITY_SELECTED_CLASS } from './TaskFormPrioritySelector';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { TaskScoreBadge } from './TaskScoreBadge';
 import { taskAssigneeIds } from './cardFields';
@@ -169,10 +170,11 @@ const PRIORITY_ORDER: Task['priority'][] = ['low', 'medium', 'high'];
 // change priority via a small menu, same as picking any other value rather than filling in a form.
 const PriorityValuePicker = ({ value, onChange, disabled }: { value: Task['priority']; onChange: (v: Task['priority']) => void; disabled: boolean }) => {
   const current = PRIORITY_MAP[value];
+  const outlineChipClass = `inline-flex items-center px-2.5 py-1 rounded-full border bg-surface text-xs font-semibold ${PRIORITY_SELECTED_CLASS[value]}`;
 
   if (disabled) {
     return (
-      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${current.className}`}>
+      <span className={outlineChipClass}>
         {current.label}
       </span>
     );
@@ -183,7 +185,7 @@ const PriorityValuePicker = ({ value, onChange, disabled }: { value: Task['prior
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-opacity hover:opacity-80 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 ${current.className}`}
+          className={`${outlineChipClass} gap-1.5 transition-opacity hover:opacity-80 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40`}
         >
           {current.label}
         </button>

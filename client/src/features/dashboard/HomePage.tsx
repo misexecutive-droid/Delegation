@@ -102,7 +102,7 @@ export const HomePage = () => {
 
       <DashboardOverview isPending={isPending} tickets={tickets} tasks={tasks} todos={todos} workflowStats={workflowStats} />
 
-      <div className="rounded-2xl border border-border/60 dark:border-white/[0.06] bg-surface p-5 sm:p-6 lg:p-7">
+      <div className="rounded-2xl border border-border/60 dark:border-white/[0.06] bg-surface p-5 sm:p-6 lg:p-7 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-800/50 text-primary-600 dark:text-primary-400 shadow-sm">

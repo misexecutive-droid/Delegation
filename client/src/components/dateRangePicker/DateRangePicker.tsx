@@ -174,7 +174,7 @@ export function DateRangePicker({
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="text-sm font-display font-bold uppercase tracking-wide text-primary-700">
+          <span className="text-sm font-display font-bold text-text">
             {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
           </span>
           <button
@@ -189,7 +189,7 @@ export function DateRangePicker({
         {/* Days Grid Header */}
         <div className="grid grid-cols-7">
           {WEEKDAY_LABELS.map((w) => (
-            <span key={w} className="text-[10px] font-bold uppercase tracking-wide text-text-light text-center">
+            <span key={w} className="text-[10px] font-bold text-text-light text-center">
               {w}
             </span>
           ))}
@@ -214,7 +214,7 @@ export function DateRangePicker({
                   'h-9 text-xs rounded-md transition-colors font-medium',
                   !inMonth ? 'text-text-light/40 cursor-default' : 'text-text-secondary cursor-pointer',
                   (isFrom || isTo) && 'bg-primary-700 text-white shadow-sm hover:bg-primary-800',
-                  inRange && 'bg-primary-500/15 text-primary-700 dark:text-primary-300',
+                  inRange && 'bg-primary-500/15 text-primary-700',
                   inMonth && !isFrom && !isTo && !inRange && 'hover:bg-surface-hover hover:text-primary-700'
                 )}
               >
@@ -228,7 +228,7 @@ export function DateRangePicker({
         {showTime && value.from && (
           <div className="flex items-center gap-4 pt-4 border-t border-border/60">
             <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wide text-text-muted">
+              <label className="text-[10px] font-bold text-text-muted">
                 Start Time
               </label>
               <input
@@ -239,7 +239,7 @@ export function DateRangePicker({
               />
             </div>
             <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wide text-text-muted">
+              <label className="text-[10px] font-bold text-text-muted">
                 End Time
               </label>
               <input

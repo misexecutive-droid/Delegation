@@ -145,14 +145,24 @@ export function DatePicker({
           {value ? formatDate(value) + (showTime ? ` ${formatTime(value)}` : '') : placeholder}
         </span>
         {value && (
-          <X
-            size={14}
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Clear date"
             className="ml-auto text-text-light hover:text-danger transition-colors shrink-0"
             onClick={(e) => {
               e.stopPropagation();
               onChange(null);
             }}
-          />
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                onChange(null);
+              }
+            }}
+          >
+            <X size={14} />
+          </span>
         )}
       </button>
 
@@ -161,7 +171,7 @@ export function DatePicker({
           snapping the way a plain height:auto toggle would. */}
       <div className={cn('grid transition-[grid-template-rows] duration-300 ease-in-out', open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
         <div className="overflow-hidden">
-          <div className="mt-2 flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
+          <div className="mt-2 flex flex-col gap-2.5 rounded-lg border border-border bg-surface p-3 shadow-sm">
             {/* Quick Picks */}
             <div className="flex flex-wrap gap-1.5">
               {QUICK_PICKS.map((pick) => {
@@ -173,7 +183,7 @@ export function DatePicker({
                     type="button"
                     onClick={() => selectDay(target)}
                     className={cn(
-                      'px-2.5 py-1 rounded-full border text-[11px] font-bold transition-colors cursor-pointer',
+                      'px-2 py-0.5 rounded-full border text-[10px] font-bold transition-colors cursor-pointer',
                       isActive
                         ? 'bg-primary-700 border-primary-700 text-white'
                         : 'border-border text-text-secondary hover:border-primary-400 hover:text-primary-700',
@@ -190,33 +200,33 @@ export function DatePicker({
               <button
                 type="button"
                 onClick={() => setViewMonth((m) => addMonths(m, -1))}
-                className="w-8 h-8 rounded-md border border-border text-text-muted hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
+                className="w-6 h-6 rounded-md border border-border text-text-muted hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} />
               </button>
-              <span className="text-sm font-display font-bold uppercase tracking-wide text-primary-700">
+              <span className="text-xs font-display font-bold text-text">
                 {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
               </span>
               <button
                 type="button"
                 onClick={() => setViewMonth((m) => addMonths(m, 1))}
-                className="w-8 h-8 rounded-md border border-border text-text-muted hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
+                className="w-6 h-6 rounded-md border border-border text-text-muted hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={14} />
               </button>
             </div>
 
             {/* Days Grid Header */}
             <div className="grid grid-cols-7">
               {WEEKDAY_LABELS.map((w) => (
-                <span key={w} className="text-[10px] font-bold uppercase tracking-wide text-text-light text-center">
+                <span key={w} className="text-[10px] font-bold text-text-light text-center">
                   {w}
                 </span>
               ))}
             </div>
 
             {/* Days Grid */}
-            <div className="grid grid-cols-7 gap-y-1 gap-x-1">
+            <div className="grid grid-cols-7 gap-y-0.5 gap-x-0.5">
               {grid.map((day) => {
                 const inMonth = day.getMonth() === viewMonth.getMonth();
                 const isBeforeMin = !!earliestDay && day < earliestDay;
@@ -230,7 +240,7 @@ export function DatePicker({
                     onClick={() => selectDay(day)}
                     disabled={!inMonth || isBeforeMin}
                     className={cn(
-                      'relative h-9 text-xs rounded-md transition-colors font-medium',
+                      'relative h-7 text-xs rounded-md transition-colors font-medium',
                       (!inMonth || isBeforeMin) ? 'text-text-light/40 cursor-default' : 'text-text-secondary cursor-pointer',
                       isSelected && 'bg-primary-700 text-white shadow-sm hover:bg-primary-800',
                       inMonth && !isBeforeMin && !isSelected && 'hover:bg-surface-hover hover:text-primary-700',
@@ -238,7 +248,7 @@ export function DatePicker({
                   >
                     {day.getDate()}
                     {isToday && !isSelected && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 size-1 rounded-full bg-primary-500" />
+                      <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 size-1 rounded-full bg-primary-500" />
                     )}
                   </button>
                 );
@@ -246,15 +256,15 @@ export function DatePicker({
             </div>
 
             {showTime && value && (
-              <div className="flex flex-col gap-1.5 pt-3 border-t border-border/60">
-                <label className="text-[10px] font-bold uppercase tracking-wide text-text-muted">
+              <div className="flex flex-col gap-1.5 pt-2.5 border-t border-border/60">
+                <label className="text-[10px] font-bold text-text-muted">
                   Time
                 </label>
                 <input
                   type="time"
                   value={formatTime(value)}
                   onChange={(e) => setTime(e.target.value)}
-                  className="w-full h-10 rounded-md border border-border px-3 text-base sm:text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400"
+                  className="w-full h-9 rounded-md border border-border px-3 text-base sm:text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400"
                 />
               </div>
             )}

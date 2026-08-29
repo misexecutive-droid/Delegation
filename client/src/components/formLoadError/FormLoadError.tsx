@@ -6,24 +6,30 @@ interface FormLoadErrorProps {
   onClose: () => void;
 }
 
-// Rendered in place of a lazy-loaded form (UserForm, DepartmentForm, ...) when its chunk fails to
-// download — a real, closable dialog instead of leaving the user stuck behind an unclosable
-// overlay on a flaky connection.
 export const FormLoadError = ({ onClose }: FormLoadErrorProps) => (
   <Modal
     open
     onClose={onClose}
-    icon={<AlertCircle className="w-5 h-5 text-danger" />}
-    title="Couldn't load this form"
-    description="Check your connection and try again."
+    icon={<AlertCircle className="size-6 text-red-500" strokeWidth={2.5} />}
+    title={<span className="text-xl font-bold text-slate-900 tracking-tight">Couldn't load this form</span>}
+    description={<span className="text-sm font-medium text-slate-500">Check your connection and try again.</span>}
     footer={
-      <Button variant="primary" size="sm" onClick={onClose}>
-        Close
-      </Button>
+      <div className="flex w-full justify-end pt-2">
+        <Button 
+          variant="primary" 
+          size="sm" 
+          onClick={onClose}
+          className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-slate-900/10 active:scale-95 transition-all duration-200"
+        >
+          Close
+        </Button>
+      </div>
     }
   >
-    <p className="text-sm text-text-secondary font-display">
-      This usually clears up on a retry — close this and reopen the form.
-    </p>
+    <div className="p-4 mt-2 rounded-2xl bg-slate-50 border border-slate-100 shadow-inner shadow-slate-100/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <p className="text-[14px] leading-relaxed text-slate-600 font-medium">
+        This usually clears up on a retry — close this and reopen the form.
+      </p>
+    </div>
   </Modal>
 );

@@ -45,11 +45,14 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {/* Label */}
         <label
           htmlFor={id}
-          className={cn("flex items-center gap-1.5 text-xs font-medium text-text-secondary transition-colors", labelClassName)}
+          className={cn(
+            "flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 transition-colors duration-200 group-focus-within/field:text-primary-600 px-1",
+            labelClassName
+          )}
         >
           {Icon && (
             <Icon
-              className={cn("w-3.5 h-3.5 text-text-light", iconClassName)}
+              className={cn("w-3.5 h-3.5 text-slate-400 group-focus-within/field:text-primary-500 transition-colors", iconClassName)}
               strokeWidth={2.5}
             />
           )}
@@ -66,15 +69,17 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className={cn(
             // text-base (16px) below sm: iOS Safari auto-zooms the viewport on focusing any
             // input smaller than 16px, which text-sm's 14px would otherwise trigger.
-            "w-full px-3 py-2.5 min-h-[100px] text-base sm:text-sm transition-all duration-200 ease-in-out resize-y",
-            "bg-surface text-text placeholder:text-text-light",
-            "border rounded-md outline-none appearance-none",
-            "disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed disabled:resize-none",
+            "w-full px-3.5 py-3 min-h-[100px] text-base sm:text-sm font-medium transition-all duration-200 ease-out resize-y",
+            "bg-slate-50 text-slate-900 placeholder:text-slate-400",
+            "border rounded-xl outline-none appearance-none",
+            "hover:border-slate-300 hover:bg-slate-100/50",
+            "focus:bg-white focus:outline-none focus:ring-4",
+            "disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed disabled:border-slate-200 disabled:resize-none",
             isError
-              ? "border-danger focus:border-danger focus:ring-2 focus:ring-danger/20"
+              ? "border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-50 bg-red-50/30"
               : isSuccess
-              ? "border-success focus:border-success focus:ring-2 focus:ring-success/20"
-              : "border-border hover:border-border-hover focus:border-primary-400 focus:ring-2 focus:ring-coral-400/30",
+              ? "border-emerald-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 bg-emerald-50/30"
+              : "border-slate-200 focus:border-primary-400 focus:ring-primary-50/50",
             className
           )}
           {...props}
@@ -86,15 +91,14 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             id={messageId}
             role="alert"
             className={cn(
-              "flex items-center gap-1.5 text-xs font-medium mt-0.5",
-              "animate-in slide-in-from-top-1 fade-in duration-200",
-              isError ? "text-danger" : "text-success"
+              "flex items-center gap-1.5 text-xs font-semibold animate-in slide-in-from-top-1 fade-in duration-200 px-1",
+              isError ? "text-red-500" : "text-emerald-500"
             )}
           >
             {isError ? (
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
             ) : (
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
             )}
             {error || success}
           </p>

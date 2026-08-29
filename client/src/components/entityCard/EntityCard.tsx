@@ -11,8 +11,8 @@ function cn(...inputs: ClassValue[]) {
 // Shared visual language for the Users / Departments / Stores cards — one definition so the
 // three entity types read as one design system instead of three hand-drifted lookalikes.
 
-export const ENTITY_CARD_CLASS =
-  'group relative flex flex-col justify-between p-3 sm:p-3.5 bg-surface rounded-xl border border-border shadow-sm transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 hover:border-primary-200';
+export const ENTITY_CARD_CLASS = 
+  'group relative flex flex-col justify-between p-4 sm:p-5 bg-white rounded-2xl border border-slate-200 shadow-sm transition-all duration-400 ease-out hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 hover:border-primary-200';
 
 interface EntityIconTileProps {
   icon: LucideIcon;
@@ -21,19 +21,18 @@ interface EntityIconTileProps {
   className?: string;
 }
 
-// The leading visual for Departments/Stores — sized and shaped to match the User card's avatar
-// circle (same 40px footprint), so every card's header reads at the same visual weight.
+// The leading visual for Departments/Stores — exactly 40px to match User avatars.
 export const EntityIconTile = ({ icon: Icon, tone = 'primary', className }: EntityIconTileProps) => (
   <div
     className={cn(
-      'flex items-center justify-center w-8 h-8 rounded-lg shrink-0 ring-1',
+      'flex items-center justify-center size-10 rounded-xl shrink-0 transition-colors duration-300',
       tone === 'coral'
-        ? 'bg-coral-500/10 text-coral-600 dark:text-coral-400 ring-coral-500/10'
-        : 'bg-primary-500/10 text-primary-600 dark:text-primary-400 ring-primary-500/10',
+        ? 'bg-coral-50 text-coral-600 ring-1 ring-coral-100/50 group-hover:bg-coral-100'
+        : 'bg-primary-50 text-primary-600 ring-1 ring-primary-100/50 group-hover:bg-primary-100',
       className
     )}
   >
-    <Icon className="w-3.5 h-3.5" />
+    <Icon className="size-5" strokeWidth={2.5} />
   </div>
 );
 
@@ -52,15 +51,19 @@ export const StatusPill = ({ active, isUpdating, onToggle, ariaLabel }: StatusPi
     disabled={isUpdating}
     aria-label={ariaLabel}
     className={cn(
-      'flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-display font-medium shrink-0 transition-all duration-300',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+      'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shrink-0 transition-all duration-200 active:scale-95',
+      'focus:outline-none focus:ring-4 focus:ring-primary-50/50',
       active
-        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 focus-visible:ring-emerald-500'
-        : 'bg-surface-hover text-text-muted hover:bg-surface-active focus-visible:ring-border',
-      isUpdating && 'opacity-70 cursor-not-allowed'
+        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50 hover:bg-emerald-100'
+        : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200/50 hover:bg-slate-200',
+      isUpdating && 'opacity-70 cursor-not-allowed active:scale-100'
     )}
   >
-    {isUpdating && <Loader size="sm" variant="slate" className="w-3 h-3" />}
+    {isUpdating ? (
+      <Loader size="sm" variant={active ? 'emerald' : 'slate'} className="size-3" />
+    ) : (
+      <span className={cn("size-1.5 rounded-full shrink-0", active ? "bg-emerald-500" : "bg-slate-400")} />
+    )}
     {active ? 'Active' : 'Inactive'}
   </button>
 );
@@ -71,8 +74,8 @@ interface MetricPillProps {
 }
 
 export const MetricPill = ({ icon: Icon, children }: MetricPillProps) => (
-  <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-hover text-text-secondary text-[11px] font-display font-medium border border-border/50">
-    <Icon className="w-3 h-3 text-text-light shrink-0" />
+  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 text-slate-600 text-[11px] font-semibold tracking-wide border border-slate-100 transition-colors duration-200 group-hover:bg-slate-100/50 group-hover:border-slate-200">
+    <Icon className="size-3.5 text-slate-400 shrink-0" strokeWidth={2.5} />
     <span>{children}</span>
   </div>
 );
@@ -90,10 +93,10 @@ export const EntityCardActions = ({ onEdit, onDelete, isDeleting, editLabel, del
     <button
       type="button"
       onClick={onEdit}
-      className="p-1 rounded-md text-text-light transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      className="p-2 rounded-lg text-slate-400 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 focus:outline-none focus:ring-4 focus:ring-primary-50/50 active:scale-90"
       aria-label={editLabel}
     >
-      <Pencil className="w-3.5 h-3.5" />
+      <Pencil className="size-4" strokeWidth={2.5} />
     </button>
 
     <button
@@ -101,12 +104,16 @@ export const EntityCardActions = ({ onEdit, onDelete, isDeleting, editLabel, del
       onClick={onDelete}
       disabled={isDeleting}
       className={cn(
-        'p-1 rounded-md text-text-light transition-all duration-200 hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger',
-        isDeleting && 'opacity-50 cursor-not-allowed'
+        'p-2 rounded-lg text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-4 focus:ring-red-50/50 active:scale-90',
+        isDeleting && 'opacity-50 cursor-not-allowed active:scale-100'
       )}
       aria-label={deleteLabel}
     >
-      {isDeleting ? <Loader size="sm" variant="rose" className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+      {isDeleting ? (
+        <Loader size="sm" variant="rose" className="size-4" />
+      ) : (
+        <Trash2 className="size-4" strokeWidth={2.5} />
+      )}
     </button>
   </div>
 );

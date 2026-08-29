@@ -77,7 +77,7 @@ export const ActivityComplianceGauges = ({ tasks, tickets, todos, groupBy }: Act
   return (
     <div className="flex flex-col items-center gap-4 w-full sm:border-l sm:border-border/60 sm:pl-6">
       <div className="flex flex-col items-center gap-0.5">
-        <span className="text-xs font-display font-bold uppercase tracking-wider text-text-muted">Compliance</span>
+        <span className="text-xs font-display font-bold text-text-muted">Compliance</span>
         <span className="text-[10px] font-display font-medium text-text-light capitalize">{ACTIVITY_GROUP_PERIOD_LABEL[groupBy]}</span>
       </div>
       <div className="flex items-center justify-evenly gap-4 w-full max-w-sm">

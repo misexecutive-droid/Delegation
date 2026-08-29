@@ -20,7 +20,10 @@ export const updateTicketSchema = createTicketSchema.partial().extend({
 
 export const paginatioinSchema = z.object({
     page : z.coerce.number().int().min(1).default(1),
-    limit : z.coerce.number().int().min(1).max(100).default(20),
+    // Board/list views deliberately request up to 500 in one shot to bucket/filter client-side
+    // (see BOARD_LIMIT in client's tickets/hook.ts) — cap must cover that, not just the 20-per-page
+    // paginated list default.
+    limit : z.coerce.number().int().min(1).max(500).default(20),
     status : z.enum(TICKET_STATUSES).optional(),
     // Lets an ADMIN/PC filter the list down to one person's tickets (e.g. the Team Overview
     // drill-down) — ignored for a non-privileged caller, same treatment as task.service.ts's

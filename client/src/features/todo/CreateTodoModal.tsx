@@ -2,8 +2,6 @@ import { useState, type FormEvent } from 'react';
 import { ListTodo } from 'lucide-react';
 import { Button, Modal, Input, DatePicker } from '../../components';
 import { TaskFormPrioritySelector } from '../tasks/TaskFormPrioritySelector';
-import { FIELD_CARD_CLASS } from '../tasks/taskFormFieldStyles';
-import { TODO_INPUT_CLASS, TODO_TRIGGER_CLASS, TODO_LABEL_CLASS, TODO_BUTTON_CLASS } from './todoFormStyles';
 import { useCreateTodoMutation } from './hook';
 import type { TodoPriority } from '../../api/todos';
 
@@ -12,8 +10,6 @@ interface CreateTodoModalProps {
   onClose: () => void;
 }
 
-// Shared by the To-Do page's "Todo Task" button and the Dashboard header's — same quick-add
-// modal, opened directly from wherever the user is instead of navigating to the To-Do page first.
 export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
   const [text, setText] = useState('');
   const [dueDate, setDueDate] = useState<Date | null>(null);
@@ -41,28 +37,30 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
     }
     createMut.mutate(
       { text: trimmed, priority, dueDate: dueDate ? dueDate.toISOString() : undefined },
-      { onSuccess: closeAndReset },
+      { onSuccess: closeAndReset }
     );
   };
 
-  // Shared "field" wrapper so every row in the form — input, date, priority — lines up on the
-  // same card padding/border instead of the priority selector floating unaligned with the rest.
-  const fieldWrapperClass = `group/field flex flex-col gap-1.5 ${FIELD_CARD_CLASS} transition-shadow duration-200 hover:shadow-sm`;
+  // Upgraded interactive wrapper for each form group
+  const fieldWrapperClass = 
+    "group/field flex flex-col gap-2 p-4 bg-white border border-slate-200 rounded-xl shadow-sm transition-all duration-300 ease-out hover:shadow-md hover:border-slate-300 focus-within:border-primary-400 focus-within:ring-4 focus-within:ring-primary-50/50";
+  
+  const labelClass = "text-sm font-semibold text-slate-700 tracking-tight transition-colors group-focus-within/field:text-primary-600";
 
   return (
     <Modal
       open
       onClose={closeAndReset}
-      icon={<ListTodo className="w-5 h-5 text-primary-600" />}
-      title="New todo task"
-      description="A personal task, not assigned to anyone else."
+      icon={<ListTodo className="w-6 h-6 text-primary-500" />}
+      title={<span className="text-xl font-bold text-slate-900">New todo task</span>}
+      description={<span className="text-slate-500">A personal task, not assigned to anyone else.</span>}
       footer={
-        <>
+        <div className="flex w-full justify-end gap-3 pt-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className={`${TODO_BUTTON_CLASS} transition-transform duration-150 active:scale-95`}
+            className="px-5 py-2.5 font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200 rounded-lg transition-all duration-200 active:scale-95"
             onClick={closeAndReset}
           >
             Cancel
@@ -72,22 +70,23 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
             form="todo-form"
             variant="primary"
             size="sm"
-            className={`${TODO_BUTTON_CLASS} transition-transform duration-150 active:scale-95`}
+            className="px-5 py-2.5 font-medium bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow-md rounded-lg transition-all duration-200 active:scale-95"
             isLoading={createMut.isPending}
           >
             Add task
           </Button>
-        </>
+        </div>
       }
     >
-      <form id="todo-form" onSubmit={handleCreate} className="flex flex-col gap-5" noValidate>
+      <form id="todo-form" onSubmit={handleCreate} className="flex flex-col gap-4 py-2" noValidate>
+        {/* Task Name Input */}
         <div
-          className="animate-in fade-in slide-in-from-top-2 duration-300"
+          className={`${fieldWrapperClass} ${error ? 'border-red-300 bg-red-50/30' : ''} animate-in fade-in slide-in-from-bottom-4 duration-500`}
           style={{ animationDelay: '0ms', animationFillMode: 'backwards' }}
         >
           <Input
             autoFocus
-            label="Task"
+            label="What needs to be done?"
             placeholder="e.g. Follow up with the vendor"
             value={text}
             onChange={(e) => {
@@ -96,32 +95,38 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
             }}
             error={error ?? undefined}
             maxLength={200}
-            labelClassName={TODO_LABEL_CLASS}
-            containerClassName={`${FIELD_CARD_CLASS} transition-shadow duration-200 focus-within:shadow-sm`}
-            className={`${TODO_INPUT_CLASS} transition-colors duration-150 ${error ? 'border-b-danger focus:border-b-danger' : ''}`}
+            labelClassName={labelClass}
+            containerClassName="w-full"
+            className={`w-full bg-transparent text-slate-900 placeholder:text-slate-400 border-none p-0 focus:ring-0 ${
+              error ? 'text-red-900 placeholder:text-red-300' : ''
+            }`}
           />
         </div>
 
+        {/* Due Date Selector */}
         <div
-          className={`${fieldWrapperClass} animate-in fade-in slide-in-from-top-2 duration-300`}
-          style={{ animationDelay: '60ms', animationFillMode: 'backwards' }}
+          className={`${fieldWrapperClass} animate-in fade-in slide-in-from-bottom-4 duration-500`}
+          style={{ animationDelay: '75ms', animationFillMode: 'backwards' }}
         >
-          <label className={TODO_LABEL_CLASS}>
-           Due date (optional)
+          <label className={labelClass}>
+            Due date <span className="text-slate-400 font-normal ml-1">(optional)</span>
           </label>
           <DatePicker
             value={dueDate}
             onChange={setDueDate}
             placeholder="No due date set"
-            triggerClassName={`${TODO_TRIGGER_CLASS} transition-colors duration-150`}
+            triggerClassName="w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
 
         <div
-          className={`${fieldWrapperClass} animate-in fade-in slide-in-from-top-2 duration-300`}
-          style={{ animationDelay: '120ms', animationFillMode: 'backwards' }}
+          className={`${fieldWrapperClass} animate-in fade-in slide-in-from-bottom-4 duration-500`}
+          style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}
         >
-          <TaskFormPrioritySelector value={priority} onChange={setPriority} />
+          <label className={labelClass}>Priority level</label>
+          <div className="pt-1">
+            <TaskFormPrioritySelector value={priority} onChange={setPriority} />
+          </div>
         </div>
       </form>
     </Modal>

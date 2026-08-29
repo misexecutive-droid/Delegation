@@ -182,6 +182,14 @@ body {
   --color-text-light: #5f6a80;
   --glass-bg: rgba(11, 18, 32, 0.72);
   --glass-border: rgba(35, 47, 73, 0.7);
+  /* success/warning/danger/info are tuned for a white surface — at the same saturation/lightness
+     they read as neon against this near-black background, which is the "sharp on the eyes"
+     complaint. Lightened + slightly desaturated so priority/status colors stay legible without
+     the harsh contrast, same hue family as the light-mode values above. */
+  --color-success: #4caf80;
+  --color-warning: #d3a24e;
+  --color-danger: #d17272;
+  --color-info: #6699cc;
   color-scheme: dark;
 }
 

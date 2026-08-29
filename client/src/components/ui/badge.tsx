@@ -5,26 +5,26 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-display font-medium w-fit whitespace-nowrap shrink-0 gap-1 [&>svg]:size-3 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] transition-[color,box-shadow] overflow-hidden",
+  "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider w-fit whitespace-nowrap shrink-0 gap-1.5 [&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:pointer-events-none transition-all duration-200 overflow-hidden shadow-sm focus-visible:outline-none focus-visible:ring-4",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+          "border-primary-200 bg-primary-50 text-primary-700 [a&]:hover:bg-primary-100 focus-visible:ring-primary-50/50",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "border-slate-200 bg-slate-100 text-slate-700 [a&]:hover:bg-slate-200 focus-visible:ring-slate-100/50",
         destructive:
-          "border-transparent bg-destructive/10 text-destructive [a&]:hover:bg-destructive/20",
+          "border-red-200 bg-red-50 text-red-700 [a&]:hover:bg-red-100 focus-visible:ring-red-50/50",
         success:
-          "border-transparent bg-success/10 text-success",
+          "border-emerald-200 bg-emerald-50 text-emerald-700 [a&]:hover:bg-emerald-100 focus-visible:ring-emerald-50/50",
         warning:
-          "border-transparent bg-warning/10 text-warning",
+          "border-amber-200 bg-amber-50 text-amber-700 [a&]:hover:bg-amber-100 focus-visible:ring-amber-50/50",
         info:
-          "border-transparent bg-primary/10 text-primary",
+          "border-blue-200 bg-blue-50 text-blue-700 [a&]:hover:bg-blue-100 focus-visible:ring-blue-50/50",
         neutral:
-          "border-transparent bg-muted text-muted-foreground",
+          "border-slate-200 bg-slate-50 text-slate-500 [a&]:hover:bg-slate-100 focus-visible:ring-slate-50/50",
         outline:
-          "border-border text-text-secondary [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+          "border-slate-200 bg-white text-slate-600 [a&]:hover:bg-slate-50 focus-visible:ring-slate-100/50",
       },
     },
     defaultVariants: {

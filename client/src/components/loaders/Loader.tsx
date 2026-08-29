@@ -15,17 +15,21 @@ export interface LoaderProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const sizeClasses = {
-  sm: 'w-4 h-4 border-2',
-  md: 'w-6 h-6 border-2',
-  lg: 'w-8 h-8 border-[3px]',
-  xl: 'w-12 h-12 border-[3px]',
+  sm: 'size-4 border-2',
+  md: 'size-6 border-2',
+  lg: 'size-8 border-[3px]',
+  xl: 'size-12 border-[4px]', // Slightly thicker border for the XL size to maintain proportion
 };
 
 const variantClasses = {
-  primary: 'border-indigo-500/20 border-t-indigo-600 dark:border-indigo-400/20 dark:border-t-indigo-400',
+  // Uses the primary theme colors to match your buttons and active states
+  primary: 'border-primary-600/20 border-t-primary-600',
+  // Crisp white for overlaying on dark gradients or primary buttons
   white: 'border-white/20 border-t-white',
-  slate: 'border-slate-200 border-t-slate-600 dark:border-slate-700 dark:border-t-slate-300',
-  rose: 'border-rose-500/20 border-t-rose-600 dark:border-rose-400/20 dark:border-t-rose-400',
+  // Premium slate tones for neutral loading states (like the StatusPill)
+  slate: 'border-slate-200 border-t-slate-500',
+  // Maps to the deep red used in your danger/delete actions
+  rose: 'border-red-500/20 border-t-red-600',
 };
 
 export const Loader = React.forwardRef<HTMLDivElement, LoaderProps>(
@@ -36,7 +40,7 @@ export const Loader = React.forwardRef<HTMLDivElement, LoaderProps>(
         role="status"
         aria-live="polite"
         className={cn(
-          "rounded-full animate-spin",
+          "rounded-full animate-spin transition-all duration-300",
           sizeClasses[size],
           variantClasses[variant],
           className

@@ -1,12 +1,19 @@
 import { useCallback, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { ArrowDown, Loader2 } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-const PULL_THRESHOLD = 68;
-const MAX_PULL = 96;
-const HOLD_HEIGHT = 44;
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+// Tuned for the new size-10 indicator footprint + margins
+const PULL_THRESHOLD = 80;
+const MAX_PULL = 120;
+const HOLD_HEIGHT = 64;
 const RESISTANCE = 0.5;
-const SPRING = { type: 'spring', stiffness: 380, damping: 32 } as const;
+const SPRING = { type: 'spring', stiffness: 400, damping: 30 } as const;
 
 export interface PullToRefreshProps {
   /** Called once the user releases past the threshold. Resolve/return to end the refresh state. */
@@ -28,9 +35,11 @@ export const PullToRefresh = ({ onRefresh, children, className, disabled }: Pull
   const touchStartY = useRef<number | null>(null);
   const pulling = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
+  
   const pull = useMotionValue(0);
   const indicatorOpacity = useTransform(pull, [0, PULL_THRESHOLD], [0, 1]);
   const indicatorRotate = useTransform(pull, [0, PULL_THRESHOLD], [0, 180]);
+  const indicatorScale = useTransform(pull, [0, PULL_THRESHOLD], [0.8, 1]); // Premium scale-in effect
 
   const settle = useCallback((to: number) => animate(pull, to, SPRING), [pull]);
 
@@ -76,7 +85,7 @@ export const PullToRefresh = ({ onRefresh, children, className, disabled }: Pull
   return (
     <div
       ref={scrollRef}
-      className={className}
+      className={cn("relative", className)}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -84,18 +93,21 @@ export const PullToRefresh = ({ onRefresh, children, className, disabled }: Pull
     >
       <motion.div
         aria-hidden="true"
-        className="pointer-events-none flex items-end justify-center overflow-hidden"
+        className="pointer-events-none flex items-end justify-center overflow-hidden absolute top-0 left-0 right-0 z-50"
         style={{ height: pull, opacity: indicatorOpacity }}
       >
-        <div className="flex items-center justify-center size-8 rounded-full bg-surface border border-border/60 shadow-sm mb-2">
+        <motion.div 
+          className="flex items-center justify-center size-10 rounded-full bg-white border border-slate-200 shadow-md shadow-slate-200/50 mb-4"
+          style={{ scale: indicatorScale }}
+        >
           {refreshing ? (
-            <Loader2 size={15} className="text-primary-600 animate-spin" strokeWidth={2.25} />
+            <Loader2 size={18} className="text-primary-600 animate-spin" strokeWidth={2.5} />
           ) : (
             <motion.span style={{ rotate: indicatorRotate }} className="flex">
-              <ArrowDown size={15} className="text-primary-600" strokeWidth={2.25} />
+              <ArrowDown size={18} className="text-primary-600" strokeWidth={2.5} />
             </motion.span>
           )}
-        </div>
+        </motion.div>
       </motion.div>
 
       {children}

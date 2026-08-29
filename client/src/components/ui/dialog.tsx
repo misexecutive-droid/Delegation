@@ -42,7 +42,8 @@ function DialogOverlay({
         // spawned from *inside* a dialog (e.g. an assignee picker in a form modal) rather than a
         // competing full-screen surface, and being portalled to document.body as siblings of the
         // dialog, they need a higher z-index of their own to render on top of it, not beneath it.
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-300 data-[state=closed]:duration-150 fixed inset-0 z-[70] bg-black/40 backdrop-blur-xs",
+        "fixed inset-0 z-[70] bg-slate-900/20 backdrop-blur-sm",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-400 data-[state=closed]:duration-200",
         className,
       )}
       {...props}
@@ -64,15 +65,18 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-card text-card-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed z-[70] grid w-full gap-4 border border-border p-6 shadow-2xl data-[state=open]:duration-300 data-[state=open]:ease-out data-[state=closed]:duration-150 max-h-[90vh] overflow-y-auto outline-none",
-          // Mobile: a bottom sheet, pinned edge-to-edge and sliding up from off-screen — the
-          // native pattern, instead of a small centered box floating in the middle of a phone
-          // screen. pb accounts for the home-indicator safe area (see index.html's viewport-fit).
-          "bottom-0 left-0 right-0 top-auto max-w-full translate-x-0 translate-y-0 rounded-t-2xl rounded-b-none pb-[max(1.5rem,env(safe-area-inset-bottom))]",
+          "fixed z-[70] grid w-full gap-5 bg-surface text-text p-6 sm:p-7 shadow-2xl border border-border outline-none max-h-[90vh] overflow-y-auto custom-scrollbar",
+          
+          // Buttery smooth entry/exit physics
+          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-400 data-[state=closed]:duration-200 data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]",
+          
+          // Mobile: bottom sheet, pinned edge-to-edge
+          "bottom-0 left-0 right-0 top-auto max-w-full translate-x-0 translate-y-0 rounded-t-[2rem] rounded-b-none pb-[max(1.5rem,env(safe-area-inset-bottom))]",
           "data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full",
-          // Desktop (sm+): the original centered dialog, unchanged.
-          "sm:top-[50%] sm:left-[50%] sm:right-auto sm:bottom-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-md sm:rounded sm:pb-6",
-          "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-90 sm:data-[state=closed]:slide-out-to-bottom-2 sm:data-[state=open]:slide-in-from-bottom-2",
+          
+          // Desktop: floating centered card
+          "sm:top-[50%] sm:left-[50%] sm:right-auto sm:bottom-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-lg sm:rounded-3xl sm:pb-7",
+          "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-bottom-4 sm:data-[state=open]:slide-in-from-bottom-4",
           className,
         )}
         {...props}
@@ -81,9 +85,14 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none cursor-pointer text-text-light hover:text-text"
+            className={cn(
+              "absolute top-5 right-5 flex items-center justify-center size-8 rounded-full text-text-light z-10 cursor-pointer transition-all duration-200",
+              "hover:text-text hover:bg-surface-hover",
+              "focus:outline-none focus:ring-4 focus:ring-surface-hover",
+              "active:scale-90 disabled:pointer-events-none"
+            )}
           >
-            <XIcon size={16} />
+            <XIcon size={18} strokeWidth={2.5} />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}
@@ -107,7 +116,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2",
         className,
       )}
       {...props}
@@ -122,7 +131,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-sm font-display font-bold leading-tight text-text", className)}
+      className={cn("text-xl font-bold text-text tracking-tight leading-tight", className)}
       {...props}
     />
   )
@@ -135,7 +144,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-sm font-medium text-text-muted leading-relaxed", className)}
       {...props}
     />
   )

@@ -29,16 +29,13 @@ interface SelectDropdownProps<Value extends string> {
   'aria-label'?: string;
 }
 
-const TRIGGER_CLASS =
-  'flex h-10 w-full items-center justify-between gap-1.5 rounded border border-border bg-surface pl-2.5 pr-2 text-sm font-medium text-text shadow-sm ' +
-  'transition-all outline-none cursor-pointer hover:border-border ' +
-  'focus-visible:ring-0 focus-visible:border-border ' +
-  'disabled:opacity-60 disabled:cursor-not-allowed';
+const TRIGGER_CLASS = cn(
+  "flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm font-medium text-slate-900 transition-all duration-200 outline-none cursor-pointer group",
+  "hover:border-slate-300 hover:bg-slate-100/50",
+  "focus-visible:bg-white focus-visible:border-primary-400 focus-visible:ring-4 focus-visible:ring-primary-50/50",
+  "disabled:opacity-60 disabled:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-200"
+);
 
-// A themed, in-app replacement for a native <select> — same trigger footprint, but the option
-// list is our own Radix DropdownMenu popover (already proven safe inside this app's Dialog-based
-// Modal, unlike the shadcn Select primitive — see TaskFormReminderField's history) so it looks
-// consistent with every other menu in the app instead of falling back to OS chrome.
 export function SelectDropdown<Value extends string>({
   value,
   onChange,
@@ -50,8 +47,6 @@ export function SelectDropdown<Value extends string>({
   ...rest
 }: SelectDropdownProps<Value>) {
   const selected = options.find((o) => o.value === value);
-  // Reading a ref's .current during render isn't allowed (it can go stale without triggering a
-  // re-render), so the trigger's DOM node is tracked in state via a callback ref instead.
   const [triggerEl, setTriggerEl] = useState<HTMLButtonElement | null>(null);
 
   return (
@@ -65,28 +60,42 @@ export function SelectDropdown<Value extends string>({
           className={cn(TRIGGER_CLASS, triggerClassName)}
         >
           <span className="truncate">{selected?.label ?? '—'}</span>
-          <ChevronDown size={14} className="shrink-0 text-text-light" />
+          <ChevronDown 
+            size={16} 
+            className="shrink-0 text-slate-400 transition-colors duration-200 group-hover:text-slate-500 group-focus-visible:text-primary-500" 
+          />
         </button>
       </DropdownMenuTrigger>
+      
       <DropdownMenuContent
         align={align}
-        className={cn('min-w-[8rem]', contentClassName)}
-        // See Combobox's identical comment: constrains flip/shift to the modal's own content
-        // element instead of the viewport, so a trigger near the bottom of a modal doesn't spill
-        // the menu out past the modal's card.
+        className={cn(
+          'min-w-[10rem] p-1.5 rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 animate-in fade-in-80 zoom-in-95 duration-200',
+          contentClassName
+        )}
         collisionBoundary={triggerEl?.closest('[data-slot="dialog-content"]') ?? undefined}
         collisionPadding={16}
       >
-        {options.map((opt) => (
-          <DropdownMenuItem
-            key={opt.value}
-            onSelect={() => onChange(opt.value)}
-            className="justify-between gap-2"
-          >
-            {opt.label}
-            {opt.value === value && <Check size={14} className="text-primary-600" />}
-          </DropdownMenuItem>
-        ))}
+        {options.map((opt) => {
+          const isSelected = opt.value === value;
+          return (
+            <DropdownMenuItem
+              key={opt.value}
+              onSelect={() => onChange(opt.value)}
+              className={cn(
+                "flex items-center justify-between gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer outline-none active:scale-[0.98]",
+                isSelected 
+                  ? "text-primary-700 bg-primary-50/50" 
+                  : "text-slate-700 focus:bg-slate-100 focus:text-slate-900"
+              )}
+            >
+              <span className="truncate">{opt.label}</span>
+              {isSelected && (
+                <Check size={16} strokeWidth={2.5} className="shrink-0 text-primary-600" />
+              )}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

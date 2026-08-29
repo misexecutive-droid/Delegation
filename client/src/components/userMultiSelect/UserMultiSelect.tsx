@@ -1,5 +1,7 @@
-import { Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { useAssignableUsersQuery } from '../../features/tickets/hook';
+import { avatarColorClass } from '../../features/tasks/avatarColors';
+import { getInitials } from '../../lib/getInitials';
 
 interface UserMultiSelectProps {
   departmentId?: string;
@@ -27,7 +29,7 @@ export const UserMultiSelect = ({ departmentId, storeId, selected, onChange }: U
   }
 
   return (
-    <div className="flex flex-col gap-1 max-h-48 overflow-y-auto p-2.5 bg-surface border border-border rounded-lg">
+    <div className="flex flex-col gap-1 max-h-48 overflow-y-auto custom-scrollbar p-1.5 bg-surface border border-border rounded-lg">
       {isLoading && (
         <p className="flex items-center gap-2 text-xs font-display text-text-muted px-2 py-2">
           <Loader2 size={13} className="animate-spin" /> Loading users…
@@ -37,20 +39,30 @@ export const UserMultiSelect = ({ departmentId, storeId, selected, onChange }: U
         <p className="text-xs font-display text-text-muted px-2 py-2">No assignable users in this scope.</p>
       )}
       {users?.map(u => {
+        const name = `${u.firstName} ${u.lastName ?? ''}`.trim();
         const checked = selected.includes(u.id);
         return (
-          <label
+          <button
             key={u.id}
-            className="flex items-center gap-2 px-2 py-2 rounded-md text-sm font-display text-text cursor-pointer hover:bg-surface-hover transition-colors"
+            type="button"
+            aria-pressed={checked}
+            onClick={() => toggle(u.id)}
+            className={`flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-display text-left transition-colors duration-150 cursor-pointer ${
+              checked ? 'bg-primary-500/10 text-text' : 'text-text-secondary hover:bg-surface-hover hover:text-text'
+            }`}
           >
-            <input
-              type="checkbox"
-              className="accent-primary-600 size-3.5"
-              checked={checked}
-              onChange={() => toggle(u.id)}
-            />
-            {u.firstName} {u.lastName ?? ''}
-          </label>
+            <span className={`flex items-center justify-center size-7 rounded-full text-[10px] font-bold text-white shrink-0 ${avatarColorClass(name)}`}>
+              {getInitials(name)}
+            </span>
+            <span className="flex-1 min-w-0 truncate">{name}</span>
+            <span
+              className={`flex items-center justify-center size-4 rounded-full border shrink-0 transition-colors duration-150 ${
+                checked ? 'bg-primary-600 border-primary-600 text-white' : 'border-border-hover text-transparent'
+              }`}
+            >
+              <Check size={10} strokeWidth={3} />
+            </span>
+          </button>
         );
       })}
     </div>
