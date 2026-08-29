@@ -31,8 +31,8 @@ const Gauge = ({ icon: Icon, label, percent }: GaugeProps) => (
         {percent != null ? `${percent}%` : '—'}
       </span>
     </RadialGauge>
-    <span className="flex items-center gap-1.5 text-xs font-medium text-text-muted">
-      <Icon size={13} />
+    <span className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+      <Icon size={13} className="text-primary-500" />
       {label}
     </span>
   </div>
@@ -77,8 +77,8 @@ export const ActivityComplianceGauges = ({ tasks, tickets, todos, groupBy }: Act
   return (
     <div className="flex flex-col items-center gap-4 w-full sm:border-l sm:border-border/60 sm:pl-6">
       <div className="flex flex-col items-center gap-0.5">
-        <span className="text-xs font-display font-bold text-text-muted">Compliance</span>
-        <span className="text-[10px] font-display font-medium text-text-light capitalize">{ACTIVITY_GROUP_PERIOD_LABEL[groupBy]}</span>
+        <span className="text-xs font-display font-bold text-text-secondary">Compliance</span>
+        <span className="text-[10px] font-display font-medium text-text-muted capitalize">{ACTIVITY_GROUP_PERIOD_LABEL[groupBy]}</span>
       </div>
       <div className="flex items-center justify-evenly gap-4 w-full max-w-sm">
         <Gauge icon={ClipboardCheck} label="Completion" percent={completionRate} />

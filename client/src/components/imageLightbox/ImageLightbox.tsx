@@ -6,6 +6,9 @@ interface ImageLightboxProps {
   onClose: () => void;
 }
 
+// Shared full-screen preview — used by both the ticket detail's already-uploaded attachments and
+// ImageUploader's local file previews, so "eye to preview" behaves identically everywhere images
+// can be viewed in the app.
 export const ImageLightbox = ({ src, onClose }: ImageLightboxProps) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 

@@ -1,4 +1,4 @@
-import { Tag, Sparkles, UserCheck, Clock, User, ChevronDown } from 'lucide-react';
+import { Tag, Sparkles, UserCheck, Clock, User, ChevronDown, Lock } from 'lucide-react';
 import { Dropdown, type DropdownAction } from '../../../components';
 import { getTicketStatusLabel } from '../../../lib/ticketStatusLabel';
 import { STATUS_CONFIG, PRIORITY_CONFIG, STATUS_OPTIONS } from './detailConstants';
@@ -8,10 +8,7 @@ import type { Role } from '../../../api/auth';
 interface TicketQuickAttributesProps {
   ticket: Ticket;
   currentUserRole: Role | undefined;
-  canChangeStatus: boolean;
-  isVerifier: boolean;
   canAssign: boolean;
-  statusActions: DropdownAction[];
   assigneeActions: DropdownAction[];
   isOverdue: boolean;
 }
@@ -19,10 +16,7 @@ interface TicketQuickAttributesProps {
 export const TicketQuickAttributes = ({
   ticket,
   currentUserRole,
-  canChangeStatus,
-  isVerifier,
   canAssign,
-  statusActions,
   assigneeActions,
   isOverdue,
 }: TicketQuickAttributesProps) => {
@@ -50,30 +44,17 @@ export const TicketQuickAttributes = ({
   return (
     <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-surface-muted/40 border border-border/50">
 
-      {/* Status Control */}
+      {/* Status — read-only here. Changing it is a deliberate action (requires a comment first),
+          not a stray click on a quick-glance info card, so the only way to change it is the
+          dedicated control in the footer. */}
       <div className={cardClass}>
         <label className={attributeLabelClass}>
           <Tag size={11} className="text-primary-500" /> Status
         </label>
-        {canChangeStatus && isVerifier ? (
-          <Dropdown
-            align="start"
-            items={statusActions}
-            trigger={
-              <button
-                type="button"
-                className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md border cursor-pointer focus:outline-none transition-all w-fit ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
-              >
-                {statusLabel}
-                <ChevronDown size={12} />
-              </button>
-            }
-          />
-        ) : (
-          <span className={`text-xs font-medium px-2 py-1 rounded-md border w-fit ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-            {statusLabel}
-          </span>
-        )}
+        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md border w-fit ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+          {statusLabel}
+          <Lock size={10} className="opacity-50" />
+        </span>
       </div>
 
       {/* Priority Badge */}

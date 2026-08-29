@@ -23,7 +23,7 @@ export const TicketComments = ({
 }: TicketCommentsProps) => (
   <div className="flex flex-col gap-3">
     <h3 className={SECTION_HEADER}>
-      <MessageSquare size={13} /> Comments
+      <MessageSquare size={13} className="text-primary-500" /> Comments
       <span className="text-text-muted normal-case font-medium">({comments.length})</span>
     </h3>
 

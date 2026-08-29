@@ -22,7 +22,10 @@ interface RadialGaugeProps {
 export const RadialGauge = ({
   percent,
   size = 220,
-  trackClassName = 'text-slate-100', // Premium soft track default
+  // Theme token (not raw slate-100) — that hardcoded value never adapted to dark mode and, being
+  // near-white, was barely visible against a light-mode card too. text-border tracks the app's
+  // actual border color, which reads as a clear "background track" ring in both themes.
+  trackClassName = 'text-border',
   gradientFrom = 'var(--color-primary-600, #4f46e5)',
   gradientTo = 'var(--color-primary-400, #818cf8)',
   children,

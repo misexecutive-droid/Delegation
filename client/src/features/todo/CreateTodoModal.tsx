@@ -112,11 +112,12 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
           style={{ animationDelay: '75ms', animationFillMode: 'backwards' }}
         >
           <label className={TODO_FIELD_LABEL_CLASS}>
-            Due date <span className="text-text-light font-normal ml-1">(optional)</span>
+            Due date & time <span className="text-text-light font-normal ml-1">(optional)</span>
           </label>
           <DatePicker
             value={dueDate}
             onChange={setDueDate}
+            showTime
             placeholder="No due date set"
             triggerClassName="w-full text-left bg-surface-hover hover:bg-surface-active border border-border rounded-lg px-3 py-2 text-text-secondary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />

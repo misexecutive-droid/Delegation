@@ -230,6 +230,17 @@ body {
   }
 }
 
+/* tailwindcss-animate's `animate-in`/`animate-out` utilities (entrance fades, slide-ins, modal/
+   sheet transitions, staggered list reveals) never checked prefers-reduced-motion anywhere in the
+   app — collapsing their duration to near-zero here means content still ends up in its final state
+   instantly instead of just turning motion off and leaving it stuck mid-transition. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in, .animate-out {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 /* Fully hides the scrollbar (still scrollable) for spots where even the thin themed one above
    would clutter a tight, content-forward layout — e.g. a modal's inner scroll panes. */
 .no-scrollbar {

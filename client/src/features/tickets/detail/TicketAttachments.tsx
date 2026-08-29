@@ -28,7 +28,7 @@ export const TicketAttachments = ({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <h3 className={SECTION_HEADER}>
-          <Paperclip size={13} /> Attachments & Screenshots
+          <Paperclip size={13} className="text-primary-500" /> Attachments & Screenshots
         </h3>
         <span className="text-[11px] text-text-muted">{attachments.length} files</span>
       </div>
@@ -94,7 +94,7 @@ export const TicketAttachments = ({
                   type="button"
                   onClick={() => onDelete(file.id)}
                   disabled={isDeleting}
-                  className="p-1.5 rounded-full bg-rose-500/80 text-white hover:bg-rose-600 transition-colors cursor-pointer disabled:opacity-50"
+                  className="p-1.5 rounded-full bg-danger/80 text-white hover:bg-danger transition-colors cursor-pointer disabled:opacity-50"
                   title="Delete image"
                 >
                   <Trash2 size={14} />

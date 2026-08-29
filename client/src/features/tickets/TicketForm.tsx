@@ -122,7 +122,11 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
       open
       onClose={onClose}
       size="xl"
-      icon={<Ticket className="w-5 h-5" />}
+      icon={
+        <div className="flex items-center justify-center size-9 rounded-xl bg-primary-500/10 text-primary-600">
+          <Ticket className="w-4.5 h-4.5" />
+        </div>
+      }
       title="Create New Ticket"
       description="Fill in the parameters to dispatch a task."
       footer={footer}
@@ -131,6 +135,7 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
         sm:left-[50%] sm:right-auto sm:top-[50%] sm:bottom-auto sm:translate-x-[-50%] sm:translate-y-[-50%]
         rounded-t-2xl rounded-b-none sm:rounded-2xl
         max-h-[92dvh] sm:max-h-[90vh]
+        shadow-2xl shadow-primary-900/10
         data-[state=open]:slide-in-from-bottom-8 data-[state=closed]:slide-out-to-bottom-8
         sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-bottom-0
         data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100
@@ -143,41 +148,48 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
       </div>
 
       <form id="ticket-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 sm:gap-6" noValidate>
-        <AssignmentModeToggle mode={assignmentMode} onChange={m => setValue('assignmentMode', m)} />
-
-        <CategoryField
-          categoryId={categoryId}
-          onChange={v => setValue('categoryId', v)}
-          categories={categories}
-        />
-
-        <TicketDetailsFields register={register} errors={errors} />
-
-        <PhotoUploadField photos={photos} onAddPhotos={addPhotos} onRemovePhoto={removePhoto} />
-
-        <PriorityField value={priority} onChange={v => setValue('priority', v)} />
-
-        <DepartmentAssigneeFields
-          departmentId={departmentId}
-          onDepartmentChange={v => setValue('departmentId', v)}
-          departments={departments}
-          assigneeId={assigneeId}
-          onAssigneeChange={v => setValue('assigneeId', v)}
-          assignableUsers={assignableUsers}
-          locked={!!selectedCategory}
-        />
-
-        <DueDateField
-          mode={assignmentMode}
-          watch={watch}
-          setValue={setValue}
-          errors={errors}
-          categoryTatHours={selectedCategory?.tatHours}
-        />
+        {[
+          <AssignmentModeToggle key="mode" mode={assignmentMode} onChange={m => setValue('assignmentMode', m)} />,
+          <CategoryField
+            key="category"
+            categoryId={categoryId}
+            onChange={v => setValue('categoryId', v)}
+            categories={categories}
+          />,
+          <TicketDetailsFields key="details" register={register} errors={errors} />,
+          <PhotoUploadField key="photos" photos={photos} onAddPhotos={addPhotos} onRemovePhoto={removePhoto} />,
+          <PriorityField key="priority" value={priority} onChange={v => setValue('priority', v)} />,
+          <DepartmentAssigneeFields
+            key="assignee"
+            departmentId={departmentId}
+            onDepartmentChange={v => setValue('departmentId', v)}
+            departments={departments}
+            assigneeId={assigneeId}
+            onAssigneeChange={v => setValue('assigneeId', v)}
+            assignableUsers={assignableUsers}
+            locked={!!selectedCategory}
+          />,
+          <DueDateField
+            key="due"
+            mode={assignmentMode}
+            watch={watch}
+            setValue={setValue}
+            errors={errors}
+            categoryTatHours={selectedCategory?.tatHours}
+          />,
+        ].map((field, i) => (
+          <div
+            key={field.key}
+            className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+            style={{ animationDelay: `${i * 40}ms`, animationFillMode: 'backwards' }}
+          >
+            {field}
+          </div>
+        ))}
 
         {/* Global Mutation Error */}
         {mutation.isError && (
-          <div className="p-3 rounded-md bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 font-display flex items-center gap-2.5">
+          <div className="p-3 rounded-md bg-danger/10 border border-danger/20 text-xs text-danger font-display flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {mutation.error instanceof Error ? mutation.error.message : 'Failed to create ticket.'}
           </div>

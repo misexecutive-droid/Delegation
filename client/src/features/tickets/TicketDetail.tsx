@@ -12,10 +12,11 @@ import {
   useAddTicketStatusUpdateMutation,
 } from './hook';
 import { ChecklistPanel } from './ChecklistPanel';
-import { Skeleton, type DropdownAction } from '../../components';
+import { Skeleton, ImageLightbox, type DropdownAction } from '../../components';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useAuth } from '../../context/AuthContext';
-import { STATUS_OPTIONS } from './detail/detailConstants';
+import { getTicketStatusLabel } from '../../lib/ticketStatusLabel';
+import { STATUS_OPTIONS, STATUS_CONFIG } from './detail/detailConstants';
 import { TicketDetailHeader } from './detail/TicketDetailHeader';
 import { TicketQuickAttributes } from './detail/TicketQuickAttributes';
 import { VerificationBanner } from './detail/VerificationBanner';
@@ -26,7 +27,6 @@ import { TicketComments } from './detail/TicketComments';
 import { TicketStatusUpdatePanel } from './detail/TicketStatusUpdatePanel';
 import { TicketVerificationActions } from './detail/TicketVerificationActions';
 import { TicketDetailFooter } from './detail/TicketDetailFooter';
-import { ImageLightbox } from './detail/ImageLightbox';
 import type { Ticket, RestrictedStatus, CaptureMethod } from '../../api/ticket';
 
 interface TicketDetailProps {
@@ -115,6 +115,14 @@ export const TicketDetail = ({ ticket: initialTicket, onClose }: TicketDetailPro
     label: s.label,
     onClick: () => updateMut.mutate({ id: ticket.id, payload: { status: s.value } }),
   }));
+  const statusStyle = STATUS_CONFIG[ticket.status];
+  const statusLabel = getTicketStatusLabel(
+    ticket.status,
+    currentUser?.role,
+    STATUS_OPTIONS.find(s => s.value === ticket.status)?.label ?? ticket.status,
+  );
+  const statusBadgeClass = `${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`;
+  const hasComments = ticket.comments.length > 0;
 
   const assigneeActions: DropdownAction[] = [
     { label: 'Unassigned', onClick: () => updateMut.mutate({ id: ticket.id, payload: { assigneeId: null } }), icon: User },
@@ -143,10 +151,7 @@ export const TicketDetail = ({ ticket: initialTicket, onClose }: TicketDetailPro
           <TicketQuickAttributes
             ticket={ticket}
             currentUserRole={currentUser?.role}
-            canChangeStatus={canChangeStatus}
-            isVerifier={isVerifier}
             canAssign={canAssign}
-            statusActions={statusActions}
             assigneeActions={assigneeActions}
             isOverdue={isOverdue}
           />
@@ -215,7 +220,11 @@ export const TicketDetail = ({ ticket: initialTicket, onClose }: TicketDetailPro
           isAdmin={isAdmin}
           onDelete={handleDelete}
           isDeleting={deleteMut.isPending}
-          onClose={onClose}
+          isVerifier={isVerifier}
+          statusActions={statusActions}
+          statusLabel={statusLabel}
+          statusBadgeClass={statusBadgeClass}
+          hasComments={hasComments}
         />
 
         <ImageLightbox src={previewImage} onClose={() => setPreviewImage(null)} />

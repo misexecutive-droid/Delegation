@@ -54,7 +54,7 @@ export const TicketDescription = ({ description }: TicketDescriptionProps) => {
       {/* Header section with copy action */}
       <div className="flex items-center justify-between">
         <h3 className={`${SECTION_HEADER} flex items-center gap-1.5`}>
-          <AlignLeft size={13} className="text-text-muted" />
+          <AlignLeft size={13} className="text-primary-500" />
           <span>Description</span>
         </h3>
 
@@ -67,8 +67,8 @@ export const TicketDescription = ({ description }: TicketDescriptionProps) => {
         >
           {copied ? (
             <>
-              <Check size={12} className="text-emerald-500" />
-              <span className="text-emerald-500">Copied</span>
+              <Check size={12} className="text-success" />
+              <span className="text-success">Copied</span>
             </>
           ) : (
             <>
