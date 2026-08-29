@@ -2,60 +2,45 @@ import { useState, type FormEvent } from 'react';
 import { ListTodo } from 'lucide-react';
 import { Button, Modal, Input, DatePicker } from '../../components';
 import { TaskFormPrioritySelector } from '../tasks/TaskFormPrioritySelector';
-import { useCreateTodoMutation } from './hook';
-import type { TodoPriority } from '../../api/todos';
+import { TODO_FIELD_WRAPPER_CLASS, TODO_FIELD_LABEL_CLASS } from './CreateTodoModal';
+import { useUpdateTodoMutation } from './hook';
+import type { Todo } from '../../api/todos';
 
-interface CreateTodoModalProps {
-  open: boolean;
+interface EditTodoModalProps {
+  todo: Todo;
   onClose: () => void;
 }
 
-// Field wrapper/label styling shared with EditTodoModal so create and edit read as one consistent
-// form language — built on the app's theme tokens (not raw Tailwind colors) so it stays correct
-// in dark mode instead of freezing to a light-only palette.
-export const TODO_FIELD_WRAPPER_CLASS =
-  'group/field flex flex-col gap-2 p-4 bg-surface border border-border rounded-xl shadow-sm transition-all duration-300 ease-out hover:shadow-md hover:border-border-hover focus-within:border-primary-400 focus-within:ring-4 focus-within:ring-primary-500/10';
-
-export const TODO_FIELD_LABEL_CLASS =
-  'text-sm font-semibold text-text-secondary tracking-tight transition-colors group-focus-within/field:text-primary-600';
-
-export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
-  const [text, setText] = useState('');
-  const [dueDate, setDueDate] = useState<Date | null>(null);
-  const [priority, setPriority] = useState<TodoPriority>('medium');
+// Same form shell/styling as CreateTodoModal (shares its field-wrapper/label constants) — kept as
+// a separate component since it's opened from a single row's quick action with that row's todo
+// already in hand, rather than the page-level "add" button's empty state.
+export const EditTodoModal = ({ todo, onClose }: EditTodoModalProps) => {
+  const [text, setText] = useState(todo.text);
+  const [dueDate, setDueDate] = useState<Date | null>(todo.dueDate ? new Date(todo.dueDate) : null);
+  const [priority, setPriority] = useState(todo.priority);
   const [error, setError] = useState<string | null>(null);
 
-  const createMut = useCreateTodoMutation();
+  const updateMut = useUpdateTodoMutation();
 
-  if (!open) return null;
-
-  const closeAndReset = () => {
-    onClose();
-    setText('');
-    setDueDate(null);
-    setPriority('medium');
-    setError(null);
-  };
-
-  const handleCreate = (e: FormEvent) => {
+  const handleSave = (e: FormEvent) => {
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed) {
       setError('Task is required');
       return;
     }
-    createMut.mutate(
-      { text: trimmed, priority, dueDate: dueDate ? dueDate.toISOString() : undefined },
-      { onSuccess: closeAndReset }
+    updateMut.mutate(
+      { id: todo.id, payload: { text: trimmed, priority, dueDate: dueDate ? dueDate.toISOString() : null } },
+      { onSuccess: onClose },
     );
   };
 
   return (
     <Modal
       open
-      onClose={closeAndReset}
+      onClose={onClose}
       icon={<ListTodo className="w-6 h-6 text-primary-500" />}
-      title={<span className="text-xl font-bold text-text">New todo task</span>}
+      title={<span className="text-xl font-bold text-text">Edit todo task</span>}
       description={<span className="text-text-muted">A personal task, not assigned to anyone else.</span>}
       footer={
         <div className="flex w-full justify-end gap-3 pt-2">
@@ -64,29 +49,25 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
             variant="outline"
             size="sm"
             className="px-5 py-2.5 font-medium text-text-secondary hover:text-text hover:bg-surface-hover border-border rounded-lg transition-all duration-200 active:scale-95"
-            onClick={closeAndReset}
+            onClick={onClose}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            form="todo-form"
+            form="todo-edit-form"
             variant="primary"
             size="sm"
             className="px-5 py-2.5 font-medium bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow-md rounded-lg transition-all duration-200 active:scale-95"
-            isLoading={createMut.isPending}
+            isLoading={updateMut.isPending}
           >
-            Add task
+            Save changes
           </Button>
         </div>
       }
     >
-      <form id="todo-form" onSubmit={handleCreate} className="flex flex-col gap-4 py-2" noValidate>
-        {/* Task Name Input */}
-        <div
-          className={`${TODO_FIELD_WRAPPER_CLASS} ${error ? 'border-danger/40 bg-danger/5' : ''} animate-in fade-in slide-in-from-bottom-4 duration-500`}
-          style={{ animationDelay: '0ms', animationFillMode: 'backwards' }}
-        >
+      <form id="todo-edit-form" onSubmit={handleSave} className="flex flex-col gap-4 py-2" noValidate>
+        <div className={`${TODO_FIELD_WRAPPER_CLASS} ${error ? 'border-danger/40 bg-danger/5' : ''}`}>
           <Input
             autoFocus
             label="What needs to be done?"
@@ -106,11 +87,7 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
           />
         </div>
 
-        {/* Due Date Selector */}
-        <div
-          className={`${TODO_FIELD_WRAPPER_CLASS} animate-in fade-in slide-in-from-bottom-4 duration-500`}
-          style={{ animationDelay: '75ms', animationFillMode: 'backwards' }}
-        >
+        <div className={TODO_FIELD_WRAPPER_CLASS}>
           <label className={TODO_FIELD_LABEL_CLASS}>
             Due date <span className="text-text-light font-normal ml-1">(optional)</span>
           </label>
@@ -122,10 +99,7 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
           />
         </div>
 
-        <div
-          className={`${TODO_FIELD_WRAPPER_CLASS} animate-in fade-in slide-in-from-bottom-4 duration-500`}
-          style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}
-        >
+        <div className={TODO_FIELD_WRAPPER_CLASS}>
           <label className={TODO_FIELD_LABEL_CLASS}>Priority level</label>
           <div className="pt-1">
             <TaskFormPrioritySelector value={priority} onChange={setPriority} />

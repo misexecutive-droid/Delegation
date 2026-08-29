@@ -204,19 +204,23 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                 isDrawer ? 'px-3 py-3' : 'px-3 py-2.5',
                 showLabel ? 'justify-start' : 'md:justify-center md:px-0',
                 isActive || hasActiveChild
-                  ? 'text-white font-bold dark:text-primary-300'
+                  ? 'text-primary-700 font-bold dark:text-primary-300'
                   : 'text-text-secondary font-semibold hover:bg-surface-hover hover:text-text',
               ].join(' ')
             }
           >
             {({ isActive }) => (
               <>
+                {/* Gentle tint + left-accent bar (not a solid fill) — the accent bar lives inside
+                    this same layoutId'd span so it slides together with the tint between items. */}
                 {(isActive || hasActiveChild) && (
                   <motion.span
                     layoutId={`sidebar-active-pill-${isDrawer ? 'drawer' : 'desktop'}`}
-                    className="absolute inset-0 rounded-xl bg-primary-700 dark:bg-primary-900/20"
+                    className="absolute inset-0 rounded-xl bg-primary-500/10 dark:bg-primary-400/10"
                     transition={{ type: 'spring', stiffness: 500, damping: 40, mass: 0.5 }}
-                  />
+                  >
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-[60%] w-[3px] rounded-r-full bg-primary-600 dark:bg-primary-400" />
+                  </motion.span>
                 )}
                 <span
                   className={[

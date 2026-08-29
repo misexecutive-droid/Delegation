@@ -42,7 +42,11 @@ export const Dashboard = () => {
           <PullToRefresh onRefresh={handleRefresh} className="relative z-10 h-full overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 
             <div className="p-4 sm:p-6 lg:p-8 xl:p-10 pb-44 md:pb-8 max-w-[1600px] mx-auto w-full min-h-full flex flex-col">
-              <AnimatePresence mode="wait">
+              {/* No mode="wait" here on purpose — that would force the outgoing page's exit
+                  animation to fully finish (350ms) before the incoming page even starts entering,
+                  doubling every sidebar navigation's perceived delay to ~700ms. Default (sync)
+                  mode lets enter and exit run concurrently instead. */}
+              <AnimatePresence>
                 <motion.div
                   key={location.pathname}
                   initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}

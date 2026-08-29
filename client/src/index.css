@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -50,8 +50,8 @@
   --color-text-muted: #6f7783;
   --color-text-light: #9aa1ad;
   --color-white: #ffffff;
-  --font-sans: "Nunito Sans", "Calibri", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Nunito Sans", "Century Gothic", "Segoe UI", sans-serif;
+  --font-sans: "Poppins", "Calibri", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Poppins", "Century Gothic", "Segoe UI", sans-serif;
   --container-width: min(90rem, 100% - 2rem);
   --sidebar-width: 18rem;
   --header-height: 4.5rem;
@@ -158,13 +158,13 @@ html, body {
   overscroll-behavior-y: none;
 }
 
-/* Nunito Sans everywhere by default. Until now it only reached the page via scattered `font-sans`/
+/* Poppins everywhere by default. Until now it only reached the page via scattered `font-sans`/
    `font-display` utility classes on individual elements — anything without one of those (plenty of
    spans/divs/inputs across the app) silently fell back to the browser's default sans-serif. Setting
    it once on body means every element inherits it, including content Radix portals straight onto
    body (dialogs, dropdowns, tooltips) that live outside the app's own component tree. The
    `font-sans`/`font-display` utility classes still work exactly as before — they already point at
-   the same Nunito Sans-first stack, so this doesn't change anything already using them. */
+   the same Poppins-first stack, so this doesn't change anything already using them. */
 body {
   font-family: var(--font-sans);
 }

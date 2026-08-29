@@ -111,7 +111,10 @@ export const Modal = ({
       {footer && (
         <div
           className={cn(
-            'shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end px-5 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:pb-3.5 bg-surface-hover/40 border-t border-border/40',
+            // No footer tint (was bg-surface-hover/40) — that band read as an off-color smudge
+            // breaking the modal's otherwise flat surface instead of a deliberate section. The
+            // border-t alone still separates the footer from the scrollable body above it.
+            'shrink-0 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end px-5 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:pb-3.5 border-t border-border/40',
             footerClassName,
           )}
         >

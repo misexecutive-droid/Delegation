@@ -34,13 +34,26 @@ export const TicketQuickAttributes = ({
     STATUS_OPTIONS.find(s => s.value === ticket.status)?.label ?? ticket.status,
   );
 
+  // Same "tinted fill + colored border" feedback as a selected card in a picker grid — applied on
+  // hover/focus-within instead of a fixed selected state, since these are always-live info panels,
+  // not options being chosen. Built from the app's own primary token, not a literal reference-image
+  // sky blue, so it stays on-brand and correct in both themes automatically.
+  const cardClass =
+    'flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40 transition-colors duration-200 ' +
+    'hover:bg-primary-500/5 hover:border-primary-500/30 focus-within:bg-primary-500/5 focus-within:border-primary-500/40';
+
+  // Bumped from font-medium/text-text-muted — at 10px, the lighter weight and flatter gray read as
+  // dull/hard to scan; semibold + the slightly darker text-secondary token (still not full-strength
+  // text) keeps it a label, not a value, but with enough presence to actually notice.
+  const attributeLabelClass = 'text-[10px] capitalize text-text-secondary font-semibold flex items-center gap-1';
+
   return (
     <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-surface-muted/40 border border-border/50">
 
       {/* Status Control */}
-      <div className="flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40">
-        <label className="text-[10px] uppercase text-text-muted font-medium flex items-center gap-1">
-          <Tag size={11} /> Status
+      <div className={cardClass}>
+        <label className={attributeLabelClass}>
+          <Tag size={11} className="text-primary-500" /> Status
         </label>
         {canChangeStatus && isVerifier ? (
           <Dropdown
@@ -64,9 +77,9 @@ export const TicketQuickAttributes = ({
       </div>
 
       {/* Priority Badge */}
-      <div className="flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40">
-        <label className="text-[10px] uppercase text-text-muted font-medium flex items-center gap-1">
-          <Sparkles size={11} /> Priority
+      <div className={cardClass}>
+        <label className={attributeLabelClass}>
+          <Sparkles size={11} className="text-primary-500" /> Priority
         </label>
         <span className={`text-xs font-medium px-2 py-1 rounded-md border w-fit ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}>
           {ticket.priority}
@@ -74,9 +87,9 @@ export const TicketQuickAttributes = ({
       </div>
 
       {/* Assignee Selection */}
-      <div className="flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40">
-        <label className="text-[10px] uppercase text-text-muted font-medium flex items-center gap-1">
-          <UserCheck size={11} /> Assignee
+      <div className={cardClass}>
+        <label className={attributeLabelClass}>
+          <UserCheck size={11} className="text-primary-500" /> Assignee
         </label>
         {canAssign ? (
           <Dropdown
@@ -114,18 +127,18 @@ export const TicketQuickAttributes = ({
       </div>
 
       {/* SLA / Due Date Info */}
-      <div className="flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40">
-        <label className="text-[10px] uppercase text-text-muted font-medium flex items-center gap-1">
-          <Clock size={11} /> SLA Deadline
+      <div className={cardClass}>
+        <label className={attributeLabelClass}>
+          <Clock size={11} className="text-primary-500" /> SLA Deadline
         </label>
         {ticket.tatDueAt ? (
           <div className="flex items-center gap-1.5 py-0.5">
-            <span className={`text-xs font-medium ${isOverdue ? 'text-rose-500 font-bold' : 'text-text-secondary'}`}>
+            <span className={`text-xs font-medium ${isOverdue ? 'text-danger font-bold' : 'text-text-secondary'}`}>
               {new Date(ticket.tatDueAt).toLocaleDateString()}
             </span>
             {isOverdue && (
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse">
-                OVERDUE
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-danger/10 text-danger border border-danger/20 animate-pulse">
+                Overdue
               </span>
             )}
           </div>

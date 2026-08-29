@@ -1,21 +1,14 @@
-import { Trash2, Check, ListTodo, CalendarClock, CalendarX2, FilterX } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2, Check, Pencil, ListTodo, CalendarClock, CalendarX2, FilterX } from 'lucide-react';
 import { Loader, Skeleton } from '../../components';
 import { ErrorMessage, EmptyState } from '../admin/adminDisplay';
 import { PRIORITY_MAP } from '../tasks/taskDisplay';
 import { useTodosQuery, useUpdateTodoMutation, useDeleteTodoMutation } from './hook';
 import { isSameDay, relativeDayLabel } from './todoDate';
 import { TODO_QUICK_FILTER_PREDICATES } from './todoQuickFilters';
+import { EditTodoModal } from './EditTodoModal';
 import type { TodoQuickFilterKey } from './TodoQuickStats';
-import type { Todo, TodoPriority } from '../../api/todos';
-
-// Outline chip style for the priority badge here — white bg, colored border + text — rather than
-// the tinted-bg PRIORITY_MAP.className used on Task cards elsewhere; kept local to Todo like the
-// rest of todoFormStyles.ts's overrides, so Task board styling is untouched.
-const PRIORITY_OUTLINE_CLASS: Record<TodoPriority, string> = {
-  low: 'border-border text-text-muted',
-  medium: 'border-warning text-warning',
-  high: 'border-danger text-danger',
-};
+import type { Todo } from '../../api/todos';
 
 interface TodoListProps {
   // When set, only todos due on this exact day are shown (both pending and completed) — used by
@@ -33,6 +26,7 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
   const { data: allTodos = [], isPending, isError } = useTodosQuery();
   const updateMut = useUpdateTodoMutation();
   const deleteMut = useDeleteTodoMutation();
+  const [editing, setEditing] = useState<Todo | null>(null);
 
   const dateFiltered = selectedDate
     ? allTodos.filter((t) => !!t.dueDate && isSameDay(new Date(t.dueDate), selectedDate))
@@ -59,25 +53,32 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
         style={{ animationFillMode: 'backwards', animationDelay: `${index * 40}ms` }}
       >
         {/* Doubles as the priority cue (soft-tinted when open) and the "mark done" control (solid
-            fill once completed) — same soft-chip language used for icons across the app. */}
+            fill once completed) — same soft-chip language used for icons across the app. The key
+            on the inner icon replays a quick pop-in whenever the completed state actually flips,
+            instead of the checkmark just silently appearing. */}
         <button
           type="button"
           onClick={() => toggleComplete(todo.id, todo.completed)}
           disabled={isToggling}
           aria-pressed={todo.completed}
           aria-label={todo.completed ? 'Mark as not done' : 'Mark as done'}
-          className={`shrink-0 flex items-center justify-center size-11 rounded-xl transition-all duration-200 cursor-pointer disabled:cursor-wait ${
+          className={`shrink-0 flex items-center justify-center size-11 rounded-xl transition-all duration-200 cursor-pointer active:scale-90 disabled:cursor-wait ${
             todo.completed ? 'bg-primary-600 text-white shadow-sm shadow-primary-600/25' : priorityMeta.className
           }`}
         >
           {isToggling ? (
             <Loader size="sm" variant="slate" className="w-4 h-4" />
           ) : (
-            <Check size={18} strokeWidth={2.5} className={todo.completed ? '' : 'opacity-30'} />
+            <Check
+              key={todo.completed ? 'done' : 'undone'}
+              size={18}
+              strokeWidth={2.5}
+              className={`animate-in zoom-in-50 duration-300 ${todo.completed ? '' : 'opacity-30'}`}
+            />
           )}
         </button>
 
-        <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
           <p
             className={`text-sm sm:text-[15px] font-display font-medium truncate transition-colors duration-200 ${
               todo.completed ? 'text-text-light line-through' : 'text-text'
@@ -87,7 +88,10 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
           </p>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex items-center gap-1 text-[10px] font-display font-bold px-1.5 py-0.5 rounded-full border bg-surface ${PRIORITY_OUTLINE_CLASS[todo.priority]}`}>
+            {/* Muted pastel chip — reuses the same soft-tinted token classes as the checkbox above
+                (bg-{status}/10 + text-{status}) instead of a separate outline style, so priority
+                reads as one consistent color language across the row. */}
+            <span className={`inline-flex items-center gap-1 text-[10px] font-display font-bold px-2 py-0.5 rounded-full transition-colors duration-200 ${priorityMeta.className}`}>
               {priorityMeta.label}
             </span>
             {todo.dueDate ? (
@@ -101,15 +105,27 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => deleteMut.mutate(todo.id)}
-          disabled={isDeleting}
-          aria-label="Delete todo"
-          className="shrink-0 p-2 rounded-lg text-text-light/70 hover:text-danger hover:bg-danger/10 transition-all duration-200 cursor-pointer disabled:opacity-50"
-        >
-          {isDeleting ? <Loader size="sm" variant="rose" className="w-3.5 h-3.5" /> : <Trash2 size={14} />}
-        </button>
+        {/* Quick actions — always reachable (and full-size) on touch, but fade in as a subtle
+            hover reveal on pointer devices so the resting row stays clean like the reference. */}
+        <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:-translate-x-1 sm:group-hover:opacity-100 sm:group-hover:translate-x-0 sm:group-focus-within:opacity-100 sm:group-focus-within:translate-x-0 transition-all duration-200">
+          <button
+            type="button"
+            onClick={() => setEditing(todo)}
+            aria-label="Edit todo"
+            className="p-2 rounded-lg text-text-light/70 hover:text-primary-600 hover:bg-primary-500/10 transition-all duration-200 cursor-pointer"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => deleteMut.mutate(todo.id)}
+            disabled={isDeleting}
+            aria-label="Delete todo"
+            className="p-2 rounded-lg text-text-light/70 hover:text-danger hover:bg-danger/10 transition-all duration-200 cursor-pointer disabled:opacity-50"
+          >
+            {isDeleting ? <Loader size="sm" variant="rose" className="w-3.5 h-3.5" /> : <Trash2 size={14} />}
+          </button>
+        </div>
       </div>
     );
   };
@@ -158,6 +174,8 @@ export const TodoList = ({ selectedDate = null, quickFilter = null }: TodoListPr
           {completed.map((todo, i) => renderRow(todo, i))}
         </div>
       )}
+
+      {editing && <EditTodoModal todo={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 };

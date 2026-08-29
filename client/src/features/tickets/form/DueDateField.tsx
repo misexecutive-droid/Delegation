@@ -37,7 +37,9 @@ export const DueDateField = ({ mode, watch, setValue, errors, categoryTatHours }
   };
 
   return (
-    <AnimatePresence mode="wait">
+    // No mode="wait" — that would force the outgoing section to fully exit before the incoming
+    // one starts entering, adding a sequential delay to what should be an instant mode switch.
+    <AnimatePresence>
       {mode === 'MANUAL' ? (
         <motion.div
           key="manual-tat"

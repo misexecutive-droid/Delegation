@@ -137,8 +137,9 @@ export const TicketFiltersPopover = ({
                   type="button"
                   onClick={() => updateDraft(d => ({ ...d, assigneeIds: toggleValue(d.assigneeIds, u.id) }))}
                   title={name}
+                  aria-label={name}
                   aria-pressed={selected}
-                  className={`relative flex items-center justify-center size-9 rounded-full text-[12px] font-bold text-white transition-all duration-200 cursor-pointer ${avatarColorClass(name)} ${
+                  className={`relative flex items-center justify-center size-11 rounded-full text-[12px] font-bold text-white transition-all duration-200 cursor-pointer ${avatarColorClass(name)} ${
                     selected ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-background shadow-md' : 'opacity-60 hover:opacity-100 hover:scale-105 hover:shadow-sm'
                   }`}
                 >
@@ -167,8 +168,9 @@ export const TicketFiltersPopover = ({
                   type="button"
                   onClick={() => updateDraft(d => ({ ...d, raisedByIds: toggleValue(d.raisedByIds, u.id) }))}
                   title={name}
+                  aria-label={name}
                   aria-pressed={selected}
-                  className={`relative flex items-center justify-center size-9 rounded-full text-[12px] font-bold text-white transition-all duration-200 cursor-pointer ${avatarColorClass(name)} ${
+                  className={`relative flex items-center justify-center size-11 rounded-full text-[12px] font-bold text-white transition-all duration-200 cursor-pointer ${avatarColorClass(name)} ${
                     selected ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-background shadow-md' : 'opacity-60 hover:opacity-100 hover:scale-105 hover:shadow-sm'
                   }`}
                 >

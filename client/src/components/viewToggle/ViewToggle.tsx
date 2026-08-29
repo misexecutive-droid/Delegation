@@ -26,9 +26,11 @@ export function ViewToggle<V extends string>({ tabs, value, onChange }: ViewTogg
           title={`${tab.label} view`}
           aria-label={`${tab.label} view`}
           aria-pressed={value === tab.key}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer outline-none active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer outline-none active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
             value === tab.key
-              ? 'bg-background text-text border border-border ring-1 ring-border/50 shadow-sm'
+              // Solid fill (not a faint background+ring) so the active view is unmistakable at a
+              // glance instead of blending into its own resting/hover states in dark mode.
+              ? 'bg-primary-600 text-white shadow-sm shadow-primary-600/25'
               : 'text-text-muted hover:text-text-secondary hover:bg-surface-active/50'
           }`}
         >

@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { LABEL_CLASS, PRIORITIES, type TicketPriority } from './formConstants';
 
 interface PriorityFieldProps {
@@ -17,11 +18,16 @@ export const PriorityField = ({ value, onChange }: PriorityFieldProps) => (
             type="button"
             aria-pressed={isSelected}
             onClick={() => onChange(p.value)}
-            className={`h-8 px-3.5 text-xs font-display font-semibold rounded-full border bg-surface transition-all duration-150 cursor-pointer ${
-              isSelected ? p.selectedClass : `${p.outlineClass} hover:border-border-hover`
+            // border-2 (not the default 1px) plus a checkmark on the selected chip — a faint
+            // background tint alone wasn't a strong enough signal for which priority was active.
+            className={`h-8 px-3.5 text-xs font-display font-semibold rounded-full border-2 bg-surface transition-all duration-150 cursor-pointer outline-none active:scale-95 focus-visible:ring-2 focus-visible:ring-primary-500/40 ${
+              isSelected ? `${p.selectedClass} shadow-sm` : `${p.outlineClass} hover:border-border-hover`
             }`}
           >
-            {p.label}
+            <span className="inline-flex items-center gap-1">
+              {isSelected && <Check size={12} strokeWidth={3} />}
+              {p.label}
+            </span>
           </button>
         );
       })}

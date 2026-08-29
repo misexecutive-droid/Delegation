@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo, type DragEvent, type KeyboardEvent } from 'react';
-import { UploadCloud, X } from 'lucide-react';
+import { UploadCloud, X, ImageOff } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -20,15 +20,27 @@ interface ImageUploaderProps {
 function ImagePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
   const url = useMemo(() => URL.createObjectURL(file), [file]);
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  // A failed/broken <img> falls back to browser-native alt-text rendering, which doesn't reliably
+  // respect this container's own sizing/overflow-hidden — swapping to a fully custom, correctly
+  // contained fallback avoids that instead of fighting the browser's own broken-image layout.
+  const [failed, setFailed] = useState(false);
 
   return (
     <div className="group relative aspect-square rounded-xl border border-border overflow-hidden bg-surface-hover shrink-0 shadow-sm transition-all duration-300 hover:shadow-md animate-in fade-in zoom-in-95">
-      {url && (
+      {url && !failed ? (
         <img
           src={url}
           alt={file.name}
+          onError={() => setFailed(true)}
           className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
+      ) : (
+        <div className="size-full flex flex-col items-center justify-center gap-1.5 p-2 text-text-light">
+          <ImageOff size={18} strokeWidth={1.75} />
+          <span className="text-[10px] font-medium text-text-muted text-center leading-tight line-clamp-2 break-words">
+            {file.name}
+          </span>
+        </div>
       )}
       <button
         type="button"

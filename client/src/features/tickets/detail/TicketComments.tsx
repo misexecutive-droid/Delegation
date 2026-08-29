@@ -50,7 +50,9 @@ export const TicketComments = ({
     </div>
 
     <div className="flex flex-col gap-2">
+      <label htmlFor="ticket-comment-input" className="sr-only">Write a comment</label>
       <textarea
+        id="ticket-comment-input"
         value={commentText}
         onChange={e => onCommentTextChange(e.target.value)}
         placeholder="Write a comment…"

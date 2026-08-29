@@ -83,7 +83,7 @@ export const TicketStatusHistory = ({ statusUpdates, onPreview }: TicketStatusHi
                 {/* Evidence Attachments */}
                 {su.photos && su.photos.length > 0 && (
                   <div className="flex flex-col gap-2 pt-2 mt-1 border-t border-border/40">
-                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-primary-500 uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-primary-500 capitalize tracking-wider">
                       <Camera size={11} />
                       <span>Evidence ({su.photos.length})</span>
                     </div>
