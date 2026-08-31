@@ -15,9 +15,6 @@ import {
 import { createId } from '@paralleldrive/cuid2';
 import { users, stores } from './core.js';
 
-// ---------------------------------------------------------------------------
-// Shared enum value arrays (reused by checklistInstance.ts)
-// ---------------------------------------------------------------------------
 
 export const CHECKLIST_RECURRENCES = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'ONE_TIME'] as const;
 export type ChecklistRecurrence = (typeof CHECKLIST_RECURRENCES)[number];
@@ -41,6 +38,7 @@ export const CHECKLIST_ICONS = [
   'shield-check',
   'calendar',
 ] as const;
+
 export const CHECKLIST_ITEM_TYPES = [
   'STANDARD',
   'AUDIT',
@@ -59,26 +57,21 @@ export const CHECKLIST_ITEM_TYPES = [
   'CASH_TALLY',
   'VIDEO_UPLOAD',
 ] as const;
+
 export const CHECKLIST_CONDITIONAL_ACTIONS = [
   'REQUIRE_PHOTO',
   'ASK_REASON',
   'CREATE_ISSUE',
   'NOTIFY_AREA_MANAGER',
 ] as const;
-// Used by both ChecklistDefinitionItem.conditionalTrigger and
-// ChecklistInstanceItem.{conditionalTrigger,booleanAnswer}.
+
 export const YES_NO_VALUES = ['YES', 'NO'] as const;
 
-// ---------------------------------------------------------------------------
-// ChecklistDefinition — recurring checklist "template" scoped to stores
-// ---------------------------------------------------------------------------
+
 export const checklistDefinitions = mysqlTable('ChecklistDefinition', {
   id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
   name: varchar('name', { length: 191 }).notNull(),
   description: text('description'),
-  // Mongoose enforced storeIds.length >= 1 via a custom path validator; that
-  // "junction table must have at least one row" rule has no schema equivalent
-  // here and must be enforced at the application/service layer.
   recurrence: mysqlEnum('recurrence', CHECKLIST_RECURRENCES).notNull(),
   startDate: datetime('startDate', { mode: 'date' }).notNull(),
   opensTime: varchar('opensTime', { length: 5 }), // HH:mm, validated at app layer
@@ -93,7 +86,6 @@ export const checklistDefinitions = mysqlTable('ChecklistDefinition', {
   updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
 });
 
-// ChecklistDefinition.storeIds — many-to-many junction (ChecklistDefinition <-> Store)
 export const checklistDefinitionStores = mysqlTable(
   'ChecklistDefinitionStore',
   {
@@ -107,13 +99,10 @@ export const checklistDefinitionStores = mysqlTable(
   (table) => [uniqueIndex('ChecklistDefinitionStore_definitionId_storeId_key').on(table.definitionId, table.storeId)],
 );
 
-// ChecklistDefinition.assigneeIds — many-to-many junction (ChecklistDefinition <-> User)
 export const checklistDefinitionAssignees = mysqlTable(
   'ChecklistDefinitionAssignee',
   {
     id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
-    // No `.references()` here — the default constraint name would exceed
-    // MySQL's 64-char identifier limit; declared explicitly below instead.
     definitionId: varchar('definitionId', { length: 191 }).notNull(),
     userId: varchar('userId', { length: 191 }).notNull().references(() => users.id),
     createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
@@ -128,11 +117,6 @@ export const checklistDefinitionAssignees = mysqlTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// ChecklistDefinitionItem — wide, sparse single-table-polymorphism item
-// (meaning of most fields depends on `itemType`); kept as one wide table to
-// match the source's own design rather than normalizing per item type.
-// ---------------------------------------------------------------------------
 export const checklistDefinitionItems = mysqlTable(
   'ChecklistDefinitionItem',
   {
@@ -166,13 +150,10 @@ export const checklistDefinitionItems = mysqlTable(
   (table) => [index('ChecklistDefinitionItem_definitionId_idx').on(table.definitionId)],
 );
 
-// ChecklistDefinitionItem.auditUserIds — many-to-many junction (used for AUDIT-type items)
 export const checklistDefinitionItemAuditUsers = mysqlTable(
   'ChecklistDefinitionItemAuditUser',
   {
     id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
-    // No `.references()` here — the default constraint name would exceed
-    // MySQL's 64-char identifier limit; declared explicitly below instead.
     itemId: varchar('itemId', { length: 191 }).notNull(),
     userId: varchar('userId', { length: 191 }).notNull().references(() => users.id),
     createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),

@@ -12,13 +12,14 @@ export const checklistInstanceController = {
         res.json({ success: true, data: instances })
     }),
 
-    // GET /checklist-instances?definitionId=&storeId=&status=  (ADMIN only)
+    // GET /checklist-instances?definitionId=&storeId=&status=&assigneeId=  (ADMIN only)
     list: asyncHandler(async (req: Request, res: Response) => {
-        const { definitionId, storeId, status } = req.query
+        const { definitionId, storeId, status, assigneeId } = req.query
         const instances = await checklistInstanceService.listAll({
             definitionId: definitionId as string | undefined,
             storeId: storeId as string | undefined,
             status: status as InstanceStatusFilter | undefined,
+            assigneeId: assigneeId as string | undefined,
         })
         res.json({ success: true, data: instances })
     }),

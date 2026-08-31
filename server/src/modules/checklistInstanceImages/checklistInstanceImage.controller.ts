@@ -4,9 +4,7 @@ import { uploadChecklistInstanceImageSchema } from "../checklistInstances/checkl
 import { asyncHandler } from "../../utils/asyncHandler.js"
 
 export const checklistInstanceImageController = {
-    // POST /checklist-instance-items/:id/images — multipart/form-data, handled by the
-    // `checklistInstanceImageUpload` multer middleware applied directly on the route (see
-    // checklistInstance.routes.ts).
+
     upload: asyncHandler(async (req: Request, res: Response) => {
         const { captureMethod } = uploadChecklistInstanceImageSchema.parse(req.body);
         const files = (req.files as Express.Multer.File[]) ?? [];

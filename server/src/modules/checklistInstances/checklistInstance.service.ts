@@ -276,6 +276,7 @@ export type ItemValueInput = {
     signatureValue?: string
     secondSignatureValue?: string
     conditionalReasonValue?: string
+    remarks?: string
 }
 
 // One validator per value-bearing item type, keyed by itemType — a lookup instead of an
@@ -427,10 +428,19 @@ export const checklistInstanceService = {
         return filterByStatus(await hydrateInstances(instanceRows), status)
     },
 
-    async listAll(filter: { definitionId?: string; storeId?: string; status?: InstanceStatusFilter }) {
+    async listAll(filter: { definitionId?: string; storeId?: string; status?: InstanceStatusFilter; assigneeId?: string }) {
         const conditions = []
         if (filter.definitionId) conditions.push(eq(checklistInstances.definitionId, filter.definitionId))
         if (filter.storeId) conditions.push(eq(checklistInstances.storeId, filter.storeId))
+        if (filter.assigneeId) {
+            // Same two-step pattern as getMine — assigneeIds lives in the junction table, not on
+            // ChecklistInstance itself, so resolve matching instance ids first.
+            const links = await db.select({ instanceId: checklistInstanceAssignees.instanceId })
+                .from(checklistInstanceAssignees)
+                .where(eq(checklistInstanceAssignees.userId, filter.assigneeId))
+            if (!links.length) return []
+            conditions.push(inArray(checklistInstances.id, links.map((l) => l.instanceId)))
+        }
 
         const instanceRows = await db.select().from(checklistInstances)
             .where(conditions.length ? and(...conditions) : undefined)
@@ -478,6 +488,7 @@ export const checklistInstanceService = {
         if (values.signatureValue !== undefined) patch.signatureValue = values.signatureValue
         if (values.secondSignatureValue !== undefined) patch.secondSignatureValue = values.secondSignatureValue
         if (values.conditionalReasonValue !== undefined) patch.conditionalReasonValue = values.conditionalReasonValue
+        if (values.remarks !== undefined) patch.remarks = values.remarks
 
         // Validators need to see the patched values (e.g. a just-submitted conditionalReasonValue)
         // the same way the original code validated against the already-`.save()`d in-memory
@@ -539,11 +550,25 @@ export const checklistInstanceService = {
                 updatedAt: new Date(),
             }).where(eq(checklistInstances.id, id))
         } else {
-            await db.update(checklistInstances).set({
-                verificationStatus: "REJECTED",
-                verificationNote: input.note ?? null,
-                updatedAt: new Date(),
-            }).where(eq(checklistInstances.id, id))
+            // A reject sends the whole checklist back, not just a status label: bump
+            // rejectionCount (so a later APPROVE is never counted as "first-attempt" for the
+            // quality score below) and reopen every item so the assignee has a genuinely
+            // incomplete checklist to fix and resubmit — matches the "re-check everything to
+            // resubmit" copy already shown on the instance detail page for REJECTED.
+            await db.transaction(async (tx) => {
+                await tx.update(checklistInstances).set({
+                    verificationStatus: "REJECTED",
+                    verificationNote: input.note ?? null,
+                    rejectionCount: sql`${checklistInstances.rejectionCount} + 1`,
+                    updatedAt: new Date(),
+                }).where(eq(checklistInstances.id, id))
+                await tx.update(checklistInstanceItems).set({
+                    isDone: false,
+                    completedAt: null,
+                    completedBy: null,
+                    updatedAt: new Date(),
+                }).where(eq(checklistInstanceItems.instanceId, id))
+            })
         }
 
         const assigneeLinks = await db.select({ userId: checklistInstanceAssignees.userId }).from(checklistInstanceAssignees).where(eq(checklistInstanceAssignees.instanceId, id))
@@ -569,6 +594,18 @@ export const checklistInstanceService = {
 
         // db.execute() on the mysql2 driver resolves to the raw mysql2 tuple [rows, fields],
         // NOT a plain row array — must destructure element 0 (see task.service.ts#complianceReport).
+        //
+        // doneItems is naturally dampened by a rejection now: verify()'s REJECT path resets every
+        // item on the instance back to isDone=false, so a rejected-and-not-yet-fixed checklist's
+        // items simply don't count toward completion until the assignee actually redoes them —
+        // no extra WHERE clause needed here for that.
+        //
+        // submittedInstances/firstAttemptApproved are instance-level counts (COUNT DISTINCT ci.id)
+        // computed inside the same item-level GROUP BY — safe because every item of one instance
+        // shares that instance's periodStart, so an instance can never straddle two buckets.
+        // firstAttemptApproved only counts an APPROVED instance whose rejectionCount is still 0 —
+        // one that was ever sent back and later fixed no longer counts as "first attempt," even
+        // though it's now approved.
         const [rows] = await db.execute(sql`
             SELECT
                 DATE_FORMAT(ci.periodStart, ${DATE_FORMATS[groupBy]}) AS bucket,
@@ -579,7 +616,9 @@ export const checklistInstanceService = {
                     CASE WHEN cii.requiredImageCount > 0
                         AND (CASE WHEN cii.requiresLivePhoto THEN COALESCE(img.liveCount, 0) ELSE COALESCE(img.totalCount, 0) END) >= cii.requiredImageCount
                     THEN 1 ELSE 0 END
-                ) AS photoCompliantItems
+                ) AS photoCompliantItems,
+                COUNT(DISTINCT CASE WHEN ci.verificationStatus IN ('PENDING', 'APPROVED', 'REJECTED') OR ci.rejectionCount > 0 THEN ci.id END) AS submittedInstances,
+                COUNT(DISTINCT CASE WHEN ci.verificationStatus = 'APPROVED' AND ci.rejectionCount = 0 THEN ci.id END) AS firstAttemptApproved
             FROM ChecklistInstanceItem cii
             JOIN ChecklistInstance ci ON ci.id = cii.instanceId
             LEFT JOIN (
@@ -598,6 +637,9 @@ export const checklistInstanceService = {
             completionRate: Number(r.totalItems) ? Math.round((Number(r.doneItems) / Number(r.totalItems)) * 1000) / 10 : null,
             itemsRequiringPhotos: Number(r.itemsRequiringPhotos),
             qualityRate: Number(r.itemsRequiringPhotos) ? Math.round((Number(r.photoCompliantItems) / Number(r.itemsRequiringPhotos)) * 1000) / 10 : null,
+            submittedInstances: Number(r.submittedInstances),
+            firstAttemptApproved: Number(r.firstAttemptApproved),
+            approvalRate: Number(r.submittedInstances) ? Math.round((Number(r.firstAttemptApproved) / Number(r.submittedInstances)) * 1000) / 10 : null,
         }));
     },
 }

@@ -235,6 +235,33 @@ const taskAttachmentMulter = multer({
 export const taskAttachmentUpload = (req : Request , res : Response , next : NextFunction) =>
     taskAttachmentMulter.array("files", TASK_ATTACHMENT_MAX_FILES)(req, res, next)
 
+// Bulk checklist-assignment import (see checklistBulkImport module) — the uploaded file (CSV,
+// Excel, or a best-effort PDF) only exists to be parsed into rows; unlike every other upload
+// above, nothing about it needs to persist afterward, so this is the one upload in the app that
+// uses memoryStorage instead of a disk folder — there's no uploads/ subdirectory to create or
+// clean up for it.
+const CHECKLIST_BULK_IMPORT_MIME_TYPES = [
+    "text/csv",
+    "application/vnd.ms-excel", // some browsers/OSes report .csv as this instead of text/csv
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/pdf",
+]
+const CHECKLIST_BULK_IMPORT_MAX_SIZE_MB = 10
+
+const checklistBulkImportMulter = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: CHECKLIST_BULK_IMPORT_MAX_SIZE_MB * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (!CHECKLIST_BULK_IMPORT_MIME_TYPES.includes(file.mimetype)) {
+            return cb(null, false)
+        }
+        cb(null, true)
+    },
+})
+
+export const checklistBulkImportUpload = (req : Request , res : Response , next : NextFunction) =>
+    checklistBulkImportMulter.single("file")(req, res, next)
+
 // Comment attachments reuse the same allowed types/limits as task-level attachments — same kind
 // of files (docs/images/video), just scoped to one comment instead of the whole task.
 const taskCommentAttachmentMulter = multer({

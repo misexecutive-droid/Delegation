@@ -10,8 +10,6 @@ import type { AccessTokenPayload } from "../../middleware/auth/auth.js"
 
 const UPLOAD_DIR = "checklist-instance-submissions"
 
-// Best-effort cleanup for files multer already wrote to disk before a validation check below
-// rejects the request — same fire-and-forget pattern as remove()'s disk delete.
 const discardFiles = (files: Express.Multer.File[]) => files.forEach((f) => fs.unlink(f.path, () => {}))
 
 export const checklistInstanceItemSubmissionImageService = {

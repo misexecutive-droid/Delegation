@@ -4,7 +4,6 @@ import { uploadChecklistInstanceItemSubmissionImageSchema } from "../checklistIn
 import { asyncHandler } from "../../utils/asyncHandler.js"
 
 export const checklistInstanceItemSubmissionImageController = {
-    // POST /checklist-instance-item-submissions/:id/images
     upload: asyncHandler(async (req: Request, res: Response) => {
         const { captureMethod } = uploadChecklistInstanceItemSubmissionImageSchema.parse(req.body)
         const files = (req.files as Express.Multer.File[]) ?? []
@@ -12,7 +11,6 @@ export const checklistInstanceItemSubmissionImageController = {
         res.status(201).json({ success: true, data: images })
     }),
 
-    // DELETE /checklist-instance-item-submission-images/:id
     remove: asyncHandler(async (req: Request, res: Response) => {
         await checklistInstanceItemSubmissionImageService.remove(req.params.id, req.user!)
         res.json({ success: true, data: { deleted: true } })

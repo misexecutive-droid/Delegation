@@ -26,10 +26,7 @@ import {
 
 export const CHECKLIST_VERIFICATION_STATUSES = ['NOT_SUBMITTED', 'PENDING', 'APPROVED', 'REJECTED'] as const;
 
-// ---------------------------------------------------------------------------
-// ChecklistInstance — one stamped-out occurrence of a ChecklistDefinition for
-// a single store and time period
-// ---------------------------------------------------------------------------
+
 export const checklistInstances = mysqlTable(
   'ChecklistInstance',
   {
@@ -40,8 +37,8 @@ export const checklistInstances = mysqlTable(
     title: varchar('title', { length: 191 }).notNull(),
     recurrence: mysqlEnum('recurrence', CHECKLIST_RECURRENCES).notNull(),
     storeId: varchar('storeId', { length: 191 }).notNull().references(() => stores.id),
-    opensTime: varchar('opensTime', { length: 5 }), // copied from definition at stamp-out
-    cutoffTime: varchar('cutoffTime', { length: 5 }), // copied from definition at stamp-out
+    opensTime: varchar('opensTime', { length: 5 }), 
+    cutoffTime: varchar('cutoffTime', { length: 5 }), 
     periodKey: varchar('periodKey', { length: 191 }).notNull(),
     periodStart: datetime('periodStart', { mode: 'date' }).notNull(),
     periodEnd: datetime('periodEnd', { mode: 'date' }).notNull(),
@@ -52,6 +49,11 @@ export const checklistInstances = mysqlTable(
     verifiedBy: varchar('verifiedBy', { length: 191 }).references(() => users.id),
     verifiedAt: datetime('verifiedAt', { mode: 'date' }),
     verificationNote: text('verificationNote'),
+    // Bumped every time a PC/Admin rejects this instance — drives the "first-attempt approval"
+    // quality metric in complianceReport (an APPROVED instance only counts toward quality if it
+    // was never rejected first) and lets the UI distinguish "never rejected" from "fixed and
+    // resubmitted."
+    rejectionCount: int('rejectionCount').notNull().default(0),
     createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
     updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
   },
@@ -62,13 +64,9 @@ export const checklistInstances = mysqlTable(
       table.periodKey,
     ),
     index('ChecklistInstance_periodStart_idx').on(table.periodStart),
-    // Mongoose also indexed {assigneeIds:1, periodStart:-1}; that array now
-    // lives in the checklistInstanceAssignees junction table below — the
-    // closest equivalent is that table's userId index plus this periodStart index.
   ],
 );
 
-// ChecklistInstance.assigneeIds — many-to-many junction (ChecklistInstance <-> User)
 export const checklistInstanceAssignees = mysqlTable(
   'ChecklistInstanceAssignee',
   {
@@ -85,11 +83,7 @@ export const checklistInstanceAssignees = mysqlTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// ChecklistInstanceItem — per-run copy of a ChecklistDefinitionItem plus
-// answer fields (same wide single-table-polymorphism shape as its definition
-// counterpart, keyed by itemType).
-// ---------------------------------------------------------------------------
+
 export const checklistInstanceItems = mysqlTable(
   'ChecklistInstanceItem',
   {
@@ -97,8 +91,6 @@ export const checklistInstanceItems = mysqlTable(
     label: varchar('label', { length: 191 }).notNull(),
     order: int('order').notNull().default(0),
     isDone: boolean('isDone').notNull().default(false),
-    // Kept in sync with isDone by a service-layer helper (was a Mongoose pre('save') hook);
-    // completedBy is cleared on un-done but not auto-set on done (service sets it explicitly).
     completedAt: datetime('completedAt', { mode: 'date' }),
     completedBy: varchar('completedBy', { length: 191 }).references(() => users.id),
     requiredImageCount: int('requiredImageCount').notNull().default(0),
@@ -110,11 +102,9 @@ export const checklistInstanceItems = mysqlTable(
     numberEntryMin: float('numberEntryMin'),
     numberEntryMax: float('numberEntryMax'),
     ratingScale: int('ratingScale'),
-    numericValue: float('numericValue'), // shared slot for NUMBER_ENTRY/RATING/CASH_TALLY
+    numericValue: float('numericValue'),
     options: json('options').$type<string[]>(),
     booleanAnswer: mysqlEnum('booleanAnswer', YES_NO_VALUES),
-    // Shared slot for MULTIPLE_CHOICE/DROPDOWN/TEXT_BOX/QR_SCAN — TEXT_BOX answers
-    // can be long free text, so `text` is used rather than `varchar`.
     textValue: text('textValue'),
     dateValue: datetime('dateValue', { mode: 'date' }),
     gpsTargetLat: float('gpsTargetLat'),
@@ -126,13 +116,16 @@ export const checklistInstanceItems = mysqlTable(
     gpsCapturedAt: datetime('gpsCapturedAt', { mode: 'date' }),
     signatureLabels: json('signatureLabels').$type<string[]>(),
     signatureValue: text('signatureValue'), // PNG data URL
-    secondSignatureValue: text('secondSignatureValue'), // PNG data URL
+    secondSignatureValue: text('secondSignatureValue'), 
     qrExpectedValue: varchar('qrExpectedValue', { length: 191 }),
     cashExpectedAmount: float('cashExpectedAmount'),
     conditionalTrigger: mysqlEnum('conditionalTrigger', YES_NO_VALUES),
     conditionalActions: json('conditionalActions').$type<(typeof CHECKLIST_CONDITIONAL_ACTIONS)[number][]>(),
     conditionalReasonValue: text('conditionalReasonValue'),
-    // Links back to a Ticket created via the CREATE_ISSUE conditional action.
+    // Free-text note the assignee can leave on any item — required by the client once the item's
+    // parent instance is overdue and this item is still not done, so a genuinely-skipped step
+    // always carries an explanation instead of just silently sitting incomplete.
+    remarks: text('remarks'),
     issueId: varchar('issueId', { length: 191 }).references(() => tickets.id),
     instanceId: varchar('instanceId', { length: 191 })
       .notNull()
@@ -143,21 +136,14 @@ export const checklistInstanceItems = mysqlTable(
   (table) => [index('ChecklistInstanceItem_instanceId_idx').on(table.instanceId)],
 );
 
-// ---------------------------------------------------------------------------
-// ChecklistInstanceItemSubmission — one row per required auditor on an
-// AUDIT-type ChecklistInstanceItem
-// ---------------------------------------------------------------------------
 export const checklistInstanceItemSubmissions = mysqlTable(
   'ChecklistInstanceItemSubmission',
   {
     id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
-    // No `.references()` here — the default constraint name would exceed
-    // MySQL's 64-char identifier limit; declared explicitly below instead.
     itemId: varchar('itemId', { length: 191 }).notNull(),
     userId: varchar('userId', { length: 191 }).notNull().references(() => users.id),
     remarks: text('remarks'),
     isDone: boolean('isDone').notNull().default(false),
-    // Kept in sync with isDone by a service-layer helper (was a Mongoose pre('save') hook).
     completedAt: datetime('completedAt', { mode: 'date' }),
     createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
     updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
@@ -172,16 +158,10 @@ export const checklistInstanceItemSubmissions = mysqlTable(
   ],
 );
 
-// ChecklistInstanceItemSubmission.accessories — embedded array with
-// independently-toggled `checked` state per element; promoted to a real
-// child table (copied from the definition item's `accessories: string[]` at
-// stamp-out), with cascading delete.
 export const checklistInstanceItemSubmissionAccessories = mysqlTable(
   'ChecklistInstanceItemSubmissionAccessory',
   {
     id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
-    // No `.references()` here — the default constraint name would exceed
-    // MySQL's 64-char identifier limit; declared explicitly below instead.
     submissionId: varchar('submissionId', { length: 191 }).notNull(),
     name: varchar('name', { length: 191 }).notNull(),
     checked: boolean('checked').notNull().default(false),
@@ -198,9 +178,6 @@ export const checklistInstanceItemSubmissionAccessories = mysqlTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// ChecklistInstanceImage — photo proof captured against a ChecklistInstanceItem
-// ---------------------------------------------------------------------------
 export const checklistInstanceImages = mysqlTable(
   'ChecklistInstanceImage',
   {
@@ -210,8 +187,6 @@ export const checklistInstanceImages = mysqlTable(
     sizeBytes: int('sizeBytes').notNull(),
     mimeType: varchar('mimeType', { length: 191 }).notNull(),
     captureMethod: mysqlEnum('captureMethod', CAPTURE_METHODS).notNull(),
-    // No `.references()` here — the default constraint name would exceed
-    // MySQL's 64-char identifier limit; declared explicitly below instead.
     checklistInstanceItemId: varchar('checklistInstanceItemId', { length: 191 }).notNull(),
     uploadedBy: varchar('uploadedBy', { length: 191 }).notNull().references(() => users.id),
     createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
@@ -227,9 +202,7 @@ export const checklistInstanceImages = mysqlTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// ChecklistInstanceItemSubmissionImage — photo proof captured against a submission
-// ---------------------------------------------------------------------------
+
 export const checklistInstanceItemSubmissionImages = mysqlTable(
   'ChecklistInstanceItemSubmissionImage',
   {
@@ -239,8 +212,6 @@ export const checklistInstanceItemSubmissionImages = mysqlTable(
     sizeBytes: int('sizeBytes').notNull(),
     mimeType: varchar('mimeType', { length: 191 }).notNull(),
     captureMethod: mysqlEnum('captureMethod', CAPTURE_METHODS).notNull(),
-    // No `.references()` here — the default constraint name would exceed
-    // MySQL's 64-char identifier limit; declared explicitly below instead.
     submissionId: varchar('submissionId', { length: 191 }).notNull(),
     uploadedBy: varchar('uploadedBy', { length: 191 }).notNull().references(() => users.id),
     createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),

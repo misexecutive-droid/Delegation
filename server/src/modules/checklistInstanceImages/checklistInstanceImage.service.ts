@@ -7,10 +7,6 @@ import { createId } from "@paralleldrive/cuid2";
 import { AppError } from "../../utils/AppError.js";
 import type { AccessTokenPayload } from "../../middleware/auth/auth.js";
 
-// A recurring checklist instance has no per-item assignee (see ChecklistDefinitionItem.ts) — so
-// unlike the Ticket/Task side, "can upload" is checked against the whole instance's assigneeIds,
-// not a single item.assigneeId. assigneeIds is now the checklistInstanceAssignees junction table
-// rather than a real embedded array field.
 const assertCanUpload = async (user: AccessTokenPayload, item: { instanceId: string }) => {
     if (user.role === "ADMIN" || user.role === "PC") return;
     const [instance] = await db.select().from(checklistInstances).where(eq(checklistInstances.id, item.instanceId)).limit(1);
@@ -64,9 +60,6 @@ export const checklistInstanceImageService = {
             uploadedBy: user.sub,
         }));
         await db.insert(checklistInstanceImages).values(rows);
-        // ids were generated client-side above, so we already know every field except the
-        // DB-computed createdAt/updatedAt defaults — one re-select by those known ids gets us
-        // the full rows (including those timestamps) without guessing at them.
         return db.select().from(checklistInstanceImages).where(inArray(checklistInstanceImages.id, rows.map((r) => r.id)));
     },
 

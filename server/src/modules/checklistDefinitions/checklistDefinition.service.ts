@@ -22,11 +22,6 @@ export type ListChecklistDefinitionsFilter = {
     isActive?: boolean
 }
 
-// Ported from the original MongoDB aggregation pipeline (see
-// docs/mongo-query-patterns-report.md): grouped by definitionId instead of a time bucket, over
-// every ChecklistInstanceItem across every instance stamped out from a given definition. As raw
-// SQL rather than the "requiresLivePhoto ? liveCount : totalCount" JS/Mongo $cond pattern used in
-// task.service.ts#complianceReport — same shape, same qualifying-photo-count logic.
 const statsByDefinition = async (definitionIds: string[]): Promise<Map<string, { completionRate: number | null; qualityRate: number | null }>> => {
     const map = new Map<string, { completionRate: number | null; qualityRate: number | null }>()
     if (!definitionIds.length) return map
@@ -65,15 +60,6 @@ const statsByDefinition = async (definitionIds: string[]): Promise<Map<string, {
     return map
 }
 
-// Not using Drizzle's relational query API (`db.query...with:{...}`) here — that API compiles
-// every relation into a `LEFT JOIN LATERAL (...)` subquery, and the actual database this app
-// runs against (MariaDB 10.11) doesn't support LATERAL joins at all (confirmed against the real
-// local instance). Plain selects assembled by hand in JS instead — same pattern as
-// task.service.ts/ticket.service.ts/checklist.service.ts. This is the closest equivalent of the
-// old `populate({ path: "items", ... })`, plus flattening the junction tables (storeLinks/
-// assigneeLinks/auditUserLinks) back into the flat id arrays (storeIds/assigneeIds/auditUserIds)
-// the API/frontend already expects, and adding the two stats fields that used to come from the
-// (now-stubbed) aggregation pipeline.
 const hydrateDefinitions = async (definitionRows: (typeof checklistDefinitions.$inferSelect)[]) => {
     if (!definitionRows.length) return []
     const definitionIds = definitionRows.map((d) => d.id)
@@ -215,10 +201,7 @@ export const checklistDefinitionService = {
             }
         })
 
-        // Stamp out this definition's first instance right away if it's already due, instead of
-        // making the admin wait for the generator job's next hourly tick. Reloaded fresh off the
-        // DB (rather than assembled from `input`) so the generator sees exactly what the
-        // transaction above actually persisted.
+
         const definitionForGeneration = await loadDefinitionForGeneration(definitionId)
         if (definitionForGeneration) await generateInstanceForDefinition(definitionForGeneration, new Date())
 
@@ -226,15 +209,10 @@ export const checklistDefinitionService = {
     },
 
     async update(id: string, input: UpdateChecklistDefinitionInput) {
-        // Captured from inside the transaction below for use afterwards (whether to stamp out a
-        // fresh instance depends on the definition's pre-update isActive state, which this update
-        // never itself changes — see setActive for that).
+    
         let wasActive = false
 
-        // Wrapped in a transaction (source had none) — this is a deliberate improvement per the
-        // migration research report: the definition update, the store/assignee link replacement,
-        // and the insert-new-items-then-delete-old-items sequence must all succeed or all fail
-        // together.
+      
         await db.transaction(async (tx) => {
             const [existing] = await tx
                 .select({ id: checklistDefinitions.id, version: checklistDefinitions.version, isActive: checklistDefinitions.isActive })
@@ -257,11 +235,6 @@ export const checklistDefinitionService = {
                 version: existing.version + 1,
                 updatedAt: new Date(),
             }).where(eq(checklistDefinitions.id, id))
-
-            // storeIds/assigneeIds are whole-array replaces in the original code (definition.set({
-            // storeIds: input.storeIds, ... })) and nothing else references these junction rows by
-            // their own id, so delete-all-and-reinsert is safe and simplest here (per migration
-            // conventions).
             await tx.delete(checklistDefinitionStores).where(eq(checklistDefinitionStores.definitionId, id))
             await tx.insert(checklistDefinitionStores).values(
                 input.storeIds.map(storeId => ({ definitionId: id, storeId })),
@@ -270,11 +243,6 @@ export const checklistDefinitionService = {
             await tx.insert(checklistDefinitionAssignees).values(
                 input.assigneeIds.map(userId => ({ definitionId: id, userId })),
             )
-
-            // Insert the new items BEFORE deleting the old ones, and delete by exclusion rather
-            // than by definitionId alone - if an insert fails partway, the old items are still
-            // intact instead of the definition being left with zero items. (Ported as-is from the
-            // original Mongoose code; now safe to do so inside a real transaction.)
             const newItemIds: string[] = []
             for (const [index, item] of input.items.entries()) {
                 const itemId = createId()
@@ -309,8 +277,7 @@ export const checklistDefinitionService = {
                     )
                 }
             }
-            // Old items' auditUserLinks cascade-delete automatically (FK onDelete: 'cascade' on
-            // ChecklistDefinitionItemAuditUser.itemId) once the item row itself is deleted below.
+           
             await tx.delete(checklistDefinitionItems).where(
                 newItemIds.length
                     ? and(eq(checklistDefinitionItems.definitionId, id), inArray(checklistDefinitionItems.id, newItemIds))
@@ -348,6 +315,7 @@ export const checklistDefinitionService = {
     //     ChecklistInstanceItemSubmissionImage
     // (see checklistDefinition.ts/checklistInstance.ts FK definitions) — a single delete on the
     // root row is enough; MySQL's cascading FKs handle every descendant table.
+    
     async remove(id: string) {
         const [existing] = await db.select({ id: checklistDefinitions.id }).from(checklistDefinitions).where(eq(checklistDefinitions.id, id)).limit(1)
         if (!existing) throw AppError.notFound("Checklist not found")
