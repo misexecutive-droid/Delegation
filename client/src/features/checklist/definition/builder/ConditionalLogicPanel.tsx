@@ -1,4 +1,4 @@
-import { Zap, ChevronRight, Check, X } from 'lucide-react';
+import { Zap, ChevronRight, Check, X, AlertCircle } from 'lucide-react';
 import type { ChecklistConditionalAction } from '../../../../api/checklistDefinitions';
 
 const TRIGGER_LABELS: Record<'YES_NO' | 'PASS_FAIL', { yes: string; no: string }> = {
@@ -19,109 +19,153 @@ interface ConditionalLogicPanelProps {
   actions: ChecklistConditionalAction[];
   onTriggerChange: (trigger: 'YES' | 'NO' | '') => void;
   onActionsChange: (actions: ChecklistConditionalAction[]) => void;
+  className?: string;
 }
 
-// The Builder's "if answer is X then: …" panel — only meaningful for YES_NO/PASS_FAIL items,
-// enforced server-side by checklistInstance.service.ts's setItemDone.
-export const ConditionalLogicPanel = ({ itemType, trigger, actions, onTriggerChange, onActionsChange }: ConditionalLogicPanelProps) => {
+export const ConditionalLogicPanel = ({
+  itemType,
+  trigger,
+  actions,
+  onTriggerChange,
+  onActionsChange,
+  className = '',
+}: ConditionalLogicPanelProps) => {
   const labels = TRIGGER_LABELS[itemType];
 
   const toggleAction = (action: ChecklistConditionalAction) => {
-    onActionsChange(actions.includes(action) ? actions.filter(a => a !== action) : [...actions, action]);
+    onActionsChange(
+      actions.includes(action)
+        ? actions.filter((a) => a !== action)
+        : [...actions, action]
+    );
   };
 
+  // State when no conditional logic is attached yet
   if (!trigger) {
     return (
       <button
         type="button"
         onClick={() => onTriggerChange('NO')}
-        className="group/trigger flex items-center gap-2 px-3 py-2 mt-2 rounded-lg border border-dashed border-coral-300 bg-coral-50/50 text-xs font-display font-medium text-coral-700 transition-all duration-200 ease-out hover:border-coral-400 hover:bg-coral-100 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 active:shadow-none cursor-pointer w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500 focus-visible:ring-offset-1"
+        className={`group/trigger inline-flex items-center gap-2 px-3 py-1.5 mt-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-950/20 text-xs font-display font-medium text-amber-800 dark:text-amber-300 transition-all duration-150 hover:border-amber-400 hover:bg-amber-100/70 hover:shadow-xs active:scale-[0.98] cursor-pointer w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 ${className}`}
       >
-        <Zap size={14} className="transition-transform duration-200 group-hover/trigger:scale-110 group-hover/trigger:-rotate-6" />
-        Add conditional logic
+        <Zap
+          size={13}
+          className="text-amber-600 dark:text-amber-400 transition-transform duration-200 group-hover/trigger:scale-110 group-hover/trigger:-rotate-6"
+        />
+        <span>Add conditional logic</span>
       </button>
     );
   }
 
   const activeSummary = actions.length
-    ? actions.map(a => ACTION_OPTIONS.find(o => o.value === a)?.label).filter(Boolean).join(', ')
+    ? actions
+        .map((a) => ACTION_OPTIONS.find((o) => o.value === a)?.label)
+        .filter(Boolean)
+        .join(', ')
     : null;
 
   return (
-    <div className="flex flex-col gap-3 p-4 mt-2 rounded-xl bg-gradient-to-br from-coral-500/10 via-coral-500/5 to-transparent border border-coral-500/30 shadow-sm animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <span className="flex items-center gap-2 text-xs font-display font-bold uppercase tracking-wider text-coral-700 dark:text-coral-400">
-          <span className="flex items-center justify-center text-coral-600">
-            <Zap size={12} />
-          </span>
-          Logic Rule
+    <div
+      role="region"
+      aria-label="Conditional logic settings"
+      className={`flex flex-col gap-3 p-3.5 mt-2.5 rounded-xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 shadow-xs transition-all ${className}`}
+    >
+      {/* Header Bar */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-xs font-display font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+          <Zap size={13} className="text-amber-600 dark:text-amber-400 shrink-0" />
+          Conditional Logic
         </span>
         <button
           type="button"
-          onClick={() => { onTriggerChange(''); onActionsChange([]); }}
-          className="p-1.5 rounded-md text-text-muted transition-colors duration-150 hover:text-danger hover:bg-danger/10 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
+          onClick={() => {
+            onTriggerChange('');
+            onActionsChange([]);
+          }}
+          className="p-1 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
           aria-label="Remove conditional logic"
+          title="Remove logic"
         >
           <X size={14} />
         </button>
       </div>
 
-      <div className="flex items-center gap-2 text-sm font-display text-text-secondary flex-wrap bg-surface p-2 rounded-lg border border-coral-500/20">
-        <span className="font-medium">If answer is</span>
-        <div className="flex items-center rounded-md border border-coral-500/30 bg-coral-500/10 p-0.5 text-xs">
-          {(['YES', 'NO'] as const).map(value => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => onTriggerChange(value)}
-              aria-pressed={trigger === value}
-              className={[
-                'px-3 py-1.5 rounded transition-all duration-200 ease-out font-medium cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500',
-                trigger === value ? 'bg-surface text-coral-700 shadow-sm' : 'text-text-muted hover:text-text hover:bg-white/40',
-              ].join(' ')}
-            >
-              {value === 'YES' ? labels.yes : labels.no}
-            </button>
-          ))}
+      {/* Trigger Expression Row */}
+      <div className="flex items-center gap-2 text-xs font-display text-text-secondary flex-wrap bg-surface p-2 rounded-lg border border-border/80 shadow-2xs">
+        <span className="font-medium text-text">If answer is</span>
+
+        {/* Segmented Control */}
+        <div className="inline-flex items-center rounded-md bg-muted/60 p-0.5 border border-border/60">
+          {(['YES', 'NO'] as const).map((value) => {
+            const isSelected = trigger === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onTriggerChange(value)}
+                aria-pressed={isSelected}
+                className={[
+                  'px-2.5 py-1 rounded text-xs font-display font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
+                  isSelected
+                    ? 'bg-surface text-amber-900 dark:text-amber-300 font-bold shadow-xs border border-border/40'
+                    : 'text-text-muted hover:text-text hover:bg-surface/50',
+                ].join(' ')}
+              >
+                {value === 'YES' ? labels.yes : labels.no}
+              </button>
+            );
+          })}
         </div>
-        <ChevronRight size={13} className="text-coral-400 shrink-0" />
-        <span className="font-medium">then require:</span>
+
+        <ChevronRight size={13} className="text-text-muted shrink-0" />
+        <span className="font-medium text-text">then trigger:</span>
       </div>
 
+      {/* Action Chips */}
       <div className="flex flex-wrap gap-2 pt-0.5">
-        {ACTION_OPTIONS.map(opt => {
-          const checked = actions.includes(opt.value);
+        {ACTION_OPTIONS.map((opt) => {
+          const isChecked = actions.includes(opt.value);
           return (
             <button
               key={opt.value}
               type="button"
               onClick={() => toggleAction(opt.value)}
-              aria-pressed={checked}
+              aria-pressed={isChecked}
               className={[
-                'group/chip flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-display font-medium transition-all duration-200 ease-out cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500',
-                checked
-                  ? 'border-coral-500 bg-coral-50 text-coral-700 shadow-sm scale-[1.02]'
-                  : 'border-coral-500/30 bg-surface text-coral-700 hover:bg-coral-500/10 hover:border-coral-500/50',
+                'group/chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-display font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50',
+                isChecked
+                  ? 'border-amber-400 dark:border-amber-600 bg-amber-100/70 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 shadow-2xs font-semibold'
+                  : 'border-border bg-surface text-text-secondary hover:bg-surface-hover hover:border-border/80 hover:text-text',
               ].join(' ')}
             >
               <span
                 className={[
-                  'flex items-center justify-center size-3.5 rounded-full border transition-all duration-200',
-                  checked ? 'border-coral-600 bg-coral-600 text-white' : 'border-coral-500/40 bg-transparent group-hover/chip:border-coral-500/70',
+                  'flex items-center justify-center size-3.5 rounded-full border transition-all duration-150 shrink-0',
+                  isChecked
+                    ? 'border-amber-600 bg-amber-600 dark:bg-amber-500 text-white'
+                    : 'border-border bg-transparent group-hover/chip:border-text-muted',
                 ].join(' ')}
               >
-                {checked && <Check size={9} strokeWidth={3.5} />}
+                {isChecked && <Check size={9} strokeWidth={3.5} />}
               </span>
-              {opt.label}
+              <span>{opt.label}</span>
             </button>
           );
         })}
       </div>
 
-      {activeSummary && (
-        <p className="text-[11px] font-display text-coral-700/80 bg-coral-500/5 border border-coral-500/10 rounded-md px-2.5 py-1.5 animate-fade-in">
-          Rule: if <span className="font-bold">{trigger === 'YES' ? labels.yes : labels.no}</span> → {activeSummary}
-        </p>
+      {/* Action Summary / Guidance */}
+      {activeSummary ? (
+        <div className="flex items-center gap-1.5 text-[11px] font-display text-amber-900/80 dark:text-amber-300/80 bg-amber-100/40 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-800/40 rounded-md px-2.5 py-1.5">
+          <span>
+            Rule: When answered <strong className="font-bold">{trigger === 'YES' ? labels.yes : labels.no}</strong> &rarr; {activeSummary}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 text-[11px] font-display text-text-muted px-1">
+          <AlertCircle size={11} className="shrink-0" />
+          <span>Select at least one action above to activate this rule.</span>
+        </div>
       )}
     </div>
   );

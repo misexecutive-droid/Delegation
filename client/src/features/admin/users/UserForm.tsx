@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { UserPlus, Eye, EyeOff, AlertCircle, ShieldCheck, Building2, Store, KeyRound } from 'lucide-react';
@@ -172,7 +172,6 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
     register,
     handleSubmit,
     control,
-    watch,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<UserFields>({
@@ -188,7 +187,7 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
     },
   });
 
-  const [role, departmentId, storeId] = watch(['role', 'departmentId', 'storeId']);
+  const [role, departmentId, storeId] = useWatch({ control, name: ['role', 'departmentId', 'storeId'] });
   const isPending = mutation.isPending || isSubmitting;
 
   const onSubmit = (data: UserFields) => {

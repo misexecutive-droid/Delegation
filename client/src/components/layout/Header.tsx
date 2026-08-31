@@ -18,7 +18,7 @@ import { Dropdown, type DropdownAction } from '../dropdown';
 export const ICON_BUTTON_CLASS =
   'inline-flex items-center justify-center size-9 rounded-full text-text-muted ' +
   'transition-all duration-200 ease-out cursor-pointer ' +
-  'hover:text-text hover:bg-surface-hover hover:border-slate-300 border border-transparent ' +
+  'hover:text-text hover:bg-surface-hover hover:border-border-hover border border-transparent ' +
   'active:scale-95 ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50';
 
@@ -43,7 +43,7 @@ const PAGE_LABELS: { pattern: RegExp; label: string }[] = [
 
 const getPageLabel = (pathname: string) => PAGE_LABELS.find((p) => p.pattern.test(pathname))?.label;
 
-export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) => {
+export const Header = ({ onToggleSidebar: _onToggleSidebar }: { onToggleSidebar?: () => void }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -70,7 +70,7 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
 
   return (
     <header
-      className="sticky top-0 z-50 w-full dark:border-border/50 bg-surface/80 dark:bg-background/80 backdrop-blur-md transition-colors border border-slate-200"
+      className="sticky top-0 z-50 w-full bg-surface/80 dark:bg-background/80 backdrop-blur-md transition-colors border border-border dark:border-border/50"
       style={{
         backdropFilter: 'var(--glass-blur, blur(12px))',
         WebkitBackdropFilter: 'var(--glass-blur, blur(12px))'
@@ -85,7 +85,7 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
               to="/"
               className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 rounded-lg py-1.5 -ml-2 transition-colors hover:bg-surface-hover"
             >
-              <div className="size-8 rounded-lg bg-gradient-to-tr from-primary-600 to-primary-500 flex items-center justify-center shrink-0 border border-slate-300/60 group-hover:scale-105 transition-all duration-300">
+              <div className="size-8 rounded-lg bg-gradient-to-tr from-primary-600 to-primary-500 flex items-center justify-center shrink-0 border border-border/60 group-hover:scale-105 transition-all duration-300">
                 <CheckSquare size={16} className="text-white" strokeWidth={2.5} />
               </div>
               <span className="hidden sm:inline font-display font-bold text-text text-[15px] tracking-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
@@ -95,8 +95,8 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
 
             {pageLabel && (
               <>
-                <span className="hidden sm:block h-5 w-px bg-slate-300/60 shrink-0" aria-hidden="true" />
-                <span className="inline-flex items-center rounded-full bg-primary-50/80 dark:bg-primary-900/20 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold text-primary-700 dark:text-primary-300 ring-1 ring-slate-300/60 dark:ring-primary-800/50 whitespace-nowrap truncate max-w-[5.5rem] sm:max-w-[9rem] lg:max-w-none">
+                <span className="hidden sm:block h-5 w-px bg-border shrink-0" aria-hidden="true" />
+                <span className="inline-flex items-center rounded-full bg-primary-50/80 dark:bg-primary-900/20 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold text-primary-700 dark:text-primary-300 ring-1 ring-border dark:ring-primary-800/50 whitespace-nowrap truncate max-w-[5.5rem] sm:max-w-[9rem] lg:max-w-none">
                   {pageLabel}
                 </span>
               </>
@@ -105,7 +105,7 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
 
           <div className="flex items-center gap-3 sm:gap-4 ml-auto">
 
-            <div className="flex items-center gap-1 p-1 rounded-full  border-1 border-slate-200">
+            <div className="flex items-center gap-1 p-1 rounded-full border border-border">
               {user && <NotificationBell />}
 
               <button
@@ -124,13 +124,13 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
               </button>
             </div>
 
-            {/* {user && (
+            {user && (
               <Dropdown
                 items={accountActions}
                 trigger={
                   <button
                     title={user.name}
-                    className="flex items-center gap-2.5 h-10 pl-1 pr-2 sm:pr-3 rounded-full bg-surface border border-slate-300 text-text-secondary cursor-pointer transition-all duration-200 hover:bg-surface-hover hover:border-slate-400 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 group"
+                    className="flex items-center gap-2.5 h-10 pl-1 pr-2 sm:pr-3 rounded-full bg-surface border border-border text-text-secondary cursor-pointer transition-all duration-200 hover:bg-surface-hover hover:border-border-hover active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 group"
                   >
                     <span className="relative flex items-center justify-center size-8 rounded-full bg-primary-600 text-white font-bold text-[11px] shrink-0 group-hover:scale-105 transition-transform">
                       {initials || <User size={14} strokeWidth={2.5} />}
@@ -146,7 +146,7 @@ export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) =>
                   </button>
                 }
               />
-            )} */}
+            )}
           </div>
         </div>
       </div>

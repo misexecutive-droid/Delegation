@@ -50,7 +50,7 @@ export const TaskRow = ({ task, assigneeName, departmentName, raisedByName, isVe
             </div>
         )}
         <div
-            className="group relative flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 pl-4 pr-3.5 py-3 rounded-lg bg-surface hover:shadow-sm transition-shadow duration-200 animate-in fade-in slide-in-from-bottom-2 overflow-hidden"
+            className="group relative flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 pl-4 pr-3.5 py-3 rounded-lg border border-border bg-surface hover:border-border-hover transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 overflow-hidden"
             style={{ animationDelay: `${Math.min(index, 10) * 35}ms`, animationFillMode: 'both' }}
         >
                 {/* Priority stripe — matches TaskCard's glanceable triage cue in the board view. */}

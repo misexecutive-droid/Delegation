@@ -19,27 +19,27 @@ export const ChecklistInstanceCard = ({ instance }: ChecklistInstanceCardProps) 
   return (
     <Link
       to={`/checklists/${instance.id}`}
-      className="flex flex-col gap-3 p-4 rounded-xl border border-border bg-surface shadow-sm hover:shadow-md hover:border-primary-500/30 transition-all duration-200"
+      className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-surface hover:border-primary-500/40 transition-colors duration-200"
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-mono font-medium text-text">{instance.title}</p>
+        <p className="text-sm font-display font-medium text-text">{instance.title}</p>
         {isComplete ? (
-          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+          <span className="flex items-center gap-1 text-[10px] font-display font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
             Done
           </span>
         ) : (
-          <span className={`flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full shrink-0 ${rateToneClass(progress)} bg-surface-hover`}>
+          <span className={`flex items-center gap-1 text-[10px] font-display font-medium px-2 py-0.5 rounded-full shrink-0 ${rateToneClass(progress)} bg-surface-hover`}>
             Mark {progress}%
           </span>
         )}
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <p className="text-xs text-text-muted font-mono">
+        <p className="text-xs text-text-muted font-display">
           {formatDateShort(instance.periodStart)} – {formatDateShort(instance.periodEnd)}
         </p>
         {overdue && (
-          <span className="flex items-center gap-1 text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-full bg-danger/10 text-danger">
+          <span className="flex items-center gap-1 text-[10px] font-display font-medium px-1.5 py-0.5 rounded-full bg-danger/10 text-danger">
             <Clock size={10} /> Overdue
           </span>
         )}
@@ -52,7 +52,7 @@ export const ChecklistInstanceCard = ({ instance }: ChecklistInstanceCardProps) 
             style={{ width: `${progress}%` }}
           />
         </div>
-        <span className="text-[10px] text-text-muted font-mono font-medium w-8 text-right">{done}/{total}</span>
+        <span className="text-[10px] text-text-muted font-display font-medium w-8 text-right">{done}/{total}</span>
       </div>
     </Link>
   );

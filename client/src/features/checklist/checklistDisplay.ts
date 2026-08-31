@@ -27,6 +27,17 @@ export const formatDate = (iso: string) =>
 export const formatDateShort = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
 
+// completedAt/generatedAt/image createdAt are real timestamps (not calendar-day labels like
+// periodStart/periodEnd above), so these render in the viewer's own local time zone rather than
+// pinning UTC — "2:45 PM" should mean 2:45 PM for whoever's looking at it.
+// e.g. "Aug 31, 2026 · 2:45 PM" — completion/verification timestamps on item and instance cards.
+export const formatDateTime = (iso: string) =>
+  `${new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+
+// e.g. "2:45 PM" — compact caption under an individual evidence photo/video thumbnail.
+export const formatTimeOnly = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
 // Derived from item completion, not stored on the instance — mirrors what ChecklistInstanceCard's
 // `isComplete` check already computed inline, generalized to the third "some done" bucket used by
 // ChecklistDefinitionDetail's grouped instance list.

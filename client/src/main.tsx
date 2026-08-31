@@ -12,6 +12,10 @@ import { ConfirmDialogProvider } from "./components/confirmDialog"
 
 const queryClient = new QueryClient();
 
+if (import.meta.env.DEV) {
+  document.body.classList.add('debug-screens');
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>

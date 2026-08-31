@@ -87,6 +87,7 @@ export type ChecklistInstanceItem = {
   conditionalTrigger: 'YES' | 'NO' | null;
   conditionalActions: ChecklistConditionalAction[];
   conditionalReasonValue: string | null;
+  remarks:            string | null;
   issueId:            string | null;
   instanceId:         string;
   images:             ChecklistInstanceImage[];
@@ -126,6 +127,13 @@ export type ComplianceReportRow = {
   completionRate: number | null;
   itemsRequiringPhotos: number;
   qualityRate: number | null;
+  // First-attempt-approval quality: of the instances actually submitted (reached PENDING/
+  // APPROVED/REJECTED), what % were approved without ever having been rejected first. A reject
+  // permanently disqualifies that instance from "first attempt," even once it's later fixed
+  // and approved — mirrors qualityRate's per-item strictness at the instance level.
+  submittedInstances: number;
+  firstAttemptApproved: number;
+  approvalRate: number | null;
 };
 
 const buildQuery = (params: Record<string, string | undefined>) => {
@@ -147,6 +155,11 @@ export const checklistInstanceApi = {
   getForDefinition: (definitionId: string) =>
     apiFetch<ApiResponse<ChecklistInstance[]>>(`/checklist-instances${buildQuery({ definitionId })}`),
 
+  // Powers the compliance board — same endpoint as getForDefinition, generalized to whichever
+  // combination of filters the admin has picked (store and/or person, plus status).
+  list: (filter: { storeId?: string; assigneeId?: string; status?: ChecklistInstanceStatus } = {}) =>
+    apiFetch<ApiResponse<ChecklistInstance[]>>(`/checklist-instances${buildQuery(filter)}`),
+
   getPendingVerification: () =>
     apiFetch<ApiResponse<ChecklistInstance[]>>('/checklist-instances/pending-verification'),
 
@@ -161,6 +174,7 @@ export const checklistInstanceApi = {
     signatureValue?: string;
     secondSignatureValue?: string;
     conditionalReasonValue?: string;
+    remarks?: string;
   }) =>
     apiFetch<ApiResponse<ChecklistInstanceItem>>(`/checklist-instance-items/${itemId}`, {
       method: 'PATCH',

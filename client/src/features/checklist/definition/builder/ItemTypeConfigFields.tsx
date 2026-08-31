@@ -1,87 +1,137 @@
 import type { ReactNode } from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, Video, MapPin, QrCode, Info, Hash, Star } from 'lucide-react';
 import { UserMultiSelect, AccessoriesListEditor } from '../../../../components';
 import { ConditionalLogicPanel } from './ConditionalLogicPanel';
 import type { ChecklistItemType } from '../../../../api/checklistDefinitions';
 import type { ItemDraft } from '../ChecklistDefinitionItemDraftRow';
 
 export interface ItemTypeFieldsProps {
-  draft:    ItemDraft;
+  draft: ItemDraft;
   onChange: (patch: Partial<ItemDraft>) => void;
   storeId?: string;
 }
 
-const FIELD_LABEL = 'text-[11px] font-display font-medium text-text-muted';
-const MINI_INPUT =
-  'px-2 py-1.5 text-xs font-mono text-center bg-surface text-text rounded-md border border-border ' +
-  'placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-150';
+const FIELD_LABEL = 'text-[11px] font-display font-semibold uppercase tracking-wider text-text-muted';
+const INPUT_BASE =
+  'px-2.5 py-1.5 text-xs font-display bg-surface text-text rounded-lg border border-border ' +
+  'placeholder:text-text-muted/60 hover:border-border/80 transition-all duration-150 ' +
+  'focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20';
 
 const PhotoFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
-  <div className="flex flex-wrap items-center gap-3">
-    <div className="flex items-center gap-2 bg-background p-1.5 rounded-lg border border-border/60">
-      <Camera size={13} className="text-text-muted ml-1" />
+  <div className="flex flex-wrap items-center gap-3.5 pt-0.5">
+    {/* Min / Max Photo Counter Pill */}
+    <div className="inline-flex items-center gap-2.5 bg-muted/40 p-1.5 rounded-lg border border-border/80 shadow-2xs">
+      <Camera size={14} className="text-text-muted ml-1 shrink-0" />
       <div className="flex items-center gap-1.5">
-        <span className={FIELD_LABEL}>Min</span>
+        <label htmlFor="photo-min-count" className={FIELD_LABEL}>Min</label>
         <input
-          type="number" min={0} value={draft.requiredImageCount}
-          onChange={e => onChange({ requiredImageCount: e.target.value })}
-          className={`w-10 ${MINI_INPUT}`}
+          id="photo-min-count"
+          type="number"
+          min={0}
+          value={draft.requiredImageCount}
+          onChange={(e) => onChange({ requiredImageCount: e.target.value })}
+          className={`w-12 text-center font-mono ${INPUT_BASE}`}
         />
       </div>
-      <div className="flex items-center gap-1.5">
-        <span className={FIELD_LABEL}>Max</span>
+      <div className="h-4 w-px bg-border/80" />
+      <div className="flex items-center gap-1.5 pr-0.5">
+        <label htmlFor="photo-max-count" className={FIELD_LABEL}>Max</label>
         <input
-          type="number" min={0} value={draft.maxImageCount}
-          onChange={e => onChange({ maxImageCount: e.target.value })}
+          id="photo-max-count"
+          type="number"
+          min={0}
+          value={draft.maxImageCount}
+          onChange={(e) => onChange({ maxImageCount: e.target.value })}
           placeholder="∞"
-          className={`w-10 ${MINI_INPUT}`}
+          className={`w-12 text-center font-mono ${INPUT_BASE}`}
         />
       </div>
     </div>
-    <label className="flex items-center gap-2 text-xs font-display text-text-secondary cursor-pointer select-none">
+
+    {/* Live Photo Toggle */}
+    <label className="inline-flex items-center gap-2 text-xs font-display text-text-secondary hover:text-text cursor-pointer select-none transition-colors">
       <input
-        type="checkbox" checked={draft.requiresLivePhoto}
-        onChange={e => onChange({ requiresLivePhoto: e.target.checked })}
-        className="rounded border-border text-primary-600 focus:ring-primary-500/20"
+        type="checkbox"
+        checked={draft.requiresLivePhoto}
+        onChange={(e) => onChange({ requiresLivePhoto: e.target.checked })}
+        className="size-4 rounded-sm border-border text-primary-700 focus:ring-primary-500/30 cursor-pointer"
       />
-      Live photo only (blocks gallery uploads)
+      <span>Live photo only (blocks gallery uploads)</span>
     </label>
   </div>
 );
 
-const AuditFields = ({ draft, onChange, storeId }: ItemTypeFieldsProps) => (
-  <div className="flex flex-col gap-3">
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-display font-medium text-text-secondary">Who audits this?</span>
-      <UserMultiSelect storeId={storeId} selected={draft.auditUserIds} onChange={ids => onChange({ auditUserIds: ids })} />
+const VideoFields = (props: ItemTypeFieldsProps) => (
+  <div className="flex flex-col gap-2.5">
+    <PhotoFields {...props} />
+    <div className="flex items-center gap-1.5 text-[11px] font-display text-text-muted">
+      <Video size={13} className="shrink-0 text-text-muted" />
+      <span>Accepts short video clips instead of photos — Min/Max above apply to clips.</span>
     </div>
-    <AccessoriesListEditor accessories={draft.accessories} onChange={accessories => onChange({ accessories })} />
+  </div>
+);
+
+const AuditFields = ({ draft, onChange, storeId }: ItemTypeFieldsProps) => (
+  <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-display font-semibold text-text">Who audits this?</span>
+      <UserMultiSelect
+        storeId={storeId}
+        selected={draft.auditUserIds}
+        onChange={(ids) => onChange({ auditUserIds: ids })}
+      />
+    </div>
+    <AccessoriesListEditor
+      accessories={draft.accessories}
+      onChange={(accessories) => onChange({ accessories })}
+    />
   </div>
 );
 
 const NumberFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
-  <div className="flex flex-wrap items-end gap-3">
+  <div className="flex flex-wrap items-end gap-3 pt-0.5">
     <div className="flex flex-col gap-1">
-      <span className={FIELD_LABEL}>Unit</span>
+      <label htmlFor="number-unit" className={FIELD_LABEL}>Unit</label>
       <input
-        value={draft.numberEntryUnit} onChange={e => onChange({ numberEntryUnit: e.target.value })}
-        placeholder="₹, kg, pcs…" className={`w-20 text-left px-2 ${MINI_INPUT}`}
+        id="number-unit"
+        value={draft.numberEntryUnit}
+        onChange={(e) => onChange({ numberEntryUnit: e.target.value })}
+        placeholder="₹, kg, pcs…"
+        className={`w-24 text-left ${INPUT_BASE}`}
       />
     </div>
     <div className="flex flex-col gap-1">
-      <span className={FIELD_LABEL}>Min</span>
-      <input type="number" value={draft.numberEntryMin} onChange={e => onChange({ numberEntryMin: e.target.value })} placeholder="—" className={`w-16 ${MINI_INPUT}`} />
+      <label htmlFor="number-min" className={FIELD_LABEL}>Min Bound</label>
+      <input
+        id="number-min"
+        type="number"
+        value={draft.numberEntryMin}
+        onChange={(e) => onChange({ numberEntryMin: e.target.value })}
+        placeholder="—"
+        className={`w-20 text-center font-mono ${INPUT_BASE}`}
+      />
     </div>
     <div className="flex flex-col gap-1">
-      <span className={FIELD_LABEL}>Max</span>
-      <input type="number" value={draft.numberEntryMax} onChange={e => onChange({ numberEntryMax: e.target.value })} placeholder="—" className={`w-16 ${MINI_INPUT}`} />
+      <label htmlFor="number-max" className={FIELD_LABEL}>Max Bound</label>
+      <input
+        id="number-max"
+        type="number"
+        value={draft.numberEntryMax}
+        onChange={(e) => onChange({ numberEntryMax: e.target.value })}
+        placeholder="—"
+        className={`w-20 text-center font-mono ${INPUT_BASE}`}
+      />
     </div>
     {draft.itemType === 'CASH_TALLY' && (
       <div className="flex flex-col gap-1">
-        <span className={FIELD_LABEL}>Expected amount</span>
+        <label htmlFor="cash-expected" className={FIELD_LABEL}>Expected Target</label>
         <input
-          type="number" value={draft.cashExpectedAmount} onChange={e => onChange({ cashExpectedAmount: e.target.value })}
-          placeholder="Optional" className={`w-24 ${MINI_INPUT}`}
+          id="cash-expected"
+          type="number"
+          value={draft.cashExpectedAmount}
+          onChange={(e) => onChange({ cashExpectedAmount: e.target.value })}
+          placeholder="Optional"
+          className={`w-28 text-center font-mono ${INPUT_BASE}`}
         />
       </div>
     )}
@@ -91,58 +141,109 @@ const NumberFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
 const RATING_SCALES = ['3', '5', '10'];
 
 const RatingFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
-  <div className="flex items-center gap-2">
-    <span className={FIELD_LABEL}>Scale out of</span>
-    <div className="flex items-center rounded-lg border border-border bg-background p-0.5">
-      {RATING_SCALES.map(scale => (
-        <button
-          key={scale}
-          type="button"
-          onClick={() => onChange({ ratingScale: scale })}
-          className={[
-            'px-3 py-1.5 rounded-md text-xs font-display font-medium transition-all duration-200 cursor-pointer',
-            draft.ratingScale === scale ? 'bg-primary-700 text-white shadow-sm' : 'text-text-muted hover:text-text hover:bg-surface-hover',
-          ].join(' ')}
-        >
-          {scale}
-        </button>
-      ))}
+  <div className="flex items-center gap-3 pt-0.5">
+    <span className={FIELD_LABEL}>Scale rating out of</span>
+    <div
+      role="radiogroup"
+      aria-label="Rating scale"
+      className="inline-flex items-center rounded-lg border border-border/80 bg-muted/40 p-0.5 shadow-2xs"
+    >
+      {RATING_SCALES.map((scale) => {
+        const isSelected = draft.ratingScale === scale;
+        return (
+          <button
+            key={scale}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            onClick={() => onChange({ ratingScale: scale })}
+            className={[
+              'flex items-center gap-1 px-3 py-1 rounded-md text-xs font-display font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
+              isSelected
+                ? 'bg-surface text-primary-700 dark:text-primary-400 font-bold shadow-xs border border-border/50'
+                : 'text-text-muted hover:text-text hover:bg-surface/50',
+            ].join(' ')}
+          >
+            <Star size={11} className={isSelected ? 'fill-primary-700 dark:fill-primary-400 text-primary-700 dark:text-primary-400' : 'text-text-muted'} />
+            <span>{scale}</span>
+          </button>
+        );
+      })}
     </div>
   </div>
 );
 
 const GpsFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
-  <div className="flex flex-col gap-2">
-    <p className={FIELD_LABEL}>Pin an exact spot — optional, leave blank to just capture wherever they are</p>
+  <div className="flex flex-col gap-2 pt-0.5">
+    <p className="text-[11px] font-display text-text-muted flex items-center gap-1.5">
+      <MapPin size={12} className="text-text-muted shrink-0" />
+      <span>Pin an exact coordinate (optional — leave blank to record staff location without geofencing).</span>
+    </p>
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
-        <span className={FIELD_LABEL}>Latitude</span>
-        <input type="number" step="any" value={draft.gpsTargetLat} onChange={e => onChange({ gpsTargetLat: e.target.value })} placeholder="—" className={`w-24 ${MINI_INPUT}`} />
+        <label htmlFor="gps-lat" className={FIELD_LABEL}>Latitude</label>
+        <input
+          id="gps-lat"
+          type="number"
+          step="any"
+          value={draft.gpsTargetLat}
+          onChange={(e) => onChange({ gpsTargetLat: e.target.value })}
+          placeholder="e.g. 12.9716"
+          className={`w-28 text-left font-mono ${INPUT_BASE}`}
+        />
       </div>
       <div className="flex flex-col gap-1">
-        <span className={FIELD_LABEL}>Longitude</span>
-        <input type="number" step="any" value={draft.gpsTargetLng} onChange={e => onChange({ gpsTargetLng: e.target.value })} placeholder="—" className={`w-24 ${MINI_INPUT}`} />
+        <label htmlFor="gps-lng" className={FIELD_LABEL}>Longitude</label>
+        <input
+          id="gps-lng"
+          type="number"
+          step="any"
+          value={draft.gpsTargetLng}
+          onChange={(e) => onChange({ gpsTargetLng: e.target.value })}
+          placeholder="e.g. 77.5946"
+          className={`w-28 text-left font-mono ${INPUT_BASE}`}
+        />
       </div>
       <div className="flex flex-col gap-1">
-        <span className={FIELD_LABEL}>Radius (m)</span>
-        <input type="number" min={1} value={draft.gpsRadiusMeters} onChange={e => onChange({ gpsRadiusMeters: e.target.value })} placeholder="—" className={`w-20 ${MINI_INPUT}`} />
+        <label htmlFor="gps-radius" className={FIELD_LABEL}>Radius (meters)</label>
+        <input
+          id="gps-radius"
+          type="number"
+          min={1}
+          value={draft.gpsRadiusMeters}
+          onChange={(e) => onChange({ gpsRadiusMeters: e.target.value })}
+          placeholder="e.g. 100"
+          className={`w-24 text-center font-mono ${INPUT_BASE}`}
+        />
       </div>
     </div>
   </div>
 );
 
 const QrFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
-  <div className="flex flex-col gap-1.5">
-    <span className={FIELD_LABEL}>Expected code (optional — leave blank to accept any scan)</span>
-    <input
-      value={draft.qrExpectedValue} onChange={e => onChange({ qrExpectedValue: e.target.value })}
-      placeholder="e.g. SKU-04821" className={`w-full text-left px-3 py-1.5 ${MINI_INPUT}`}
-    />
+  <div className="flex flex-col gap-1.5 pt-0.5">
+    <label htmlFor="qr-expected-code" className={FIELD_LABEL}>
+      Expected Barcode / QR Code (Optional)
+    </label>
+    <div className="relative">
+      <input
+        id="qr-expected-code"
+        value={draft.qrExpectedValue}
+        onChange={(e) => onChange({ qrExpectedValue: e.target.value })}
+        placeholder="e.g. SKU-04821 (Leave blank to accept any scanned barcode)"
+        className={`w-full text-left font-mono pr-8 ${INPUT_BASE}`}
+      />
+      <QrCode size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+    </div>
   </div>
 );
 
 const OptionsFields = ({ draft, onChange }: ItemTypeFieldsProps) => (
-  <AccessoriesListEditor label="Options" accessories={draft.options} onChange={options => onChange({ options })} />
+  <AccessoriesListEditor
+    label="Options"
+    accessories={draft.options}
+    onChange={(options) => onChange({ options })}
+  />
 );
 
 const ConditionalFields = ({ draft, onChange }: ItemTypeFieldsProps) => {
@@ -152,25 +253,22 @@ const ConditionalFields = ({ draft, onChange }: ItemTypeFieldsProps) => {
       itemType={draft.itemType}
       trigger={draft.conditionalTrigger}
       actions={draft.conditionalActions}
-      onTriggerChange={trigger => onChange({ conditionalTrigger: trigger })}
-      onActionsChange={actions => onChange({ conditionalActions: actions })}
+      onTriggerChange={(trigger) => onChange({ conditionalTrigger: trigger })}
+      onActionsChange={(actions) => onChange({ conditionalActions: actions })}
     />
   );
 };
 
-const infoNote = (text: string) => () => <p className="text-xs font-display text-text-muted leading-relaxed">{text}</p>;
-
-const VideoFields = (props: ItemTypeFieldsProps) => (
-  <div className="flex flex-col gap-2.5">
-    <PhotoFields {...props} />
-    <p className="text-xs font-display text-text-muted">Accepts a short video clip instead of a photo — Min/Max above apply to clips.</p>
+const infoNote = (text: string) => () => (
+  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/40 border border-border/60 text-xs font-display text-text-secondary leading-relaxed">
+    <Info size={14} className="text-text-muted shrink-0" />
+    <span>{text}</span>
   </div>
 );
 
 type FieldRenderer = (props: ItemTypeFieldsProps) => ReactNode;
 
-// Single source of truth for "what does this question type need to be configured?" — shared by
-// the item draft row (full editor) and the palette's quick-add popup, so the two never drift.
+// Single source of truth for "what does this question type need to be configured?"
 const FIELDS_BY_TYPE: Partial<Record<ChecklistItemType, FieldRenderer>> = {
   STANDARD: PhotoFields,
   VIDEO_UPLOAD: VideoFields,
@@ -184,24 +282,22 @@ const FIELDS_BY_TYPE: Partial<Record<ChecklistItemType, FieldRenderer>> = {
   DROPDOWN: OptionsFields,
   YES_NO: ConditionalFields,
   PASS_FAIL: ConditionalFields,
-  SIGNATURE: infoNote('Captures one signature drawn on-screen.'),
-  DUAL_SIGNATURE: infoNote('Captures two signatures drawn on-screen, one after another — e.g. employee then supervisor.'),
+  SIGNATURE: infoNote('Captures one signature drawn on-screen by the store staff.'),
+  DUAL_SIGNATURE: infoNote('Captures two signatures drawn on-screen sequentially — e.g., employee followed by supervisor.'),
 };
 
 export const ItemTypeConfigFields = (props: ItemTypeFieldsProps) => {
   const Renderer = FIELDS_BY_TYPE[props.draft.itemType];
   if (!Renderer) {
-    return <p className="text-xs font-display text-text-muted italic">No extra setup needed for this type — the label above is enough.</p>;
+    return (
+      <p className="text-xs font-display text-text-muted italic py-1">
+        No extra configuration needed for this type.
+      </p>
+    );
   }
   return <>{Renderer(props)}</>;
 };
 
-// Mirrors ChecklistBuilder's save-time validation, one item at a time — used both to gate the
-// quick-add popup's confirm button and (via ChecklistBuilder) the final "Create checklist" submit,
-// so an item can never look addable in one place and rejected in the other. Kept alongside
-// ItemTypeConfigFields since both operate on the same ItemDraft shape — only affects Fast Refresh
-// granularity, not runtime correctness.
-// eslint-disable-next-line react-refresh/only-export-components
 export const isItemDraftComplete = (draft: ItemDraft): boolean => {
   if (draft.itemType === 'AUDIT' && draft.auditUserIds.length === 0) return false;
   if ((draft.itemType === 'MULTIPLE_CHOICE' || draft.itemType === 'DROPDOWN') && draft.options.length < 2) return false;

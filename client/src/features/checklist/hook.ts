@@ -11,6 +11,7 @@ import { checklistInstanceApi, type ChecklistInstanceStatus, type VerifyChecklis
 import { checklistInstanceItemSubmissionApi } from '../../api/checklistInstanceItemSubmissions';
 import type { ChecklistInstanceItemSubmissionAccessory } from '../../api/checklistInstances';
 import type { CaptureMethod } from '../../api/ticket';
+import { checklistBulkImportApi, type BulkImportPublishPayload } from '../../api/checklistBulkImport';
 import { useEntityMutation, errorMessage, handleQueryRetry } from '../../lib/queryHelpers';
 
 const KEYS = {
@@ -19,6 +20,8 @@ const KEYS = {
   myInstances:            (status?: ChecklistInstanceStatus) => ['checklist-instances', 'mine', status ?? 'all'] as const,
   instanceDetail:         (id: string) => ['checklist-instances', 'detail', id] as const,
   instancesForDefinition: (definitionId: string) => ['checklist-instances', 'by-definition', definitionId] as const,
+  instancesBoard:         (filter: { storeId?: string; assigneeId?: string; status?: ChecklistInstanceStatus }) =>
+    ['checklist-instances', 'board', filter] as const,
 };
 
 export const useChecklistDefinitionsQuery = (filters: ListChecklistDefinitionsParams = {}) => {
@@ -95,6 +98,26 @@ export const useDeleteChecklistDefinitionMutation = () => {
   });
 };
 
+// Read-only — parses + matches the uploaded file but never writes anything, so no cache
+// invalidation belongs here.
+export const useChecklistBulkImportPreviewMutation = () =>
+  useMutation({
+    mutationFn: (file: File) => checklistBulkImportApi.preview(file).then(r => r.data),
+    onError: (err) => toast.error(errorMessage(err, 'Failed to read that file')),
+  });
+
+export const useChecklistBulkImportPublishMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BulkImportPublishPayload) => checklistBulkImportApi.publish(payload).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checklist-definitions'] });
+      queryClient.invalidateQueries({ queryKey: ['checklist-instances'] });
+    },
+    onError: (err) => toast.error(errorMessage(err, 'Failed to publish this batch')),
+  });
+};
+
 export const useMyChecklistInstancesQuery = (status?: ChecklistInstanceStatus) => {
   const { token } = useAuth();
   return useQuery({
@@ -125,10 +148,23 @@ export const useInstancesForDefinitionQuery = (definitionId: string) => {
   });
 };
 
+// Powers the admin Compliance Board — every generated instance matching whichever store/person/
+// status filters are picked, across every checklist definition (not scoped to one, unlike
+// useInstancesForDefinitionQuery above).
+export const useChecklistInstancesBoardQuery = (filter: { storeId?: string; assigneeId?: string; status?: ChecklistInstanceStatus } = {}) => {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: KEYS.instancesBoard(filter),
+    queryFn: () => checklistInstanceApi.list(filter).then(r => r.data),
+    enabled: !!token,
+    retry: handleQueryRetry,
+  });
+};
+
 export const useSetChecklistInstanceItemDoneMutation = (instanceId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ itemId, isDone, numericValue, booleanAnswer, textValue, dateValue, gpsLat, gpsLng, gpsAccuracy, signatureValue, secondSignatureValue, conditionalReasonValue }: {
+    mutationFn: ({ itemId, isDone, numericValue, booleanAnswer, textValue, dateValue, gpsLat, gpsLng, gpsAccuracy, signatureValue, secondSignatureValue, conditionalReasonValue, remarks }: {
       itemId: string;
       isDone: boolean;
       numericValue?: number;
@@ -141,9 +177,10 @@ export const useSetChecklistInstanceItemDoneMutation = (instanceId: string) => {
       signatureValue?: string;
       secondSignatureValue?: string;
       conditionalReasonValue?: string;
+      remarks?: string;
     }) =>
       checklistInstanceApi.setItemDone(itemId, isDone, {
-        numericValue, booleanAnswer, textValue, dateValue, gpsLat, gpsLng, gpsAccuracy, signatureValue, secondSignatureValue, conditionalReasonValue,
+        numericValue, booleanAnswer, textValue, dateValue, gpsLat, gpsLng, gpsAccuracy, signatureValue, secondSignatureValue, conditionalReasonValue, remarks,
       }).then(r => r.data),
     onSuccess: () => {
       // No success toast here — keeps checkbox-toggling snappy, matching

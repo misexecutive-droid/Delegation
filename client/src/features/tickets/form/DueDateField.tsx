@@ -1,4 +1,4 @@
-import type { UseFormWatch, UseFormSetValue, FieldErrors } from 'react-hook-form';
+import { useWatch, type Control, type UseFormSetValue, type FieldErrors } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { DatePicker } from '../../../components';
@@ -6,7 +6,7 @@ import type { TicketFields } from './ticketFormSchema';
 
 interface DueDateFieldProps {
   mode: 'MANUAL' | 'AUTO';
-  watch: UseFormWatch<TicketFields>;
+  control: Control<TicketFields>;
   setValue: UseFormSetValue<TicketFields>;
   errors: FieldErrors<TicketFields>;
   categoryTatHours: number | null | undefined;
@@ -18,9 +18,9 @@ const toTimeStr = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
 // Manual mode asks for an explicit due date/time; Auto mode shows the TAT that will be applied
 // instead (the category's TAT if one is selected, otherwise the 24h default).
-export const DueDateField = ({ mode, watch, setValue, errors, categoryTatHours }: DueDateFieldProps) => {
-  const dueDate = watch('dueDate');
-  const dueTime = watch('dueTime');
+export const DueDateField = ({ mode, control, setValue, errors, categoryTatHours }: DueDateFieldProps) => {
+  const dueDate = useWatch({ control, name: 'dueDate' });
+  const dueTime = useWatch({ control, name: 'dueTime' });
   // dueDate/dueTime stay as separate 'YYYY-MM-DD'/'HH:mm' strings on the form (see
   // ticketFormSchema.ts, combined via `${dueDate}T${dueTime}` at submit) — DatePicker just needs
   // a single Date to work with, built from whichever of the two strings are already set.

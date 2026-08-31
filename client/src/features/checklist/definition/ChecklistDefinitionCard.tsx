@@ -32,8 +32,7 @@ const ROLE_LABEL: Record<ChecklistAssigneeRole, string> = {
   OPERATIONS: 'Operations',
 };
 
-// One tag per distinctive item type present on the checklist — evaluated in this fixed order so
-// the card's tag row is stable across re-renders instead of following object key order.
+
 const TAG_BY_ITEM_TYPE: Partial<Record<ChecklistItemType, string>> = {
   GPS: 'GPS',
   SIGNATURE: 'Signature',

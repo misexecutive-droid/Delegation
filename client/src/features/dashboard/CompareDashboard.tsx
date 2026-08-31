@@ -11,6 +11,8 @@ import {
   shiftPeriod,
   pointDelta,
 } from './dashboardDisplay';
+import { useMyChecklistInstancesQuery } from '../checklist/hook';
+import { getChecklistProgress } from '../../lib/checklistProgress';
 import type { Task } from '../../api/task';
 import type { Ticket } from '../../api/ticket';
 import type { Todo } from '../../api/todos';
@@ -141,6 +143,8 @@ const ChartTooltip = ({ active, payload }: ChartTooltipProps) => {
 
 export const CompareDashboard = ({ tasks, tickets, todos, period, onPeriodChange }: CompareDashboardProps) => {
   const gradientId = useId();
+  const { data: checklistInstances = [] } = useMyChecklistInstancesQuery();
+  const { progress: checklistCompliance } = getChecklistProgress(checklistInstances);
 
   const { chartData, current, previous, projection } = useMemo(() => {
     const now = new Date().getTime();
@@ -213,7 +217,7 @@ export const CompareDashboard = ({ tasks, tickets, todos, period, onPeriodChange
         <SummaryChip label="Completion" value={current.completion} previous={previous.completion} dotClassName="bg-primary-500" />
         <SummaryChip label="On-time" value={current.onTime} previous={previous.onTime} dotClassName="bg-coral-500" />
         <SoonChip label="Quality Rate" />
-        <SoonChip label="Checklist" />
+        <SummaryChip label="Checklist" value={checklistCompliance} previous={null} dotClassName="bg-emerald-500" />
       </div>
 
       {hasData ? (

@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, Clock } from 'lucide-react';
+import { ArrowLeft, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, Clock, History, Check } from 'lucide-react';
 import { Skeleton } from '../../../components';
-import { useChecklistInstanceQuery } from '../hook';
+import { useChecklistInstanceQuery, useAssignableUsersQuery } from '../hook';
 import { ChecklistInstanceItemCard } from './ChecklistInstanceItemCard';
 import { ChecklistInstanceItemAuditCard } from './ChecklistInstanceItemAuditCard';
 import { ChecklistInstanceItemNumberEntryCard } from './ChecklistInstanceItemNumberEntryCard';
@@ -16,7 +16,8 @@ import { ChecklistInstanceItemSignatureCard } from './ChecklistInstanceItemSigna
 import { ChecklistInstanceItemDualSignatureCard } from './ChecklistInstanceItemDualSignatureCard';
 import { ChecklistInstanceItemQrScanCard } from './ChecklistInstanceItemQrScanCard';
 import { ChecklistInstanceItemCashTallyCard } from './ChecklistInstanceItemCashTallyCard';
-import { formatDate, rateToneClass, rateBarClass, isInstanceOverdue } from '../checklistDisplay';
+import { ItemRemarksField } from './ItemRemarksField';
+import { formatDate, formatDateTime, rateToneClass, rateBarClass, isInstanceOverdue } from '../checklistDisplay';
 import { useAuth } from '../../../context/AuthContext';
 import type { ChecklistInstanceItem } from '../../../api/checklistInstances';
 
@@ -86,10 +87,13 @@ export const ChecklistInstanceDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: instance, isPending, isError } = useChecklistInstanceQuery(instanceId);
+  // Scoped to the instance's own store once it's loaded — resolves completedBy user ids to real
+  // names for the Activity timeline below.
+  const { data: people = [] } = useAssignableUsersQuery(undefined, instance?.storeId);
 
   if (isPending) {
     return (
-      <div className="flex flex-col gap-4 max-w-2xl">
+      <div className="flex flex-col gap-4 max-w-4xl">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-40 w-full rounded-xl" />
       </div>
@@ -98,7 +102,7 @@ export const ChecklistInstanceDetail = () => {
 
   if (isError || !instance) {
     return (
-      <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-danger/10 text-danger text-sm font-mono max-w-2xl">
+      <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-danger/10 text-danger text-sm font-display max-w-4xl">
         <AlertCircle size={15} />
         Failed to load checklist.
       </div>
@@ -113,30 +117,34 @@ export const ChecklistInstanceDetail = () => {
   const isLocked = instance.verificationStatus === 'APPROVED';
   const isComplete = total > 0 && done === total;
   const overdue = isInstanceOverdue(instance.periodEnd, isComplete);
+  const nameById = new Map(people.map(p => [p.id, `${p.firstName} ${p.lastName ?? ''}`.trim() || p.email]));
+  const timeline = instance.items
+    .filter((i): i is typeof i & { completedAt: string } => i.isDone && !!i.completedAt)
+    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-4xl">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-xs font-mono text-text-muted hover:text-text transition-colors cursor-pointer w-fit"
+        className="flex items-center gap-1.5 text-xs font-display text-text-muted hover:text-text transition-colors cursor-pointer w-fit"
       >
         <ArrowLeft size={13} /> Back
       </button>
 
-      <div className="flex flex-col gap-3 p-5 rounded-xl border border-border bg-surface">
+      <div className="flex flex-col gap-3 p-5 rounded-lg border border-border bg-surface">
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-lg font-mono font-bold text-text">{instance.title}</h1>
-          <span className={`shrink-0 text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-surface-hover ${rateToneClass(progress)}`}>
+          <h1 className="text-xl font-display font-bold text-text">{instance.title}</h1>
+          <span className={`shrink-0 text-xs font-display font-medium px-2.5 py-1 rounded-full bg-surface-hover ${rateToneClass(progress)}`}>
             Mark {progress}%
           </span>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-xs text-text-muted font-mono">
+          <p className="text-xs text-text-muted font-display">
             {formatDate(instance.periodStart)} – {formatDate(instance.periodEnd)}
           </p>
           {overdue && (
-            <span className="flex items-center gap-1 text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-danger/10 text-danger">
+            <span className="flex items-center gap-1 text-xs font-display font-medium px-2 py-0.5 rounded-full bg-danger/10 text-danger">
               <Clock size={11} /> Overdue
             </span>
           )}
@@ -149,27 +157,27 @@ export const ChecklistInstanceDetail = () => {
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="text-xs font-mono text-text-muted shrink-0">{done}/{total} done</span>
+          <span className="text-xs font-display text-text-muted shrink-0">{done}/{total} done</span>
         </div>
       </div>
 
       {instance.verificationStatus === 'PENDING' && (
-        <div className="flex items-center gap-2.5 p-3.5 rounded-lg bg-primary-500/10 border border-primary-500/25 text-primary-600 dark:text-primary-300 text-xs font-mono">
+        <div className="flex items-center gap-2.5 p-3.5 rounded-lg bg-primary-500/10 border border-primary-500/25 text-primary-600 dark:text-primary-300 text-xs font-display">
           <ShieldQuestion size={16} className="shrink-0" />
           Every item is checked off — awaiting PC/Admin verification.
         </div>
       )}
 
       {instance.verificationStatus === 'APPROVED' && (
-        <div className="flex items-center gap-2.5 p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-mono">
+        <div className="flex items-center gap-2.5 p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-display">
           <ShieldCheck size={16} className="shrink-0" />
-          Verified{instance.verifiedAt ? ` on ${formatDate(instance.verifiedAt)}` : ''}.
+          Verified{instance.verifiedAt ? ` on ${formatDateTime(instance.verifiedAt)}` : ''}.
           {instance.verificationNote ? ` "${instance.verificationNote}"` : ''}
         </div>
       )}
 
       {instance.verificationStatus === 'REJECTED' && (
-        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-mono">
+        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-display">
           <ShieldAlert size={16} className="shrink-0 mt-0.5" />
           <span>
             Sent back for changes{instance.verificationNote ? `: "${instance.verificationNote}"` : '.'} Fix the
@@ -178,13 +186,40 @@ export const ChecklistInstanceDetail = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         {instance.items.map(item => (
-          <div key={item.id}>
+          <div key={item.id} className="flex flex-col gap-1.5">
             {ITEM_CARD_RENDERERS[item.itemType](item, { instanceId, canWork, isLocked, currentUserId: user?.id })}
+            {canWork && !isLocked && !item.isDone && item.itemType !== 'AUDIT' && (
+              <ItemRemarksField item={item} instanceId={instanceId} required={overdue} />
+            )}
           </div>
         ))}
       </div>
+
+      {timeline.length > 0 && (
+        <div className="flex flex-col gap-3 p-5 rounded-lg border border-border bg-surface">
+          <h2 className="flex items-center gap-1.5 text-xs font-display font-bold text-text-light">
+            <History size={13} /> Activity
+          </h2>
+          <div className="flex flex-col gap-2.5">
+            {timeline.map(item => (
+              <div key={item.id} className="flex items-start gap-2.5">
+                <span className="flex items-center justify-center size-5 rounded-full bg-emerald-500/10 text-emerald-600 shrink-0 mt-0.5">
+                  <Check size={11} strokeWidth={3} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-display text-text truncate">{item.label}</p>
+                  <p className="text-xs font-display text-text-muted mt-0.5">
+                    {formatDateTime(item.completedAt)}
+                    {item.completedBy && ` · ${nameById.get(item.completedBy) ?? 'Unknown'}`}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

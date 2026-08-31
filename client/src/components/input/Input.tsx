@@ -41,13 +41,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <label
             htmlFor={id}
             className={cn(
-              "flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 transition-colors duration-200 group-focus-within/input:text-primary-600 px-1",
+              "flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-text-muted transition-colors duration-150 group-focus-within/input:text-primary-600 px-1",
               labelClassName
             )}
           >
             {Icon && (
               <Icon
-                className={cn("w-3.5 h-3.5 text-slate-400 group-focus-within/input:text-primary-500 transition-colors", iconClassName)}
+                className={cn("w-3.5 h-3.5 text-text-light group-focus-within/input:text-primary-500 transition-colors", iconClassName)}
                 strokeWidth={2.5}
               />
             )}
@@ -65,15 +65,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={cn(
               // text-base (16px) below sm: iOS Safari auto-zooms the viewport on focusing any
               // input smaller than 16px, which text-sm's 14px would otherwise trigger.
-              "w-full h-11 rounded-xl border px-3.5 text-base sm:text-sm font-medium transition-all duration-200",
-              "bg-slate-50 text-slate-900 placeholder:text-slate-400",
-              "hover:border-slate-300 hover:bg-slate-100/50",
-              "focus:bg-white focus:outline-none focus:ring-4",
-              "disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed disabled:border-slate-200",
+              "w-full h-12 rounded-xl border px-4 text-base sm:text-sm font-medium transition-colors duration-150",
+              "bg-surface text-text placeholder:text-text-light",
+              "focus:outline-none",
+              "disabled:bg-muted disabled:text-text-light disabled:cursor-not-allowed disabled:border-border",
               suffix && "pr-11",
               error
-                ? "border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-50 bg-red-50/30"
-                : "border-slate-200 focus:border-primary-400 focus:ring-primary-50/50",
+                ? "border-danger focus:border-danger bg-danger/5"
+                : "border-border hover:border-border-hover focus:border-primary-500",
               className
             )}
             {...props}
@@ -83,8 +82,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {suffix && (
             <div className={cn(
               "absolute right-3 flex items-center justify-center transition-colors duration-200",
-              "text-slate-400 group-focus-within:text-primary-600",
-              error && "text-red-500 group-focus-within:text-red-600"
+              "text-text-light group-focus-within:text-primary-600",
+              error && "text-danger group-focus-within:text-danger"
             )}>
               {suffix}
             </div>
@@ -96,7 +95,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <p
             id={errorId}
             role="alert"
-            className="flex items-center gap-1.5 text-xs font-semibold text-red-500 animate-in slide-in-from-top-1 fade-in duration-200 px-1"
+            className="flex items-center gap-1.5 text-xs font-semibold text-danger animate-in slide-in-from-top-1 fade-in duration-200 px-1"
           >
             <AlertCircle className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
             {error}

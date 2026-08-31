@@ -55,7 +55,7 @@ const Column = ({ status, tickets, draggable, onOpen, departmentNames }: ColumnP
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col gap-2 rounded-xl border min-w-0 p-2 transition-colors duration-150 ${
+      className={`flex flex-col gap-2 rounded-lg border min-w-0 p-2 transition-colors duration-150 ${
         isOver ? 'border-primary-400 bg-primary-50/40' : 'border-border bg-surface-hover/40'
       }`}
     >

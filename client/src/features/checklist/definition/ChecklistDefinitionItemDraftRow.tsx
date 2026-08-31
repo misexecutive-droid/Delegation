@@ -1,30 +1,29 @@
+
 import { ItemTypeConfigFields } from './builder/ItemTypeConfigFields';
 import type { ChecklistItemType, ChecklistConditionalAction } from '../../../api/checklistDefinitions';
 
 export type ItemDraft = {
-  label:              string;
+  label: string;
   requiredImageCount: string;
-  maxImageCount:      string;
-  requiresLivePhoto:  boolean;
-  itemType:           ChecklistItemType;
-  auditUserIds:       string[];
-  accessories:        string[];
-  numberEntryUnit:    string;
-  numberEntryMin:     string;
-  numberEntryMax:     string;
-  ratingScale:        string;
-  options:            string[];
-  gpsTargetLat:       string;
-  gpsTargetLng:       string;
-  gpsRadiusMeters:    string;
-  qrExpectedValue:    string;
+  maxImageCount: string;
+  requiresLivePhoto: boolean;
+  itemType: ChecklistItemType;
+  auditUserIds: string[];
+  accessories: string[];
+  numberEntryUnit: string;
+  numberEntryMin: string;
+  numberEntryMax: string;
+  ratingScale: string;
+  options: string[];
+  gpsTargetLat: string;
+  gpsTargetLng: string;
+  gpsRadiusMeters: string;
+  qrExpectedValue: string;
   cashExpectedAmount: string;
   conditionalTrigger: 'YES' | 'NO' | '';
   conditionalActions: ChecklistConditionalAction[];
 };
 
-// Tightly coupled to ItemDraft/ChecklistDefinitionItemDraftRow in this file — only affects Fast
-// Refresh granularity, not runtime correctness.
 // eslint-disable-next-line react-refresh/only-export-components
 export const emptyItemDraft = (): ItemDraft => ({
   label: '',
@@ -75,52 +74,72 @@ const ITEM_TYPES = [
 ] as const satisfies readonly ChecklistItemType[];
 
 interface ChecklistDefinitionItemDraftRowProps {
-  index:    number;
-  draft:    ItemDraft;
+  index: number;
+  draft: ItemDraft;
   onChange: (index: number, patch: Partial<ItemDraft>) => void;
   storeId?: string;
+  className?: string;
 }
 
-// Sibling of admin/checklist/ItemDraftRow.tsx — same photo-requirement controls (min/max count,
-// live-photo-only), minus the per-item assignee dropdown, since assignment here lives at the
-// checklist level via assigneeIds, not per-item — EXCEPT for itemType "AUDIT", which is the one
-// deliberate exception: it names specific users (auditUserIds) who must each independently submit
-// their own evidence against this one step (see ChecklistInstanceItemSubmission on the backend).
-// Per-type fields live in ItemTypeConfigFields, shared with the palette's quick-add popup so both
-// surfaces agree on what each question type needs.
-export const ChecklistDefinitionItemDraftRow = ({ index, draft, onChange, storeId }: ChecklistDefinitionItemDraftRowProps) => {
+export const ChecklistDefinitionItemDraftRow = ({
+  index,
+  draft,
+  onChange,
+  storeId,
+  className = '',
+}: ChecklistDefinitionItemDraftRowProps) => {
   const patch = (p: Partial<ItemDraft>) => onChange(index, p);
 
   return (
-    <div className="flex flex-col gap-3 p-3.5 rounded-xl border border-border/70 bg-surface transition-colors duration-200 hover:border-border/90 animate-fade-in-up">
-      <div className="flex items-center gap-2">
-        <span className="flex items-center justify-center size-6 rounded-md bg-surface-hover text-text-muted text-[11px] font-display font-bold shrink-0 tabular-nums">
+    <div
+      className={`flex flex-col gap-3.5 p-4 rounded-xl border border-border bg-surface shadow-xs transition-all duration-150 hover:border-border/90 hover:shadow-sm ${className}`}
+    >
+      {/* Item Index + Main Description Input */}
+      <div className="flex items-center gap-2.5">
+        <span className="flex items-center justify-center size-7 rounded-lg bg-muted/60 text-text-secondary text-xs font-mono font-bold shrink-0 tabular-nums select-none border border-border/40">
           {String(index + 1).padStart(2, '0')}
         </span>
+
         <input
+          type="text"
           value={draft.label}
-          onChange={e => patch({ label: e.target.value })}
-          placeholder={`Item ${index + 1} description...`}
-          className="flex-1 min-w-0 px-3 py-2.5 text-sm font-display bg-surface text-text rounded-lg border border-border placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-150"
+          onChange={(e) => patch({ label: e.target.value })}
+          placeholder={`Task ${index + 1} prompt (e.g. Inspect refrigeration temperature)...`}
+          aria-label={`Task ${index + 1} title`}
+          className="flex-1 min-w-0 px-3.5 py-2 text-sm font-display bg-surface text-text rounded-lg border border-border placeholder:text-text-muted/60 hover:border-border/80 transition-all duration-150 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
         />
       </div>
 
-      <div className="flex items-center gap-1 overflow-x-auto rounded-lg border border-border/60 bg-background p-1 text-xs font-display">
-        {ITEM_TYPES.map(type => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => patch({ itemType: type })}
-            className={[
-              'shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 font-medium transition-all duration-150 cursor-pointer',
-              draft.itemType === type ? 'bg-primary-700 text-white shadow-sm' : 'text-text-muted hover:text-text hover:bg-surface-hover',
-            ].join(' ')}
-          >
-            {ITEM_TYPE_LABEL[type]}
-          </button>
-        ))}
+      {/* Horizontal Question Type Switcher */}
+      <div
+        role="radiogroup"
+        aria-label="Question type switcher"
+        className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-lg border border-border/80 bg-muted/30 p-1 text-xs font-display"
+      >
+        {ITEM_TYPES.map((type) => {
+          const isSelected = draft.itemType === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              role="radio"
+              aria-checked={isSelected}
+              aria-label={`Switch type to ${ITEM_TYPE_LABEL[type]}`}
+              onClick={() => patch({ itemType: type })}
+              className={[
+                'shrink-0 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
+                isSelected
+                  ? 'bg-primary-700 text-white shadow-2xs font-semibold'
+                  : 'text-text-muted hover:text-text hover:bg-surface/60',
+              ].join(' ')}
+            >
+              {ITEM_TYPE_LABEL[type]}
+            </button>
+          );
+        })}
       </div>
 
+      {/* Type-specific Fields Configuration */}
       <div className="pt-2.5 border-t border-dashed border-border/60">
         <ItemTypeConfigFields draft={draft} onChange={patch} storeId={storeId} />
       </div>

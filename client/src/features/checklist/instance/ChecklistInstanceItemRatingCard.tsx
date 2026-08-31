@@ -27,19 +27,19 @@ export const ChecklistInstanceItemRatingCard = ({ item, instanceId, canWork, isL
   };
 
   return (
-    <div className={`flex flex-col gap-3 p-3 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
+    <div className={`flex flex-col gap-3 p-4 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono font-medium leading-snug text-text">{item.label}</p>
+          <p className="text-sm font-display font-medium leading-snug text-text">{item.label}</p>
           {item.isDone && item.completedAt && (
-            <p className="text-xs text-text-muted font-mono mt-0.5">Completed {formatDate(item.completedAt)}</p>
+            <p className="text-xs text-text-muted font-display mt-0.5">Completed {formatDate(item.completedAt)}</p>
           )}
         </div>
         {canWork && !isLocked && item.isDone && (
           <button
             onClick={() => setItemDone.mutate({ itemId: item.id, isDone: false, numericValue: item.numericValue ?? undefined })}
             disabled={setItemDone.isPending}
-            className="shrink-0 text-text-light hover:text-amber-500 transition-colors cursor-pointer disabled:opacity-50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -77,7 +77,7 @@ export const ChecklistInstanceItemRatingCard = ({ item, instanceId, canWork, isL
         })}
         {setItemDone.isPending && <Loader2 size={14} className="animate-spin text-text-muted ml-1" />}
         {item.numericValue != null && (
-          <span className="text-xs font-mono text-text-muted ml-2">{item.numericValue}/{scale}</span>
+          <span className="text-xs font-display text-text-muted ml-2">{item.numericValue}/{scale}</span>
         )}
       </div>
     </div>

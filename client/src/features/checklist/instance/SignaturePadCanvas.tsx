@@ -67,12 +67,12 @@ export const SignaturePadCanvas = ({ label, disabled, onChange }: SignaturePadCa
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono font-medium text-text-secondary">{label}</span>
+        <span className="text-xs font-display font-medium text-text-secondary">{label}</span>
         {hasDrawn && !disabled && (
           <button
             type="button"
             onClick={clear}
-            className="flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-amber-500 transition-colors cursor-pointer"
+            className="flex items-center gap-1 text-[11px] font-display text-text-muted hover:text-amber-500 transition-colors cursor-pointer"
           >
             <RotateCcw size={11} /> Clear
           </button>

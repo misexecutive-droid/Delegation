@@ -1,10 +1,7 @@
-import { Briefcase } from 'lucide-react';
+import { Briefcase, Check, UserCheck } from 'lucide-react';
 import { LABEL_CLASS } from './formConstants';
 import type { ChecklistAssigneeRole } from '../../../../api/checklistDefinitions';
 
-// Tightly coupled to ChecklistRolesField right below — only affects Fast Refresh granularity,
-// not runtime correctness.
-// eslint-disable-next-line react-refresh/only-export-components
 export const ROLE_OPTIONS: { value: ChecklistAssigneeRole; label: string }[] = [
   { value: 'STORE_MANAGER', label: 'Store Manager' },
   { value: 'FLOOR_MANAGER', label: 'Floor Manager' },
@@ -17,45 +14,106 @@ export const ROLE_OPTIONS: { value: ChecklistAssigneeRole; label: string }[] = [
 interface ChecklistRolesFieldProps {
   selected: ChecklistAssigneeRole[];
   onChange: (roles: ChecklistAssigneeRole[]) => void;
+  className?: string;
 }
 
-// Descriptive-only "who does this job at the store" tags (shown on the Templates grid, e.g.
-// "Daily · Store Manager") — separate from Assigned Users above, which is the actual mechanism
-// that decides who receives each generated instance.
-export const ChecklistRolesField = ({ selected, onChange }: ChecklistRolesFieldProps) => {
+export const ChecklistRolesField = ({
+  selected,
+  onChange,
+  className = '',
+}: ChecklistRolesFieldProps) => {
   const toggle = (role: ChecklistAssigneeRole) => {
-    onChange(selected.includes(role) ? selected.filter(r => r !== role) : [...selected, role]);
+    onChange(
+      selected.includes(role)
+        ? selected.filter((r) => r !== role)
+        : [...selected, role]
+    );
+  };
+
+  const handleToggleAll = () => {
+    if (selected.length === ROLE_OPTIONS.length) {
+      onChange([]);
+    } else {
+      onChange(ROLE_OPTIONS.map((r) => r.value));
+    }
   };
 
   return (
-    <div className="space-y-2">
-      <label className={LABEL_CLASS}>
-        <Briefcase className="w-3.5 h-3.5 text-violet-400" /> Assign To (Role)
-      </label>
-      <div className="flex flex-wrap gap-2">
-        {ROLE_OPTIONS.map(opt => {
+    <div
+      role="group"
+      aria-labelledby="checklist-roles-heading"
+      className={`flex flex-col gap-2 w-full ${className}`}
+    >
+      {/* Header with Title and Quick Actions */}
+      <div className="flex items-center justify-between gap-2">
+        <label
+          id="checklist-roles-heading"
+          className={`${LABEL_CLASS} flex items-center gap-1.5 cursor-pointer`}
+        >
+          <Briefcase size={14} className="text-text-muted shrink-0" />
+          <span>Assign by Role</span>
+        </label>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleAll}
+            className="text-[11px] font-display font-medium text-text-muted hover:text-text underline cursor-pointer transition-colors"
+          >
+            {selected.length === ROLE_OPTIONS.length ? 'Clear all' : 'Select all'}
+          </button>
+
+          {selected.length > 0 && (
+            <span className="text-[11px] font-display font-medium text-text-muted flex items-center gap-1">
+              <UserCheck size={12} className="text-primary-700 dark:text-primary-400" />
+              <span>{selected.length} selected</span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Role Option Chips */}
+      <div className="flex flex-wrap gap-2 pt-0.5">
+        {ROLE_OPTIONS.map((opt) => {
           const checked = selected.includes(opt.value);
+
           return (
             <label
               key={opt.value}
               className={[
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-display font-medium cursor-pointer transition-colors',
+                'group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-display font-medium cursor-pointer select-none transition-all duration-150',
+                'focus-within:ring-2 focus-within:ring-primary-500/50',
                 checked
-                  ? 'border-primary-500/50 bg-primary-500/10 text-primary-700 dark:text-primary-300'
-                  : 'border-border text-text-secondary hover:bg-surface-hover',
+                  ? 'border-primary-500/60 bg-primary-50 dark:bg-primary-950/40 text-primary-800 dark:text-primary-300 shadow-2xs font-semibold'
+                  : 'border-border bg-surface text-text-secondary hover:bg-surface-hover hover:border-border/80 hover:text-text',
               ].join(' ')}
             >
               <input
                 type="checkbox"
                 checked={checked}
                 onChange={() => toggle(opt.value)}
-                className="accent-primary-600 size-3"
+                className="sr-only"
               />
-              {opt.label}
+              <span
+                className={[
+                  'flex size-3.5 items-center justify-center rounded-sm border transition-all duration-150',
+                  checked
+                    ? 'border-primary-600 bg-primary-600 text-white'
+                    : 'border-border bg-surface group-hover:border-text-muted',
+                ].join(' ')}
+              >
+                {checked && <Check size={10} strokeWidth={3.5} />}
+              </span>
+              <span>{opt.label}</span>
             </label>
           );
         })}
       </div>
+
+      {/* Helper Subtext */}
+      <p className="text-[11px] font-display text-text-muted">
+        Any store team member holding one of the selected roles will have access to run this checklist.
+      </p>
     </div>
   );
 };

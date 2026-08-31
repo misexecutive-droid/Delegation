@@ -1,72 +1,130 @@
-import { Check, AlertTriangle } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Check, AlertTriangle, Lock } from 'lucide-react';
+
+export interface StepItem {
+  label: string;
+  description?: string;
+  icon?: ReactNode;
+}
 
 interface BuilderStepperProps {
-  steps: readonly { label: string }[];
+  steps: readonly StepItem[];
   current: number;
   maxReached: number;
   allUnlocked: boolean;
   isStepValid: (index: number) => boolean;
   onSelect: (index: number) => void;
+  className?: string;
 }
 
-// Linear-but-forgiving wizard nav: steps beyond `maxReached` are genuinely disabled (not just
-// dimmed) in create mode, but never re-lock once reached, even if an earlier step regresses — see
-// BuilderReviewStep for how regressions actually get surfaced. `allUnlocked` (edit mode) skips the
-// lock check entirely so every section is one click away for an admin who already has valid data.
-export const BuilderStepper = ({ steps, current, maxReached, allUnlocked, isStepValid, onSelect }: BuilderStepperProps) => (
-  <nav aria-label="Checklist builder steps" className="w-full overflow-x-auto">
-    <ol className="flex items-center min-w-max sm:min-w-0">
-      {steps.map((s, i) => {
-        const locked = i > maxReached && !allUnlocked;
-        const isCurrent = i === current;
-        const valid = isStepValid(i);
-        const connectorFilled = i < current;
-        const isLast = i === steps.length - 1;
+export const BuilderStepper = ({
+  steps,
+  current,
+  maxReached,
+  allUnlocked,
+  isStepValid,
+  onSelect,
+  className = '',
+}: BuilderStepperProps) => {
+  return (
+    <nav
+      aria-label="Checklist builder progress"
+      className={`w-full overflow-x-auto no-scrollbar py-2 ${className}`}
+    >
+      <ol className="flex items-center justify-between min-w-max sm:min-w-0 w-full gap-1 sm:gap-2">
+        {steps.map((step, index) => {
+          const isLocked = index > maxReached && !allUnlocked;
+          const isCurrent = index === current;
+          const isValid = isStepValid(index);
+          const isCompleted = index < current && isValid;
+          const isConnectorFilled = index < current;
+          const isLast = index === steps.length - 1;
 
-        return (
-          <li key={s.label} className="flex items-center flex-1 last:flex-none">
-            <button
-              type="button"
-              onClick={() => !locked && onSelect(i)}
-              disabled={locked}
-              aria-current={isCurrent ? 'step' : undefined}
-              aria-label={locked ? `${s.label} (complete previous steps first)` : s.label}
-              className="group flex items-center gap-2.5 shrink-0 cursor-pointer disabled:cursor-not-allowed focus:outline-none"
+          // Accessible status description
+          let statusDescription = 'In progress';
+          if (isLocked) statusDescription = 'Locked (complete previous steps first)';
+          else if (isCompleted) statusDescription = 'Completed';
+          else if (!isValid && index < maxReached) statusDescription = 'Needs attention';
+
+          return (
+            <li
+              key={step.label}
+              className="flex items-center flex-1 last:flex-none"
             >
-              <span
-                className={[
-                  'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-display font-bold transition-all duration-200',
-                  locked && 'bg-surface-hover text-text-light border border-border',
-                  !locked && isCurrent && 'bg-primary-700 text-white ring-4 ring-primary-500/20',
-                  !locked && !isCurrent && valid && 'bg-primary-700 text-white',
-                  !locked && !isCurrent && !valid && 'bg-warning/10 text-warning border-2 border-warning/40',
-                ].filter(Boolean).join(' ')}
+              <button
+                type="button"
+                onClick={() => !isLocked && onSelect(index)}
+                disabled={isLocked}
+                aria-current={isCurrent ? 'step' : undefined}
+                aria-label={`Step ${index + 1}: ${step.label} (${statusDescription})`}
+                className={`group flex items-center gap-2.5 shrink-0 rounded-lg p-1 transition-all duration-150 select-none ${isLocked
+                    ? 'cursor-not-allowed opacity-60'
+                    : 'cursor-pointer hover:bg-muted/40'
+                  } focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50`}
               >
-                {!locked && !isCurrent && valid && <Check size={15} strokeWidth={3} />}
-                {!locked && !isCurrent && !valid && <AlertTriangle size={13} strokeWidth={2.5} />}
-                {(locked || isCurrent) && i + 1}
-              </span>
-              <span
-                className={[
-                  'hidden sm:inline text-xs font-display font-medium whitespace-nowrap transition-colors duration-200',
-                  locked ? 'text-text-light' : isCurrent ? 'text-primary-700' : valid ? 'text-text-secondary' : 'text-warning',
-                  !locked && 'group-hover:text-primary-700',
-                ].join(' ')}
-              >
-                {s.label}
-              </span>
-            </button>
-            {!isLast && (
-              <span
-                className={[
-                  'mx-2 sm:mx-3 h-0.5 flex-1 min-w-6 rounded-full transition-colors duration-300',
-                  connectorFilled ? 'bg-primary-700' : 'bg-border',
-                ].join(' ')}
-              />
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  </nav>
-);
+                {/* Step Circle Badge */}
+                <span
+                  className={[
+                    'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-display font-bold transition-all duration-200',
+                    isLocked && 'bg-surface-hover text-text-light border border-border',
+                    !isLocked && isCurrent && 'bg-primary-700 text-white ring-4 ring-primary-500/20 shadow-xs scale-105',
+                    !isLocked && !isCurrent && isValid && 'bg-primary-700 text-white group-hover:scale-105',
+                    !isLocked && !isCurrent && !isValid && 'bg-warning/15 text-warning border-2 border-warning/50 font-semibold group-hover:bg-warning/20',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  {isLocked ? (
+                    <Lock size={12} className="text-text-muted" />
+                  ) : !isCurrent && isValid ? (
+                    <Check size={14} strokeWidth={3} />
+                  ) : !isCurrent && !isValid ? (
+                    <AlertTriangle size={13} strokeWidth={2.5} />
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+
+                {/* Step Label & Subtitle */}
+                <div className="flex flex-col text-left">
+                  <span
+                    className={[
+                      'text-xs font-display font-medium whitespace-nowrap transition-colors duration-150',
+                      isLocked && 'text-text-muted',
+                      !isLocked && isCurrent && 'text-primary-700 dark:text-primary-400 font-bold',
+                      !isLocked && !isCurrent && isValid && 'text-text-secondary group-hover:text-text',
+                      !isLocked && !isCurrent && !isValid && 'text-warning font-semibold',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {step.label}
+                  </span>
+
+                  {step.description && (
+                    <span className="hidden md:inline text-[10px] text-text-muted">
+                      {step.description}
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              {/* Progress Connector Line */}
+              {!isLast && (
+                <div
+                  aria-hidden="true"
+                  className="mx-2 sm:mx-3 flex-1 h-0.5 min-w-5 sm:min-w-8 rounded-full bg-border overflow-hidden"
+                >
+                  <div
+                    className={`h-full transition-all duration-300 ${isConnectorFilled ? 'bg-primary-700 w-full' : 'w-0'
+                      }`}
+                  />
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  )
+}

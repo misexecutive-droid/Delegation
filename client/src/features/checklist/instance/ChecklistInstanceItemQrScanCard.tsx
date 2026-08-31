@@ -86,19 +86,19 @@ export const ChecklistInstanceItemQrScanCard = ({ item, instanceId, canWork, isL
   };
 
   return (
-    <div className={`flex flex-col gap-3 p-3 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
+    <div className={`flex flex-col gap-3 p-4 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono font-medium leading-snug text-text">{item.label}</p>
+          <p className="text-sm font-display font-medium leading-snug text-text">{item.label}</p>
           {item.isDone && item.completedAt && (
-            <p className="text-xs text-text-muted font-mono mt-0.5">Completed {formatDate(item.completedAt)}</p>
+            <p className="text-xs text-text-muted font-display mt-0.5">Completed {formatDate(item.completedAt)}</p>
           )}
         </div>
         {interactive && item.isDone && (
           <button
             onClick={() => setItemDone.mutate({ itemId: item.id, isDone: false, textValue: item.textValue ?? undefined })}
             disabled={setItemDone.isPending}
-            className="shrink-0 text-text-light hover:text-amber-500 transition-colors cursor-pointer disabled:opacity-50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -135,13 +135,13 @@ export const ChecklistInstanceItemQrScanCard = ({ item, instanceId, canWork, isL
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={startScan}
-                className="flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-md border border-border text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors"
+                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-border text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors"
               >
                 <ScanLine size={12} /> {scannedValue ? 'Scan again' : 'Scan with camera'}
               </button>
               <button
                 onClick={() => setManualEntry(v => !v)}
-                className="text-[11px] font-mono text-text-muted hover:text-text underline decoration-dotted cursor-pointer"
+                className="text-[11px] font-display text-text-muted hover:text-text underline decoration-dotted cursor-pointer"
               >
                 {manualEntry ? 'Hide manual entry' : 'Enter code manually'}
               </button>
@@ -149,7 +149,7 @@ export const ChecklistInstanceItemQrScanCard = ({ item, instanceId, canWork, isL
           )}
 
           {scannedValue && (
-            <p className="text-xs font-mono px-2.5 py-1.5 rounded-md bg-background border border-border/60 text-text-secondary w-fit">
+            <p className="text-xs font-display px-2.5 py-1.5 rounded-md bg-background border border-border/60 text-text-secondary w-fit">
               Scanned: {scannedValue}
             </p>
           )}
@@ -159,7 +159,7 @@ export const ChecklistInstanceItemQrScanCard = ({ item, instanceId, canWork, isL
               value={scannedValue}
               onChange={(e) => setScannedValue(e.target.value)}
               placeholder="Type the code…"
-              className="w-full max-w-xs px-2.5 py-1.5 text-sm font-mono bg-surface text-text rounded-md border border-border focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+              className="w-full max-w-xs px-2.5 py-1.5 text-sm font-display bg-surface text-text rounded-md border border-border focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
             />
           )}
 
@@ -167,7 +167,7 @@ export const ChecklistInstanceItemQrScanCard = ({ item, instanceId, canWork, isL
             <button
               onClick={() => scannedValue.trim() && setItemDone.mutate({ itemId: item.id, isDone: true, textValue: scannedValue.trim() })}
               disabled={!scannedValue.trim() || setItemDone.isPending}
-              className="w-fit flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-fit flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {setItemDone.isPending && <Loader2 size={12} className="animate-spin" />}
               Save

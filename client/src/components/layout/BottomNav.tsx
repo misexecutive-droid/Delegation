@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router';
 import { motion } from 'framer-motion';
+import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -8,12 +9,20 @@ import {
   ListTodo,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  exact: boolean;
+  soon?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Home', icon: LayoutDashboard, exact: true },
   { to: '/tasks', label: 'Tasks', icon: CheckSquare, exact: false },
   { to: '/tickets', label: 'Tickets', icon: TicketCheck, exact: false },
   { to: '/todo', label: 'To-Do', icon: ListTodo, exact: false },
-  { to: '/checklists', label: 'Checklists', icon: ClipboardCheck, exact: false, soon: true },
+  { to: '/checklists', label: 'Checklists', icon: ClipboardCheck, exact: false },
 ];
 
 const INDICATOR_SPRING = { type: 'spring', stiffness: 420, damping: 32 } as const;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, AlertCircle, Trash2, ListChecks, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Skeleton, GradientIconTile } from '../../../../components';
+import { Skeleton, GradientIconTile, Breadcrumbs } from '../../../../components';
 import { Badge } from '@/components/ui/badge';
 import {
   useChecklistDefinitionQuery,
@@ -15,7 +15,7 @@ import { useChecklistTemplatesQuery } from '../../hook';
 import { QuestionTypePalette } from './QuestionTypePalette';
 import { isItemDraftComplete } from './ItemTypeConfigFields';
 import { BuilderSchedulePanel } from './BuilderSchedulePanel';
-import { BuilderAssignPanel } from './BuilderAssignPanel';
+import  {BuilderAssignPanel}  from './BuilderAssignPanel';
 import { BuilderProofPanel } from './BuilderProofPanel';
 import { BuilderStepper } from './wizard/BuilderStepper';
 import { BuilderStepFrame } from './wizard/BuilderStepFrame';
@@ -92,6 +92,14 @@ const STEPS = [
   { key: 'review', label: 'Review' },
 ] as const;
 
+// Shown next to the disabled Next button so it's clear *why* it's blocked, not just that it is.
+const STEP_BLOCK_REASON: Record<number, string> = {
+  0: 'Enter a checklist name to continue.',
+  1: 'Select at least one store and a start date to continue.',
+  2: 'Add at least one complete checklist item to continue.',
+  3: 'Assign at least one team member to continue.',
+};
+
 export const ChecklistBuilder = () => {
   const { definitionId } = useParams();
   const isEditing = !!definitionId;
@@ -115,9 +123,6 @@ export const ChecklistBuilder = () => {
   const [assigneeRoles, setAssigneeRoles] = useState<ChecklistAssigneeRole[]>([]);
   const [proofRequired, setProofRequired] = useState<ChecklistProofType[]>([]);
   const [itemDrafts, setItemDrafts] = useState<ItemDraft[]>([]);
-
-  // Edit mode lands on Review — the only entry point is "Edit in Builder" from an existing,
-  // presumably-valid checklist, so there's no reason to walk the admin through onboarding again.
   const [step, setStep] = useState(() => (definitionId ? STEPS.length - 1 : 0));
   const [maxStepReached, setMaxStepReached] = useState(step);
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -128,15 +133,6 @@ export const ChecklistBuilder = () => {
     setMaxStepReached(m => Math.max(m, index));
   };
 
-  // Hydrate local state from the loaded definition exactly once per definition — a later refetch
-  // (e.g. after save, or a window-focus refetch) shouldn't clobber whatever the admin is
-  // mid-typing. Done during render, React's "adjusting state when a prop changes" pattern
-  // (react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes),
-  // rather than in an effect: an effect only runs after commit, which would leave a one-render
-  // gap between `existing` resolving and local state catching up — invisible on the old
-  // all-at-once layout, but a visible flash of "0 stores, 0 items" now that Review can be the
-  // first thing rendered in edit mode. Keyed by id (not a plain once-only flag) so it re-hydrates
-  // correctly if this instance ever gets reused for a different definitionId.
   const [hydratedId, setHydratedId] = useState<string | undefined>(undefined);
   if (existing && hydratedId !== existing.id) {
     setHydratedId(existing.id);
@@ -217,25 +213,27 @@ export const ChecklistBuilder = () => {
 
   if (isEditing && isLoadingExisting) {
     return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+      <div className="flex flex-col gap-4 w-full max-w-5xl mx-auto p-4 sm:p-6">
+        <Skeleton className="h-10 w-72 rounded-lg" />
+        <Skeleton className="h-96 w-full rounded-2xl" />
       </div>
     );
   }
 
   if (isEditing && (loadError || !existing)) {
     return (
-      <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-danger/10 text-danger text-sm font-display">
-        <AlertCircle size={15} />
-        Failed to load this checklist.
+      <div className="w-full max-w-5xl mx-auto p-4 sm:p-6">
+        <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm font-display shadow-xs">
+          <AlertCircle size={18} className="shrink-0" />
+          <span>Failed to load this checklist. Please refresh or try again later.</span>
+        </div>
       </div>
     );
   }
 
   const stepContent = [
     <BuilderStepFrame key="basics" stepIndex={step} title="Basics" description="Give this checklist a name your team will recognize.">
-      <div className="max-w-2xl">
+      <div className="max-w-3xl">
         <ChecklistDetailsFields name={name} onNameChange={setName} description={description} onDescriptionChange={setDescription} />
       </div>
     </BuilderStepFrame>,
@@ -258,43 +256,49 @@ export const ChecklistBuilder = () => {
     </BuilderStepFrame>,
 
     <BuilderStepFrame key="items" stepIndex={step} title="Checklist Items" description="Add the steps your team needs to complete, in order.">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
         <ImportFromTemplateField templates={templates} onImport={handleImportTemplate} />
         <div className="grid grid-cols-1 lg:grid-cols-[20rem_1fr] gap-6 items-start">
-          <div className="rounded-xl border border-border bg-surface shadow-sm p-4 lg:sticky lg:top-6">
+          <div className="rounded-xl border border-border bg-surface shadow-xs p-4 lg:sticky lg:top-6">
             <QuestionTypePalette onAdd={addItem} storeId={primaryStoreId} />
           </div>
 
-          <div className="flex flex-col gap-4">
-            <label className="flex items-center gap-2 text-xs font-display font-medium text-text-secondary uppercase tracking-wider">
-              Checklist Items
-              <Badge variant="outline">{itemDrafts.length}</Badge>
-            </label>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between pb-1">
+              <label className="flex items-center gap-2 text-xs font-display font-bold uppercase tracking-wider text-text-secondary">
+                <span>Checklist Items</span>
+                <Badge variant="outline" className="text-[11px] py-0 px-2 font-mono">
+                  {itemDrafts.length}
+                </Badge>
+              </label>
+            </div>
 
             {itemDrafts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2.5 py-10 px-4 rounded-xl border border-dashed border-border bg-surface-hover/30 text-center">
-                <span className="flex items-center justify-center size-10 rounded-full bg-gradient-to-br from-primary-600 to-primary-500 text-white shadow-sm shadow-primary-600/20">
-                  <ListChecks size={18} />
+              <div className="flex flex-col items-center justify-center gap-3 py-12 px-6 rounded-xl border border-dashed border-border/80 bg-surface-hover/20 text-center transition-colors">
+                <span className="flex items-center justify-center size-12 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 border border-primary-100 dark:border-primary-900/40 shadow-xs">
+                  <ListChecks size={22} />
                 </span>
-                <p className="text-sm font-display font-medium text-text">No items yet</p>
-                <p className="text-xs font-display text-text-muted max-w-56">
-                  Pick a question type from the panel on the left to add your first item.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm font-display font-semibold text-text">No checklist items yet</p>
+                  <p className="text-xs font-display text-text-muted max-w-xs leading-relaxed">
+                    Pick a question type from the palette on the left to add your first checklist item.
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-3">
                 {itemDrafts.map((draft, i) => (
-                  <div key={i} className="flex items-start gap-2">
+                  <div key={i} className="group flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <ChecklistDefinitionItemDraftRow index={i} draft={draft} onChange={updateDraft} storeId={primaryStoreId} />
                     </div>
                     <button
                       type="button"
                       onClick={() => removeItem(i)}
-                      className="shrink-0 p-2 mt-1 text-text-light hover:text-danger hover:bg-danger/10 rounded-md transition-colors duration-150 cursor-pointer"
+                      className="shrink-0 p-2 mt-1.5 text-text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
                       aria-label="Remove item"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 ))}
@@ -345,15 +349,26 @@ export const ChecklistBuilder = () => {
   const progressPercent = Math.round(((step + 1) / STEPS.length) * 100);
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto py-2 sm:py-4">
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', to: '/' },
+          { label: 'Admin', to: '/admin' },
+          { label: 'Checklists', to: '/admin/scheduled-checklists' },
+          { label: isEditing && existing ? existing.name : 'New checklist' },
+          { label: STEPS[step].label },
+        ]}
+      />
+
+      {/* Top Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3.5">
           <GradientIconTile icon={ListChecks} />
           <div>
-            <h1 className="font-display text-xl font-bold text-text leading-tight">
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-text tracking-tight leading-snug">
               {isEditing ? `Editing: ${existing?.name}` : 'New Checklist'}
             </h1>
-            <p className="text-sm text-text-muted mt-0.5">
+            <p className="text-xs sm:text-sm text-text-muted mt-0.5">
               {isEditing && existing
                 ? `Version ${existing.version} · Live in ${existing.storeIds.length} store${existing.storeIds.length !== 1 ? 's' : ''}`
                 : 'Build a recurring checklist your team runs on a schedule.'}
@@ -362,15 +377,19 @@ export const ChecklistBuilder = () => {
         </div>
 
         <button
+          type="button"
           onClick={() => navigate('/admin/scheduled-checklists')}
-          className="press-feedback flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover hover:text-text transition-colors duration-150 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover hover:text-text hover:border-border/80 shadow-2xs transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:scale-[0.98]"
         >
-          <ArrowLeft size={13} /> Back to Templates
+          <ArrowLeft size={13} />
+          <span>Back to Templates</span>
         </button>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden">
-        <div className="flex flex-col gap-3 px-5 sm:px-6 py-5 border-b border-border/60 bg-surface-hover/30">
+      {/* Main Wizard Card */}
+      <div className="rounded-2xl border border-border bg-surface shadow-xs overflow-hidden">
+        {/* Stepper Header with Progress Bar */}
+        <div className="flex flex-col gap-3 px-5 sm:px-6 pt-5 pb-4 border-b border-border/60 bg-muted/20">
           <BuilderStepper
             steps={STEPS}
             current={step}
@@ -379,15 +398,16 @@ export const ChecklistBuilder = () => {
             isStepValid={isStepValid}
             onSelect={goToStep}
           />
-          <div className="h-1 w-full rounded-full bg-border overflow-hidden">
+          <div className="h-1.5 w-full rounded-full bg-border/60 overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-primary-600 to-primary-400 transition-[width] duration-300 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-primary-600 via-primary-500 to-primary-400 transition-[width] duration-300 ease-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
 
-        <div className="p-5 sm:p-6">
+        {/* Wizard Content Step */}
+        <div className="p-5 sm:p-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={step}
@@ -400,26 +420,37 @@ export const ChecklistBuilder = () => {
             </motion.div>
           </AnimatePresence>
 
-          <div className="flex items-center justify-between pt-6 mt-6 border-t border-border/60">
+          {/* Footer Navigation Bar */}
+          <div className="flex items-center justify-between pt-6 mt-8 border-t border-border/60">
             {step > 0 ? (
               <button
                 type="button"
                 onClick={() => goToStep(step - 1)}
-                className="press-feedback flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs sm:text-sm font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover hover:text-text transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:scale-[0.98]"
               >
-                <ChevronLeft size={15} /> Back
+                <ChevronLeft size={15} />
+                <span>Back</span>
               </button>
             ) : <span />}
 
             {step < STEPS.length - 1 && (
-              <button
-                type="button"
-                onClick={() => goToStep(step + 1)}
-                disabled={!sectionValidity[step]}
-                className="press-feedback flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-display font-medium text-white bg-primary-700 shadow-sm transition-all duration-150 hover:bg-primary-800 hover:shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
-              >
-                Next <ChevronRight size={15} />
-              </button>
+              <div className="flex flex-col items-end gap-1.5">
+                {!sectionValidity[step] && (
+                  <p className="text-[11px] font-display text-warning flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {STEP_BLOCK_REASON[step]}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => goToStep(step + 1)}
+                  disabled={!sectionValidity[step]}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs sm:text-sm font-display font-medium text-white bg-primary-700 shadow-xs transition-all duration-150 hover:bg-primary-800 hover:shadow-sm active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={15} />
+                </button>
+              </div>
             )}
           </div>
         </div>

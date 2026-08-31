@@ -3,6 +3,9 @@ import { ClipboardList, ListTodo, TicketCheck, ListChecks } from 'lucide-react';
 import { Skeleton } from '../../components';
 import { StatusBreakdownCard } from './StatusBreakdownCard';
 import { isOverdueTodo } from '../todo/todoQuickFilters';
+import { useMyChecklistInstancesQuery } from '../checklist/hook';
+import { instanceProgressStatus, isInstanceOverdue } from '../checklist/checklistDisplay';
+import { getChecklistProgress } from '../../lib/checklistProgress';
 import type { Task } from '../../api/task';
 import type { Ticket } from '../../api/ticket';
 import type { Todo } from '../../api/todos';
@@ -24,6 +27,7 @@ interface KpiStripProps {
 
 export const KpiStrip = ({ tickets, todos, isPending, workflowStats }: KpiStripProps) => {
   const navigate = useNavigate();
+  const { data: checklistInstances = [] } = useMyChecklistInstancesQuery();
 
   if (isPending) {
     return (
@@ -57,6 +61,20 @@ export const KpiStrip = ({ tickets, todos, isPending, workflowStats }: KpiStripP
   const openTickets = tickets.filter(t => t.status === 'OPEN');
   const inProgressTickets = tickets.filter(t => t.status === 'IN_PROGRESS' || t.status === 'IN_REVIEW' || t.status === 'ON_HOLD');
   const closedTickets = tickets.filter(t => t.status === 'CLOSED');
+
+  // Checklist: pending/overdue/completed mirror MyChecklists's own grouping logic (done vs total
+  // items per instance), and the compliance % reuses the same getChecklistProgress helper the
+  // instance detail page uses — so this tile's numbers never drift from what /checklists shows.
+  const checklistStatuses = checklistInstances.map(instance => {
+    const done = instance.items.filter(i => i.isDone).length;
+    const status = instanceProgressStatus(done, instance.items.length);
+    const overdue = isInstanceOverdue(instance.periodEnd, status === 'COMPLETED');
+    return { status, overdue };
+  });
+  const overdueChecklists = checklistStatuses.filter(c => c.overdue);
+  const pendingChecklists = checklistStatuses.filter(c => c.status !== 'COMPLETED' && !c.overdue);
+  const completedChecklists = checklistStatuses.filter(c => c.status === 'COMPLETED');
+  const { progress: checklistCompliance } = getChecklistProgress(checklistInstances);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-5">
@@ -95,7 +113,18 @@ export const KpiStrip = ({ tickets, todos, isPending, workflowStats }: KpiStripP
           { label: 'Closed', value: closedTickets.length, tone: 'success', onClick: () => navigate('/tickets') },
         ]}
       />
-      <StatusBreakdownCard icon={ListChecks} title="Checklist" total={0} comingSoon />
+      <StatusBreakdownCard
+        icon={ListChecks}
+        title="Checklist"
+        total={checklistCompliance ?? 0}
+        totalLabel="Compliance %"
+        onOpen={() => navigate('/checklists')}
+        rows={[
+          { label: 'Pending', value: pendingChecklists.length, tone: 'warning', onClick: () => navigate('/checklists') },
+          { label: 'Overdue', value: overdueChecklists.length, onClick: () => navigate('/checklists') },
+          { label: 'Completed', value: completedChecklists.length, tone: 'success', onClick: () => navigate('/checklists') },
+        ]}
+      />
     </div>
   );
 };

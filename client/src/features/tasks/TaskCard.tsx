@@ -72,7 +72,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
       }}
       role="button"
       tabIndex={0}
-      className="group relative flex flex-col gap-2.5 p-4 pl-4 rounded-xl bg-surface shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 overflow-hidden"
+      className="group relative flex flex-col gap-2.5 p-4 pl-4 rounded-lg border border-border bg-surface hover:border-primary-500/40 transition-colors duration-200 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 overflow-hidden"
     >
       {isNewlyAssigned && raisedByName && (
         <div className="flex items-center gap-1.5 -mt-1 -mx-1 px-2.5 py-1.5 rounded-lg bg-info/10 text-[11px] font-medium text-info">

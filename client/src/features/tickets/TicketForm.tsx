@@ -1,6 +1,6 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Ticket, AlertCircle } from 'lucide-react';
@@ -38,7 +38,7 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<TicketFields>({
@@ -46,11 +46,11 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
     defaultValues: { priority: 'MEDIUM', assignmentMode: 'MANUAL' },
   });
 
-  const assignmentMode = watch('assignmentMode');
-  const categoryId = watch('categoryId');
-  const departmentId = watch('departmentId');
-  const priority = watch('priority');
-  const assigneeId = watch('assigneeId');
+  const assignmentMode = useWatch({ control, name: 'assignmentMode' });
+  const categoryId = useWatch({ control, name: 'categoryId' });
+  const departmentId = useWatch({ control, name: 'departmentId' });
+  const priority = useWatch({ control, name: 'priority' });
+  const assigneeId = useWatch({ control, name: 'assigneeId' });
   const { data: assignableUsers } = useAssignableUsersQuery(departmentId || undefined);
 
   const selectedCategory = categories?.find(c => c.id === categoryId);
@@ -74,7 +74,7 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
     }
   }, [selectedCategory, setValue]);
 
-  const onSubmit = (data: TicketFields) => {
+  const onSubmit = useCallback((data: TicketFields) => {
     const tatHours = data.assignmentMode === 'MANUAL' && data.dueDate && data.dueTime
       ? Math.max(1, Math.ceil((new Date(`${data.dueDate}T${data.dueTime}`).getTime() - Date.now()) / (60 * 60 * 1000)))
       : undefined;
@@ -104,7 +104,7 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
         },
       },
     );
-  };
+  }, [mutation, photos, queryClient, onClose, selectedCategory]);
 
   const footer = (
     <>
@@ -172,7 +172,7 @@ export const TicketForm = ({ onClose }: TicketFormProps) => {
           <DueDateField
             key="due"
             mode={assignmentMode}
-            watch={watch}
+            control={control}
             setValue={setValue}
             errors={errors}
             categoryTatHours={selectedCategory?.tatHours}

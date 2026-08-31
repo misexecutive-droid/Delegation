@@ -29,7 +29,7 @@ export const TicketCard = ({ ticket, onClick, departmentName, index = 0 }: Ticke
     <button
       type="button"
       onClick={() => onClick(ticket)}
-      className="group relative w-full text-left flex flex-col gap-2.5 p-4 rounded-xl bg-surface shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200 cursor-pointer animate-step-in outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 overflow-hidden"
+      className="group relative w-full text-left flex flex-col gap-2.5 p-4 rounded-lg border border-border bg-surface hover:border-primary-500/40 transition-colors duration-200 cursor-pointer animate-step-in outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 overflow-hidden"
       style={{ animationDelay: `${Math.min(index, 10) * 35}ms` }}
     >
       {/* Priority stripe — same glanceable triage cue used on delegation cards. */}

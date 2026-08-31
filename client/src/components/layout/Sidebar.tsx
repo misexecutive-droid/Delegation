@@ -41,9 +41,11 @@ const CHECKLIST_CHILDREN: NavChild[] = [
 ];
 
 const CHECKLIST_ADMIN_CHILDREN: NavChild[] = [
-  { to: '/admin/checklist-templates', label: 'Delegation Templates' },
-  { to: '/admin/scheduled-checklists', label: 'Templates' },
-  { to: '/admin/scheduled-checklists/builder', label: 'Builder' },
+  // "New checklist" on the Recurring Checklists grid already reaches the Builder — no separate
+  // nav entry for it, so there's exactly one path in, not two.
+  { to: '/admin/scheduled-checklists', label: 'Recurring Checklists' },
+  { to: '/admin/checklist-compliance', label: 'Checklist Compliance' },
+  { to: '/admin/checklist-templates', label: 'Task Templates' },
 ];
 
 const TASK_CHILDREN: NavChild[] = [
@@ -64,7 +66,7 @@ const NAV: NavItem[] = [
   { to: '/tickets', icon: TicketCheck, label: 'Tickets' },
   { to: '/todo', icon: ListTodo, label: 'To-Do' },
   { to: '/events', icon: CalendarClock, label: 'Events' },
-  { to: '/checklists', icon: ClipboardCheck, label: 'Checklists', children: CHECKLIST_CHILDREN, soon: true },
+  { to: '/checklists', icon: ClipboardCheck, label: 'Checklists', children: CHECKLIST_CHILDREN },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
 ];

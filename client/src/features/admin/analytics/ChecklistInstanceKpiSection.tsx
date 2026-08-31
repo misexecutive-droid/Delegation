@@ -1,4 +1,4 @@
-import { Repeat, Camera } from 'lucide-react';
+import { Repeat, Camera, ShieldCheck } from 'lucide-react';
 import { KpiSectionShell } from './KpiSectionShell';
 import { ReportTrendChart } from './ReportTrendChart';
 import { useChecklistInstanceComplianceReportQuery } from './useAnalyticsQueries';
@@ -15,12 +15,13 @@ export const ChecklistInstanceKpiSection = ({ groupBy, from, to }: ChecklistInst
   const { data: rows, isPending, isError } = useChecklistInstanceComplianceReportQuery(groupBy, from, to);
   const completion = latestWithTrend(rows, 'completionRate', 'rate');
   const quality = latestWithTrend(rows, 'qualityRate', 'rate');
+  const approval = latestWithTrend(rows, 'approvalRate', 'rate');
 
   return (
     <KpiSectionShell
       icon={Repeat}
       title="Recurring Checklists"
-      description="Completion and photo-quality compliance for scheduled checklist instances, bucketed by each instance's period."
+      description="Completion, photo-evidence compliance, and PC first-attempt approval for scheduled checklist instances, bucketed by each instance's period."
       isPending={isPending}
       isError={isError}
       errorMessage="Failed to load recurring checklist data."
@@ -41,6 +42,15 @@ export const ChecklistInstanceKpiSection = ({ groupBy, from, to }: ChecklistInst
           value: quality.value != null ? `${quality.value}%` : '—',
           trend: quality.trend,
         },
+        {
+          icon: ShieldCheck,
+          iconTint: 'text-violet-600 dark:text-violet-400',
+          // "First attempt" — an instance the PC ever rejected no longer counts here, even once
+          // it's later fixed and approved (see checklistInstance.service.ts#complianceReport).
+          label: 'PC approval rate (first attempt)',
+          value: approval.value != null ? `${approval.value}%` : '—',
+          trend: approval.trend,
+        },
       ]}
       chart={
         <ReportTrendChart
@@ -48,6 +58,7 @@ export const ChecklistInstanceKpiSection = ({ groupBy, from, to }: ChecklistInst
           series={[
             { key: 'completionRate', label: 'Completion %', color: 'var(--color-primary-500)' },
             { key: 'qualityRate', label: 'Quality %', color: 'var(--color-success)' },
+            { key: 'approvalRate', label: 'PC approval %', color: 'var(--color-violet-500, #8b5cf6)' },
           ]}
           valueSuffix="%"
           yDomain={[0, 100]}

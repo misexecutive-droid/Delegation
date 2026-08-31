@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, type LucideIcon } from 'lucide-react';
@@ -30,14 +30,9 @@ const TRANSITION = { type: 'spring', stiffness: 400, damping: 25 };
 
 export const Fab = ({ actions, icon: Icon = Plus, 'aria-label': ariaLabel }: FabProps) => {
   const [expanded, setExpanded] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  
+
   const isSingleAction = actions.length === 1;
   const singleAction = isSingleAction ? actions[0] : null;
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleMainClick = () => {
     if (singleAction) {
@@ -46,8 +41,6 @@ export const Fab = ({ actions, icon: Icon = Plus, 'aria-label': ariaLabel }: Fab
       setExpanded((v) => !v);
     }
   };
-
-  if (!mounted) return null;
 
   return createPortal(
     <>

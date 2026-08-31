@@ -1,4 +1,4 @@
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Tag } from 'lucide-react';
@@ -35,7 +35,6 @@ export const CategoryForm = ({ onClose, category }: CategoryFormProps) => {
     register,
     handleSubmit,
     control,
-    watch,
     formState: { errors },
   } = useForm<CategoryFields>({
     resolver: zodResolver(categorySchema),
@@ -47,7 +46,7 @@ export const CategoryForm = ({ onClose, category }: CategoryFormProps) => {
     },
   });
 
-  const departmentId = watch('departmentId');
+  const departmentId = useWatch({ control, name: 'departmentId' });
 
   const onSubmit = (data: CategoryFields) => {
     const payload = {

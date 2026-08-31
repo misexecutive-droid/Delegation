@@ -21,6 +21,7 @@ export { AccessoriesListEditor } from './accessoriesListEditor';
 export { DateRangePicker } from './dateRangePicker';
 export type { DateRangeValue } from './dateRangePicker';
 export { DatePicker } from './datePicker';
+export { TimePicker } from './timePicker';
 export { Modal } from './modal';
 export { Combobox } from './combobox';
 export type { ComboboxOption } from './combobox';

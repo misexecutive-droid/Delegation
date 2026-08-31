@@ -3,3 +3,4 @@ export { ChecklistDefinitionDetail } from './definition/ChecklistDefinitionDetai
 export { ChecklistBuilder } from './definition/builder/ChecklistBuilder';
 export { MyChecklists } from './instance/MyChecklists';
 export { ChecklistInstanceDetail } from './instance/ChecklistInstanceDetail';
+export { ChecklistComplianceBoard } from './instance/ChecklistComplianceBoard';

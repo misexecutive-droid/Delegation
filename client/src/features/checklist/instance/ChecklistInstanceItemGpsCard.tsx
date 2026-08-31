@@ -64,12 +64,12 @@ export const ChecklistInstanceItemGpsCard = ({ item, instanceId, canWork, isLock
   };
 
   return (
-    <div className={`flex flex-col gap-3 p-3 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
+    <div className={`flex flex-col gap-3 p-4 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono font-medium leading-snug text-text">{item.label}</p>
+          <p className="text-sm font-display font-medium leading-snug text-text">{item.label}</p>
           {item.isDone && item.completedAt && (
-            <p className="text-xs text-text-muted font-mono mt-0.5">Completed {formatDate(item.completedAt)}</p>
+            <p className="text-xs text-text-muted font-display mt-0.5">Completed {formatDate(item.completedAt)}</p>
           )}
         </div>
         {interactive && item.isDone && (
@@ -79,7 +79,7 @@ export const ChecklistInstanceItemGpsCard = ({ item, instanceId, canWork, isLock
               gpsLat: item.gpsLat ?? undefined, gpsLng: item.gpsLng ?? undefined, gpsAccuracy: item.gpsAccuracy ?? undefined,
             })}
             disabled={setItemDone.isPending}
-            className="shrink-0 text-text-light hover:text-amber-500 transition-colors cursor-pointer disabled:opacity-50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -100,7 +100,7 @@ export const ChecklistInstanceItemGpsCard = ({ item, instanceId, canWork, isLock
           )}
 
           {captured && (
-            <div className="flex flex-col gap-1 px-2.5 py-2 rounded-md bg-background border border-border/60 text-xs font-mono text-text-secondary">
+            <div className="flex flex-col gap-1 px-2.5 py-2 rounded-md bg-background border border-border/60 text-xs font-display text-text-secondary">
               <span className="flex items-center gap-1.5"><MapPin size={12} className="text-primary-500" /> {captured.lat.toFixed(6)}, {captured.lng.toFixed(6)} (±{Math.round(captured.accuracy)}m)</span>
               {hasTarget && distance != null && (
                 <span className={withinRadius === false ? 'text-danger' : 'text-emerald-600 dark:text-emerald-400'}>
@@ -115,7 +115,7 @@ export const ChecklistInstanceItemGpsCard = ({ item, instanceId, canWork, isLock
               <button
                 onClick={capture}
                 disabled={isCapturing}
-                className="flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-md border border-border text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-border text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors disabled:opacity-50"
               >
                 {isCapturing ? <Loader2 size={12} className="animate-spin" /> : <LocateFixed size={12} />}
                 {captured ? 'Recapture location' : 'Capture location'}
@@ -125,7 +125,7 @@ export const ChecklistInstanceItemGpsCard = ({ item, instanceId, canWork, isLock
               <button
                 onClick={() => setItemDone.mutate({ itemId: item.id, isDone: true, gpsLat: captured.lat, gpsLng: captured.lng, gpsAccuracy: captured.accuracy })}
                 disabled={setItemDone.isPending}
-                className="flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {setItemDone.isPending && <Loader2 size={12} className="animate-spin" />}
                 Save

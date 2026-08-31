@@ -88,19 +88,19 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
   const showFollowUp = pendingAnswer != null || (item.isDone && isTriggering((item.booleanAnswer ?? '') as 'YES' | 'NO'));
 
   return (
-    <div className={`flex flex-col gap-3 p-3 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
+    <div className={`flex flex-col gap-3 p-4 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono font-medium leading-snug text-text">{item.label}</p>
+          <p className="text-sm font-display font-medium leading-snug text-text">{item.label}</p>
           {item.isDone && item.completedAt && (
-            <p className="text-xs text-text-muted font-mono mt-0.5">Completed {formatDate(item.completedAt)}</p>
+            <p className="text-xs text-text-muted font-display mt-0.5">Completed {formatDate(item.completedAt)}</p>
           )}
         </div>
         {interactive && item.isDone && (
           <button
             onClick={() => { setPendingAnswer(null); setItemDone.mutate({ itemId: item.id, isDone: false, booleanAnswer: item.booleanAnswer ?? undefined }); }}
             disabled={setItemDone.isPending}
-            className="shrink-0 text-text-light hover:text-amber-500 transition-colors cursor-pointer disabled:opacity-50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -116,7 +116,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
       )}
 
       {!item.isDone && !pendingAnswer && item.conditionalTrigger && actions.length > 0 && (
-        <p className="flex items-center gap-1.5 text-[11px] font-mono text-coral-700 dark:text-coral-400">
+        <p className="flex items-center gap-1.5 text-[11px] font-display text-coral-700 dark:text-coral-400">
           <Zap size={11} className="shrink-0" />
           If you answer {item.conditionalTrigger === 'YES' ? labels.yes : labels.no}, you'll need to provide {actions.map(a => ACTION_HINT[a]).join(', ')}.
         </p>
@@ -127,7 +127,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
           type="button"
           disabled={!interactive || item.isDone}
           onClick={() => pickAnswer('YES')}
-          className={`flex-1 px-3 py-1.5 rounded-md border text-xs font-mono font-medium transition-colors ${
+          className={`flex-1 px-3 py-1.5 rounded-md border text-xs font-display font-medium transition-colors ${
             (pendingAnswer ?? item.booleanAnswer) === 'YES'
               ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
               : 'border-border text-text-secondary hover:bg-surface-hover'
@@ -139,7 +139,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
           type="button"
           disabled={!interactive || item.isDone}
           onClick={() => pickAnswer('NO')}
-          className={`flex-1 px-3 py-1.5 rounded-md border text-xs font-mono font-medium transition-colors ${
+          className={`flex-1 px-3 py-1.5 rounded-md border text-xs font-display font-medium transition-colors ${
             (pendingAnswer ?? item.booleanAnswer) === 'NO'
               ? 'border-rose-500/60 bg-rose-500/10 text-rose-600 dark:text-rose-400'
               : 'border-border text-text-secondary hover:bg-surface-hover'
@@ -153,24 +153,24 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
         <div className="flex flex-col gap-2.5 pt-2.5 border-t border-dashed border-border/60">
           {requiresReason && (
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-mono text-text-muted">Reason</span>
+              <span className="text-[11px] font-display text-text-muted">Reason</span>
               {pendingAnswer ? (
                 <textarea
                   value={reasonDraft}
                   onChange={e => setReasonDraft(e.target.value)}
                   rows={2}
                   placeholder="Why? (required)"
-                  className="w-full px-2.5 py-2 text-xs font-mono bg-surface text-text rounded-md border border-border focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all resize-y"
+                  className="w-full px-2.5 py-2 text-xs font-display bg-surface text-text rounded-md border border-border focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all resize-y"
                 />
               ) : (
-                <p className="text-xs font-mono text-text italic">"{item.conditionalReasonValue}"</p>
+                <p className="text-xs font-display text-text italic">"{item.conditionalReasonValue}"</p>
               )}
             </div>
           )}
 
           {requiresPhoto && (
             <div className="flex flex-col gap-2">
-              <span className="text-[11px] font-mono text-text-muted">
+              <span className="text-[11px] font-display text-text-muted">
                 Photo {images.length > 0 ? `(${images.length})` : '(required)'}
               </span>
               {images.length > 0 && (
@@ -197,16 +197,16 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
               )}
               {pendingAnswer && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <label className="flex items-center gap-1.5 text-[11px] font-mono font-medium px-2.5 py-1 rounded-md border border-primary-500/50 text-primary-600 hover:bg-primary-500/10 cursor-pointer transition-colors">
+                  <label className="flex items-center gap-1.5 text-[11px] font-display font-medium px-2.5 py-1 rounded-md border border-primary-500/50 text-primary-600 hover:bg-primary-500/10 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-primary-500/50 focus-within:ring-offset-1">
                     <Camera size={11} />
                     Take photo
-                    <input type="file" accept="image/*" capture="environment" multiple className="hidden"
+                    <input type="file" accept="image/*" capture="environment" multiple className="sr-only"
                       onChange={e => { handleFiles(e.target.files, 'LIVE'); e.target.value = ''; }} />
                   </label>
-                  <label className="flex items-center gap-1.5 text-[11px] font-mono font-medium px-2.5 py-1 rounded-md border border-border text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors">
+                  <label className="flex items-center gap-1.5 text-[11px] font-display font-medium px-2.5 py-1 rounded-md border border-border text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-primary-500/50 focus-within:ring-offset-1">
                     <ImageUp size={11} />
                     Gallery
-                    <input type="file" accept="image/*" multiple className="hidden"
+                    <input type="file" accept="image/*" multiple className="sr-only"
                       onChange={e => { handleFiles(e.target.files, 'GALLERY'); e.target.value = ''; }} />
                   </label>
                   {uploadImages.isPending && <Loader2 size={12} className="animate-spin text-text-muted" />}
@@ -220,7 +220,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
               <button
                 type="button"
                 onClick={() => { setPendingAnswer(null); setReasonDraft(item.conditionalReasonValue ?? ''); }}
-                className="text-xs font-mono font-medium px-2.5 py-1 rounded-md text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
+                className="text-xs font-display font-medium px-2.5 py-1 rounded-md text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -228,7 +228,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
                 type="button"
                 onClick={confirmPendingAnswer}
                 disabled={!canConfirm || setItemDone.isPending}
-                className="flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {setItemDone.isPending && <Loader2 size={12} className="animate-spin" />}
                 Confirm answer

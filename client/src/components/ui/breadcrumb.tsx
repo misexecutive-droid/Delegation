@@ -13,7 +13,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
     <ol
       data-slot="breadcrumb-list"
       className={cn(
-        "flex flex-wrap items-center gap-1.5 sm:gap-2 text-sm font-medium text-slate-500 break-words",
+        "flex flex-wrap items-center gap-1.5 sm:gap-2 text-sm font-medium text-text-muted break-words",
         className,
       )}
       {...props}
@@ -44,7 +44,7 @@ function BreadcrumbLink({
       className={cn(
         "transition-colors duration-200 cursor-pointer rounded-md",
         "hover:text-primary-600",
-        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-50/50 focus-visible:text-primary-600",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:text-primary-600",
         className
       )}
       {...props}
@@ -59,7 +59,7 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={cn("text-slate-900 font-bold tracking-tight", className)}
+      className={cn("text-text font-bold tracking-tight", className)}
       {...props}
     />
   )
@@ -75,7 +75,7 @@ function BreadcrumbSeparator({
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
-      className={cn("text-slate-300 [&>svg]:size-3.5", className)}
+      className={cn("text-text-light [&>svg]:size-3.5", className)}
       {...props}
     >
       {children ?? <ChevronRight strokeWidth={2.5} />}
@@ -93,7 +93,7 @@ function BreadcrumbEllipsis({
       role="presentation"
       aria-hidden="true"
       className={cn(
-        "flex items-center justify-center size-6 rounded-md bg-slate-50 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600",
+        "flex items-center justify-center size-6 rounded-md bg-muted text-text-muted transition-colors hover:bg-surface-hover hover:text-text",
         className
       )}
       {...props}

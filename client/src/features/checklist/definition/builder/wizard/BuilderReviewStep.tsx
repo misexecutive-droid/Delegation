@@ -1,5 +1,20 @@
 import type { ReactNode } from 'react';
-import { Pencil, AlertCircle, Loader2, Store, Repeat, Calendar, Clock, Users, ShieldCheck } from 'lucide-react';
+import {
+  Pencil,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Store,
+  Repeat,
+  Calendar,
+  Clock,
+  Users,
+  ShieldCheck,
+  FileText,
+  ListChecks,
+  UserCheck,
+} from 'lucide-react';
 import { Button } from '../../../../../components';
 import { Badge } from '@/components/ui/badge';
 import { useStoresQuery } from '../../../hook';
@@ -9,7 +24,9 @@ import { PROOF_OPTIONS } from '../BuilderProofPanel';
 import { ROLE_OPTIONS } from '../../form/ChecklistRolesField';
 import { ITEM_TYPE_LABEL, type ItemDraft } from '../../ChecklistDefinitionItemDraftRow';
 import type {
-  ChecklistRecurrence, ChecklistAssigneeRole, ChecklistProofType,
+  ChecklistRecurrence,
+  ChecklistAssigneeRole,
+  ChecklistProofType,
 } from '../../../../../api/checklistDefinitions';
 
 interface BuilderReviewStepProps {
@@ -33,137 +50,389 @@ interface BuilderReviewStepProps {
   submitError?: string;
 }
 
-const SECTION_STEP_LABEL = ['Basics', 'Schedule', 'Items', 'Assign & Proof'];
+const SECTION_CONFIG = [
+  { label: 'Basics', icon: FileText },
+  { label: 'Schedule', icon: Calendar },
+  { label: 'Items', icon: ListChecks },
+  { label: 'Assign & Proof', icon: Users },
+] as const;
 
-const EditButton = ({ onClick }: { onClick: () => void }) => (
+/** Safe date formatter to prevent invalid date runtime crashes */
+const safeFormatDate = (dateStr: string): string => {
+  if (!dateStr) return 'No date set';
+  try {
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return 'Invalid date';
+    return formatDate(d.toISOString());
+  } catch {
+    return dateStr;
+  }
+};
+
+const EditButton = ({
+  onClick,
+  sectionName,
+}: {
+  onClick: () => void;
+  sectionName: string;
+}) => (
   <button
     type="button"
     onClick={onClick}
-    className="flex items-center gap-1.5 text-xs font-display font-medium px-3 py-1.5 rounded-full border border-primary-500/40 text-primary-700 hover:bg-primary-50 transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+    aria-label={`Edit ${sectionName} section`}
+    className="inline-flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1 rounded-md text-primary-700 bg-primary-50/60 hover:bg-primary-100 hover:text-primary-800 border border-primary-200/60 transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
   >
-    <Pencil size={12} /> Edit
+    <Pencil size={11} className="shrink-0" />
+    <span>Edit</span>
   </button>
 );
 
 const SectionCard = ({
-  title, icon, valid, onEdit, children,
-}: { title: string; icon: ReactNode; valid: boolean; onEdit: () => void; children: ReactNode }) => (
-  <div className="flex flex-col gap-3 p-4 rounded-xl border border-border bg-surface shadow-xs">
-    <div className="flex items-center justify-between gap-2">
-      <span className="flex items-center gap-2 text-xs font-display font-bold uppercase tracking-wider text-text-muted">
-        {icon}
-        {title}
-      </span>
+  title,
+  icon,
+  valid,
+  onEdit,
+  badgeText,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  valid: boolean;
+  onEdit: () => void;
+  badgeText?: string;
+  children: ReactNode;
+}) => (
+  <div
+    className={`flex flex-col rounded-xl border bg-surface p-4 transition-all shadow-xs ${
+      valid
+        ? 'border-border/80 hover:border-border'
+        : 'border-warning/40 bg-warning/5 ring-1 ring-warning/20'
+    }`}
+  >
+    <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-border/50">
       <div className="flex items-center gap-2">
-        {!valid && <Badge variant="warning">Needs attention</Badge>}
-        <EditButton onClick={onEdit} />
+        <span
+          className={`p-1.5 rounded-lg text-xs ${
+            valid
+              ? 'bg-muted/60 text-text-secondary'
+              : 'bg-warning/15 text-warning'
+          }`}
+        >
+          {icon}
+        </span>
+        <h3 className="text-xs font-display font-bold uppercase tracking-wider text-text-secondary">
+          {title}
+        </h3>
+        {badgeText && (
+          <span className="text-[11px] font-medium text-text-muted px-1.5 py-0.5 rounded-full bg-muted/50">
+            {badgeText}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        {!valid && (
+          <Badge variant="warning" className="gap-1 text-[11px] py-0.5 px-2">
+            <AlertTriangle size={11} /> Needs attention
+          </Badge>
+        )}
+        <EditButton onClick={onEdit} sectionName={title} />
       </div>
     </div>
-    {children}
+    <div className="flex flex-col flex-1 gap-2.5">{children}</div>
   </div>
 );
 
 export const BuilderReviewStep = ({
-  name, description, storeIds, recurrence, startDate, opensTime, cutoffTime,
-  itemDrafts, assigneeIds, assigneeRoles, proofRequired,
-  sectionValidity, onEditSection, canSubmit, isSubmitting, isEditing, onSubmit, submitError,
+  name,
+  description,
+  storeIds,
+  recurrence,
+  startDate,
+  opensTime,
+  cutoffTime,
+  itemDrafts,
+  assigneeIds,
+  assigneeRoles,
+  proofRequired,
+  sectionValidity,
+  onEditSection,
+  canSubmit,
+  isSubmitting,
+  isEditing,
+  onSubmit,
+  submitError,
 }: BuilderReviewStepProps) => {
   const { data: stores = [] } = useStoresQuery();
-  const { data: assignableUsers = [] } = useAssignableUsersQuery(undefined, storeIds[0]);
+  const { data: assignableUsers = [] } = useAssignableUsersQuery(
+    undefined,
+    storeIds[0]
+  );
 
-  const storeNames = storeIds.map(id => stores.find(s => s.id === id)?.name ?? 'Unknown store');
-  const namedItems = itemDrafts.filter(d => d.label.trim());
-  const assignees = assigneeIds.map(id => {
-    const u = assignableUsers.find(a => a.id === id);
+  const selectedStores = storeIds
+    .map((id) => stores.find((s) => s.id === id)?.name ?? 'Unknown store');
+  const namedItems = itemDrafts.filter((d) => d.label.trim());
+  const assignees = assigneeIds.map((id) => {
+    const u = assignableUsers.find((a) => a.id === id);
     if (!u) return 'Unknown user';
     const full = `${u.firstName} ${u.lastName ?? ''}`.trim();
     return full || u.email;
   });
 
-  const incompleteLabels = sectionValidity
-    .map((valid, i) => (valid ? null : SECTION_STEP_LABEL[i]))
-    .filter((label): label is string => label !== null);
+  const incompleteSections = sectionValidity
+    .map((valid, i) => (valid ? null : { index: i, label: SECTION_CONFIG[i].label }))
+    .filter((s): s is { index: number; label: string } => s !== null);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SectionCard title="Basics" icon={<Store size={13} />} valid={sectionValidity[0]} onEdit={() => onEditSection(0)}>
-          <p className="text-sm font-display font-medium text-text">{name.trim() || 'Untitled checklist'}</p>
-          <p className="text-xs font-display text-text-muted">{description.trim() || 'No description added.'}</p>
+    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
+      {/* Review summary header */}
+      <div>
+        <h2 className="text-base font-display font-semibold text-text">
+          Review Checklist Details
+        </h2>
+        <p className="text-xs font-display text-text-muted mt-0.5">
+          Please review all sections before finalizing and {isEditing ? 'saving' : 'publishing'} your checklist.
+        </p>
+      </div>
+
+      {/* Grid of Sections */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 1. Basics */}
+        <SectionCard
+          title="Basics"
+          icon={<FileText size={14} />}
+          valid={sectionValidity[0]}
+          onEdit={() => onEditSection(0)}
+        >
+          <div className="space-y-1">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+              Checklist Title
+            </span>
+            <p className="text-sm font-display font-semibold text-text">
+              {name.trim() || <span className="italic text-text-muted">Untitled checklist</span>}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+              Description
+            </span>
+            <p className="text-xs font-display text-text-secondary leading-relaxed line-clamp-3">
+              {description.trim() || <span className="italic text-text-muted">No description provided.</span>}
+            </p>
+          </div>
         </SectionCard>
 
-        <SectionCard title="Schedule" icon={<Repeat size={13} />} valid={sectionValidity[1]} onEdit={() => onEditSection(1)}>
-          <div className="flex flex-col gap-1.5 text-xs font-display text-text-secondary">
-            <span className="flex items-center gap-1.5"><Store size={12} className="text-text-muted" /> {storeNames.length ? storeNames.join(', ') : 'No stores selected'}</span>
-            <span className="flex items-center gap-1.5"><Repeat size={12} className="text-text-muted" /> {RECURRENCE_LABEL[recurrence]}</span>
-            <span className="flex items-center gap-1.5"><Calendar size={12} className="text-text-muted" /> {startDate ? formatDate(new Date(startDate).toISOString()) : 'No date set'}</span>
+        {/* 2. Schedule */}
+        <SectionCard
+          title="Schedule"
+          icon={<Calendar size={14} />}
+          valid={sectionValidity[1]}
+          onEdit={() => onEditSection(1)}
+        >
+          <div className="grid grid-cols-1 gap-2 text-xs font-display text-text-secondary">
+            {/* Stores */}
+            <div className="flex items-start gap-2">
+              <Store size={13} className="text-text-muted shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <span className="text-text-muted">Stores: </span>
+                {selectedStores.length > 0 ? (
+                  <span className="font-medium text-text">
+                    {selectedStores.join(', ')}
+                  </span>
+                ) : (
+                  <span className="italic text-warning font-normal">No stores selected</span>
+                )}
+              </div>
+            </div>
+
+            {/* Recurrence */}
+            <div className="flex items-center gap-2">
+              <Repeat size={13} className="text-text-muted shrink-0" />
+              <div>
+                <span className="text-text-muted">Frequency: </span>
+                <span className="font-medium text-text">
+                  {RECURRENCE_LABEL[recurrence] ?? recurrence}
+                </span>
+              </div>
+            </div>
+
+            {/* Start Date */}
+            <div className="flex items-center gap-2">
+              <Calendar size={13} className="text-text-muted shrink-0" />
+              <div>
+                <span className="text-text-muted">Starts: </span>
+                <span className="font-medium text-text">{safeFormatDate(startDate)}</span>
+              </div>
+            </div>
+
+            {/* Active Time Window */}
             {(opensTime || cutoffTime) && (
-              <span className="flex items-center gap-1.5"><Clock size={12} className="text-text-muted" /> {opensTime || '—'} to {cutoffTime || '—'}</span>
+              <div className="flex items-center gap-2">
+                <Clock size={13} className="text-text-muted shrink-0" />
+                <div>
+                  <span className="text-text-muted">Window: </span>
+                  <span className="font-medium text-text">
+                    {opensTime || 'Anytime'} &rarr; {cutoffTime || 'End of day'}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         </SectionCard>
 
-        <SectionCard title="Items" icon={<ShieldCheck size={13} />} valid={sectionValidity[2]} onEdit={() => onEditSection(2)}>
+        {/* 3. Items */}
+        <SectionCard
+          title="Items"
+          icon={<ListChecks size={14} />}
+          valid={sectionValidity[2]}
+          badgeText={`${namedItems.length} item${namedItems.length === 1 ? '' : 's'}`}
+          onEdit={() => onEditSection(2)}
+        >
           {namedItems.length === 0 ? (
-            <p className="text-xs font-display text-text-muted">No items added yet.</p>
-          ) : (
-            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
-              {namedItems.map((d, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs font-display">
-                  <span className="text-text-light tabular-nums shrink-0 w-5">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="flex-1 min-w-0 truncate text-text-secondary">{d.label}</span>
-                  <Badge variant="outline" className="shrink-0">{ITEM_TYPE_LABEL[d.itemType]}</Badge>
-                </div>
-              ))}
+            <div className="py-4 text-center">
+              <p className="text-xs font-display text-text-muted italic">
+                No items added to this checklist yet.
+              </p>
             </div>
+          ) : (
+            <ul
+              role="list"
+              className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1 divide-y divide-border/30"
+            >
+              {namedItems.map((item, index) => (
+                <li
+                  key={index}
+                  className="flex items-center justify-between gap-2 pt-1.5 first:pt-0 text-xs font-display"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-[11px] font-mono font-medium text-text-muted shrink-0 w-5">
+                      {String(index + 1).padStart(2, '0')}.
+                    </span>
+                    <span className="truncate text-text font-medium" title={item.label}>
+                      {item.label}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="shrink-0 text-[10px] py-0 px-1.5">
+                    {ITEM_TYPE_LABEL[item.itemType] ?? item.itemType}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
           )}
         </SectionCard>
 
-        <SectionCard title="Assign & Proof" icon={<Users size={13} />} valid={sectionValidity[3]} onEdit={() => onEditSection(3)}>
-          <div className="flex flex-col gap-2">
+        {/* 4. Assign & Proof */}
+        <SectionCard
+          title="Assign & Proof"
+          icon={<Users size={14} />}
+          valid={sectionValidity[3]}
+          onEdit={() => onEditSection(3)}
+        >
+          <div className="flex flex-col gap-3">
+            {/* Roles */}
             {assigneeRoles.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {assigneeRoles.map(role => (
-                  <Badge key={role} variant="info">{ROLE_OPTIONS.find(r => r.value === role)?.label ?? role}</Badge>
-                ))}
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                  Assigned Roles
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {assigneeRoles.map((role) => (
+                    <Badge key={role} variant="info" className="text-[11px] py-0.5">
+                      {ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
-            <p className="text-xs font-display text-text-secondary">
-              {assignees.length ? assignees.join(', ') : 'No assignees selected'}
-            </p>
+
+            {/* Specific Assignees */}
+            <div className="space-y-1">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted flex items-center gap-1">
+                <UserCheck size={11} /> Specific Assignees
+              </span>
+              <p className="text-xs font-display text-text-secondary">
+                {assignees.length ? (
+                  assignees.join(', ')
+                ) : (
+                  <span className="italic text-text-muted">No individual users selected</span>
+                )}
+              </p>
+            </div>
+
+            {/* Proof Types */}
             {proofRequired.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1 border-t border-dashed border-border/60">
-                {proofRequired.map(p => (
-                  <Badge key={p} variant="outline">{PROOF_OPTIONS.find(o => o.value === p)?.label ?? p}</Badge>
-                ))}
+              <div className="space-y-1 pt-2 border-t border-dashed border-border/60">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted flex items-center gap-1">
+                  <ShieldCheck size={11} /> Required Proof
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {proofRequired.map((proof) => (
+                    <Badge key={proof} variant="outline" className="text-[11px] py-0.5">
+                      {PROOF_OPTIONS.find((o) => o.value === proof)?.label ?? proof}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </SectionCard>
       </div>
 
+      {/* Submission Error Banner */}
       {submitError && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-danger/10 text-danger text-sm font-display">
-          <AlertCircle size={15} />
-          {submitError}
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm font-display"
+        >
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+          <div className="flex-1">{submitError}</div>
         </div>
       )}
 
-      <div className="flex flex-col items-start gap-2 pt-2">
+      {/* Action Footer & Incomplete Step Helper */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border/60">
+        <div>
+          {!canSubmit && incompleteSections.length > 0 ? (
+            <div className="flex items-center gap-2 text-xs font-display text-warning">
+              <AlertTriangle size={14} className="shrink-0" />
+              <span>
+                Please complete missing fields in:{' '}
+                {incompleteSections.map((s, idx) => (
+                  <button
+                    key={s.index}
+                    type="button"
+                    onClick={() => onEditSection(s.index)}
+                    className="font-semibold underline hover:text-warning-hover cursor-pointer"
+                  >
+                    {s.label}
+                    {idx < incompleteSections.length - 1 ? ', ' : ''}
+                  </button>
+                ))}
+              </span>
+            </div>
+          ) : (
+            <p className="flex items-center gap-1.5 text-xs font-display text-success">
+              <CheckCircle2 size={14} className="shrink-0" /> All sections look complete and ready.
+            </p>
+          )}
+        </div>
+
         <Button
           variant="primary"
           onClick={onSubmit}
           disabled={!canSubmit || isSubmitting}
-          className="gap-1.5 rounded-lg bg-primary-700 hover:bg-primary-800 active:bg-primary-900 focus-visible:ring-primary-500"
+          className="gap-2 rounded-lg px-5 py-2 font-display font-medium shadow-xs"
         >
-          {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-          {isEditing ? 'Save changes' : 'Create checklist'}
+          {isSubmitting ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              <span>Saving...</span>
+            </>
+          ) : isEditing ? (
+            'Save changes'
+          ) : (
+            'Create checklist'
+          )}
         </Button>
-        {!canSubmit && incompleteLabels.length > 0 && (
-          <p className="text-xs font-display text-text-muted">
-            Complete {incompleteLabels.join(', ')} before {isEditing ? 'saving' : 'creating'} this checklist.
-          </p>
-        )}
       </div>
     </div>
   );

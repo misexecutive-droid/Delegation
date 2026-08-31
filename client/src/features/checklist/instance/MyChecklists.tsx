@@ -20,7 +20,7 @@ export const MyChecklists = () => {
       <div className="flex items-center gap-3">
         <GradientIconTile icon={ClipboardCheck} />
         <div>
-          <h1 className="text-xl font-mono font-bold text-text">My Checklists</h1>
+          <h1 className="text-xl font-display font-bold text-text">My Checklists</h1>
           <p className="text-sm text-text-muted mt-0.5">
             {instances.length} checklist{instances.length !== 1 ? 's' : ''} assigned to you
           </p>
@@ -36,7 +36,7 @@ export const MyChecklists = () => {
       )}
 
       {isError && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-danger/10 text-danger text-sm font-mono">
+        <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-danger/10 text-danger text-sm font-display">
           <AlertCircle size={15} />
           Failed to load your checklists.
         </div>
@@ -45,7 +45,7 @@ export const MyChecklists = () => {
       {!isPending && !isError && instances.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-text-muted gap-2">
           <ClipboardCheck size={28} className="text-text-light" />
-          <p className="text-sm font-mono">No checklists assigned to you yet.</p>
+          <p className="text-sm font-display">No checklists assigned to you yet.</p>
         </div>
       )}
 
@@ -53,7 +53,7 @@ export const MyChecklists = () => {
         <div className="flex flex-col gap-6">
           {[...grouped.entries()].map(([recurrence, group]) => (
             <div key={recurrence} className="flex flex-col gap-3">
-              <h3 className="text-xs font-mono font-medium text-text-muted uppercase tracking-wider">
+              <h3 className="text-xs font-display font-bold text-text-light">
                 {RECURRENCE_LABEL[recurrence]}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

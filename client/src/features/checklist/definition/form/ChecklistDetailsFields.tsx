@@ -1,3 +1,4 @@
+
 import { CheckSquare, FileText } from 'lucide-react';
 import { Input, Textarea } from '../../../../components';
 
@@ -8,7 +9,6 @@ interface ChecklistDetailsFieldsProps {
   onDescriptionChange: (value: string) => void;
 }
 
-// Name + description — the free-text identity of the checklist.
 export const ChecklistDetailsFields = ({
   name,
   onNameChange,

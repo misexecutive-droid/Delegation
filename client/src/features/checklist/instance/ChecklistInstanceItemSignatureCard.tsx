@@ -19,19 +19,19 @@ export const ChecklistInstanceItemSignatureCard = ({ item, instanceId, canWork, 
   const label = item.signatureLabels?.[0] || 'Signature';
 
   return (
-    <div className={`flex flex-col gap-3 p-3 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
+    <div className={`flex flex-col gap-3 p-4 rounded-lg border border-border bg-surface ${isLocked ? 'opacity-75' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono font-medium leading-snug text-text">{item.label}</p>
+          <p className="text-sm font-display font-medium leading-snug text-text">{item.label}</p>
           {item.isDone && item.completedAt && (
-            <p className="text-xs text-text-muted font-mono mt-0.5">Completed {formatDate(item.completedAt)}</p>
+            <p className="text-xs text-text-muted font-display mt-0.5">Completed {formatDate(item.completedAt)}</p>
           )}
         </div>
         {interactive && item.isDone && (
           <button
             onClick={() => setItemDone.mutate({ itemId: item.id, isDone: false, signatureValue: item.signatureValue ?? undefined })}
             disabled={setItemDone.isPending}
-            className="shrink-0 text-text-light hover:text-amber-500 transition-colors cursor-pointer disabled:opacity-50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -57,7 +57,7 @@ export const ChecklistInstanceItemSignatureCard = ({ item, instanceId, canWork, 
                 <button
                   onClick={() => draft && setItemDone.mutate({ itemId: item.id, isDone: true, signatureValue: draft })}
                   disabled={!draft || setItemDone.isPending}
-                  className="w-fit flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-fit flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {setItemDone.isPending && <Loader2 size={12} className="animate-spin" />}
                   Save

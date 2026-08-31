@@ -41,6 +41,12 @@ const OrgStructurePage = lazy(() => import('./features/admin/orgStructure').then
 const ReportsPage = lazy(() => import('./features/reports').then(m => ({ default: m.ReportsPage })));
 const SettingsPage = lazy(() => import('./features/admin/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ChecklistTemplateList = lazy(() => import('./features/admin/checklistTemplate').then(m => ({ default: m.ChecklistTemplateList })));
+const MyChecklists = lazy(() => import('./features/checklist').then(m => ({ default: m.MyChecklists })));
+const ChecklistInstanceDetail = lazy(() => import('./features/checklist').then(m => ({ default: m.ChecklistInstanceDetail })));
+const ChecklistTemplatesGrid = lazy(() => import('./features/checklist').then(m => ({ default: m.ChecklistTemplatesGrid })));
+const ChecklistDefinitionDetail = lazy(() => import('./features/checklist').then(m => ({ default: m.ChecklistDefinitionDetail })));
+const ChecklistBuilder = lazy(() => import('./features/checklist').then(m => ({ default: m.ChecklistBuilder })));
+const ChecklistComplianceBoard = lazy(() => import('./features/checklist').then(m => ({ default: m.ChecklistComplianceBoard })));
 
 const ProtectedRoute = () => {
   const { token } = useAuth();
@@ -151,18 +157,8 @@ const router = createBrowserRouter([
           { path: '/tasks', element: <TaskList /> },
           { path: '/todo', element: <TodoPage /> },
           { path: '/events', element: <EventList /> },
-          {
-            path: '/checklists',
-            element: (
-              <ComingSoon
-                icon={ClipboardCheck}
-                title="Checklists"
-                description="Running your team's checklists is being reworked — check back once the updated experience is ready."
-                features={['Step-by-step guided runs', 'Photo capture per step', 'Completion history']}
-              />
-            ),
-          },
-          { path: '/checklists/:instanceId', element: <Navigate to="/checklists" replace /> },
+          { path: '/checklists', element: <MyChecklists /> },
+          { path: '/checklists/:instanceId', element: <ChecklistInstanceDetail /> },
           { path: '/dashboard', element: <Navigate to="/" replace /> },
           {
             element: <AnalyticsRoute />,
@@ -201,20 +197,11 @@ const router = createBrowserRouter([
               { path: '/admin/stores', element: <Navigate to="/admin/directory" replace /> },
               { path: '/admin/org-structure', element: <OrgStructurePage /> },
               { path: '/admin/checklist-templates', element: <ChecklistTemplatesRoute /> },
-              {
-                path: '/admin/scheduled-checklists',
-                element: (
-                  <ComingSoon
-                    icon={ClipboardCheck}
-                    title="Recurring Checklists"
-                    description="Checklists that repeat automatically on a schedule are still being built — check back once the updated experience is ready. Need a one-off checklist for a single task or ticket? Use Checklist Templates instead."
-                    features={['Recurring schedule builder', 'Automatic checklist generation', 'Schedule calendar view']}
-                  />
-                ),
-              },
-              { path: '/admin/scheduled-checklists/builder', element: <Navigate to="/admin/scheduled-checklists" replace /> },
-              { path: '/admin/scheduled-checklists/builder/:definitionId', element: <Navigate to="/admin/scheduled-checklists" replace /> },
-              { path: '/admin/scheduled-checklists/:definitionId', element: <Navigate to="/admin/scheduled-checklists" replace /> },
+              { path: '/admin/scheduled-checklists', element: <ChecklistTemplatesGrid /> },
+              { path: '/admin/checklist-compliance', element: <ChecklistComplianceBoard /> },
+              { path: '/admin/scheduled-checklists/builder', element: <ChecklistBuilder /> },
+              { path: '/admin/scheduled-checklists/builder/:definitionId', element: <ChecklistBuilder /> },
+              { path: '/admin/scheduled-checklists/:definitionId', element: <ChecklistDefinitionDetail /> },
               { path: '/admin/tickets', element: <TicketList /> },
               { path: '/admin/reports', element: <ReportsPage /> },
               { path: '/admin/settings', element: <SettingsPage /> },

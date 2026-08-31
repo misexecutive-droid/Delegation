@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { ClipboardList, Users, FileDown } from "lucide-react";
-import { Button } from "../../components";
+import { Button, Breadcrumbs } from "../../components";
 import { useAssignableUsersQuery } from "../tasks/hook";
 import { TaskList } from "../tasks";
 import { ExportDialog } from "../reports";
+import { TEAM_DELEGATIONS_BREADCRUMBS } from "./adminBreadcrumbs";
 import {
   Select,
   SelectTrigger,
@@ -28,6 +29,7 @@ export const AdminTaskList = () => {
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full">
+        <Breadcrumbs items={TEAM_DELEGATIONS_BREADCRUMBS} />
 
         {/* Header Section */}
         <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-6 border-b border-border">
