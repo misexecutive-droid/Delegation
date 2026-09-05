@@ -8,6 +8,32 @@ import type { Task } from '../../api/task';
 // (rather than if/else) so adding another bucket later is just one more entry here.
 export type CategoryFilterKey = 'all' | 'issue' | 'delegation' | 'task';
 
+export interface TaskFilters {
+  category:     CategoryFilterKey;
+  status:       Task['status'] | 'all';
+  priority:     Task['priority'][];
+  /**
+   * A delegation has no store of its own — it hangs off a department, and the department is what
+   * belongs to a store. So this filters on `department.storeId`, and a delegation with no
+   * department is out of scope for any store, the same way it's out of scope for any department.
+   */
+  storeId:      string;
+  departmentId: string;
+  assigneeIds:  string[];
+  raisedByIds:  string[];
+}
+
+/**
+ * Past its due date and not finished.
+ *
+ * Was declared three times over — TaskList's quick-filter predicates, TaskBoard's per-column
+ * count and TaskCard's own footer chip — in three slightly different shapes, one of which
+ * returned `string | boolean | undefined` rather than a boolean. One definition, so a card can
+ * never disagree with the column header counting it.
+ */
+export const isOverdueTask = (t: Task) =>
+  !!t.dueDate && t.status !== 'done' && new Date(t.dueDate).getTime() < Date.now();
+
 export const CATEGORY_PREDICATES: Record<CategoryFilterKey, (t: Task) => boolean> = {
   all: () => true,
   issue: (t) => t.category === 'issue',

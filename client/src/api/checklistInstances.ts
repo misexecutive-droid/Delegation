@@ -1,8 +1,12 @@
+import { z } from 'zod';
 import { apiFetch } from './http';
+import { arrayField, withArrayDefaults, normalizeWith } from './normalize';
 import type { ApiResponse, ChecklistRecurrence, ChecklistItemType, ChecklistConditionalAction } from './checklistDefinitions';
 import type { CaptureMethod } from './ticket';
 
-export type ChecklistInstanceStatus = 'OPEN' | 'COMPLETED';
+// OVERDUE is a subset of OPEN (unfinished and past its period end), matching the server's
+// InstanceStatusFilter — it used to be applied client-side over the whole list.
+export type ChecklistInstanceStatus = 'OPEN' | 'COMPLETED' | 'OVERDUE';
 export type ChecklistVerificationStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type ChecklistInstanceImage = {
@@ -136,32 +140,94 @@ export type ComplianceReportRow = {
   approvalRate: number | null;
 };
 
-const buildQuery = (params: Record<string, string | undefined>) => {
+// Accepts numbers too, since page/limit are numeric — they were being stringified at the call
+// site before, which is easy to forget and silently drops the param.
+const buildQuery = (params: Record<string, string | number | undefined>) => {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined) search.set(key, value);
+    if (value !== undefined) search.set(key, String(value));
   }
   const query = search.toString();
   return query ? `?${query}` : '';
 };
 
+// assigneeIds/items are the fields this feature's own crash risk hinges on — TicketCard-style
+// consumers (getChecklistProgress, instanceProgressStatus) iterate `.items` and the dashboard's
+// Compliance card filters on `.assigneeIds`, both assuming an array that the type declares but a
+// real response isn't guaranteed to include.
+const checklistInstanceArrayDefaults = withArrayDefaults({
+  assigneeIds: arrayField(z.string()),
+  items: arrayField(z.unknown()),
+});
+const normalizeInstance = (raw: unknown) => normalizeWith<ChecklistInstance>(checklistInstanceArrayDefaults, raw);
+const normalizeInstances = (raw: unknown[]) => raw.map(normalizeInstance);
+
+/**
+ * The three list endpoints now answer `{ success, data, meta }`. `page`/`limit` are optional and
+ * the query stays unbounded when neither is sent, so `data` is unchanged for callers that don't
+ * ask to paginate — `meta.total` is then simply the full count.
+ */
+export type ChecklistInstancePage = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+};
+
+type PageParams = { page?: number; limit?: number };
+
+export type ChecklistInstanceSummary = {
+  total: number;
+  completed: number;
+  pending: number;
+  overdue: number;
+  /** Across every item of every matching instance — powers completion-ratio gauges. */
+  totalItems: number;
+  doneItems: number;
+};
+
 export const checklistInstanceApi = {
-  getMine: (status?: ChecklistInstanceStatus) =>
-    apiFetch<ApiResponse<ChecklistInstance[]>>(`/checklist-instances/mine${buildQuery({ status })}`),
+  getMine: (status?: ChecklistInstanceStatus, paging: PageParams = {}) =>
+    apiFetch<ApiResponse<ChecklistInstance[]> & { meta: ChecklistInstancePage }>(
+      `/checklist-instances/mine${buildQuery({ status, ...paging })}`,
+    ).then(r => ({ ...r, data: normalizeInstances(r.data) })),
+
+  /**
+   * The counts screens used to derive by downloading every instance and reducing in JS. Ask for
+   * these instead of `.length`-ing a list — that pattern is why the list endpoints could not
+   * paginate.
+   */
+  getSummary: (filter: { mine?: boolean; storeId?: string; assigneeId?: string; definitionId?: string } = {}) =>
+    apiFetch<ApiResponse<ChecklistInstanceSummary>>(
+      `/checklist-instances/summary${buildQuery({
+        mine: filter.mine ? '1' : undefined,
+        storeId: filter.storeId,
+        assigneeId: filter.assigneeId,
+        definitionId: filter.definitionId,
+      })}`,
+    ),
 
   getOne: (id: string) =>
-    apiFetch<ApiResponse<ChecklistInstance>>(`/checklist-instances/${id}`),
+    apiFetch<ApiResponse<ChecklistInstance>>(`/checklist-instances/${id}`)
+      .then(r => ({ ...r, data: normalizeInstance(r.data) })),
 
-  getForDefinition: (definitionId: string) =>
-    apiFetch<ApiResponse<ChecklistInstance[]>>(`/checklist-instances${buildQuery({ definitionId })}`),
+  getForDefinition: (definitionId: string, paging: PageParams = {}) =>
+    apiFetch<ApiResponse<ChecklistInstance[]> & { meta: ChecklistInstancePage }>(
+      `/checklist-instances${buildQuery({ definitionId, ...paging })}`,
+    ).then(r => ({ ...r, data: normalizeInstances(r.data) })),
 
   // Powers the compliance board — same endpoint as getForDefinition, generalized to whichever
   // combination of filters the admin has picked (store and/or person, plus status).
-  list: (filter: { storeId?: string; assigneeId?: string; status?: ChecklistInstanceStatus } = {}) =>
-    apiFetch<ApiResponse<ChecklistInstance[]>>(`/checklist-instances${buildQuery(filter)}`),
+  list: (filter: { storeId?: string; assigneeId?: string; status?: ChecklistInstanceStatus } & PageParams = {}) =>
+    apiFetch<ApiResponse<ChecklistInstance[]> & { meta: ChecklistInstancePage }>(
+      `/checklist-instances${buildQuery(filter)}`,
+    ).then(r => ({ ...r, data: normalizeInstances(r.data) })),
 
-  getPendingVerification: () =>
-    apiFetch<ApiResponse<ChecklistInstance[]>>('/checklist-instances/pending-verification'),
+  getPendingVerification: (paging: PageParams = {}) =>
+    apiFetch<ApiResponse<ChecklistInstance[]> & { meta: ChecklistInstancePage }>(
+      `/checklist-instances/pending-verification${buildQuery(paging)}`,
+    ).then(r => ({ ...r, data: normalizeInstances(r.data) })),
 
   setItemDone: (itemId: string, isDone: boolean, values?: {
     numericValue?: number;
@@ -185,7 +251,7 @@ export const checklistInstanceApi = {
     apiFetch<ApiResponse<ChecklistInstance>>(`/checklist-instances/${id}/verify`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
-    }),
+    }).then(r => ({ ...r, data: normalizeInstance(r.data) })),
 
   uploadImages: (itemId: string, files: File[], captureMethod: CaptureMethod) => {
     const formData = new FormData();

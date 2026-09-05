@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Sparkles, Plus } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Modal } from '../../../../components';
 import { ItemTypeConfigFields, isItemDraftComplete } from './ItemTypeConfigFields';
 import { emptyItemDraft, type ItemDraft } from '../ChecklistDefinitionItemDraftRow';

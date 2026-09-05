@@ -14,11 +14,7 @@ interface DatePickerProps {
   className?: string;
   triggerClassName?: string;
   disabled?: boolean;
-  /** Adds a time-of-day input below the calendar (only once a date is picked), same pattern as
-   *  DateRangePicker's `showTime` — for a single due-date-and-time field instead of a range. */
   showTime?: boolean;
-  /** Earliest selectable day — days before this are rendered disabled rather than removed, so the
-   *  month grid still reads normally. */
   minDate?: Date;
 }
 
@@ -62,13 +58,10 @@ const QUICK_PICKS: { label: string; resolve: (today: Date) => Date }[] = [
   { label: 'Next month', resolve: (today) => addMonths(today, 1) },
 ];
 
-// Clock-face time dial — a watch-style circle with every value marked around it, instead of
-// stepper arrows that need repeated clicks to travel any distance. Hour marks run 12,1,2…11
-// clockwise from the top (index 0 = 12 o'clock position); minute marks run 0,5,10…55 the same way.
 const HOUR_MARKS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const MINUTE_MARKS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
-const DIAL_SIZE = 176;
-const DIAL_RADIUS = 72;
+const DIAL_SIZE = 160;
+const DIAL_RADIUS = 64;
 const DIAL_CENTER = DIAL_SIZE / 2;
 
 const dialMarkPosition = (index: number) => {
@@ -79,17 +72,6 @@ const dialMarkPosition = (index: number) => {
   };
 };
 
-// Single-date sibling of DateRangePicker — same calendar visuals, but a single click selects and
-// closes instead of requiring a from/to pair, which is what a plain due-date field actually needs.
-//
-// Renders the calendar inline (in normal document flow) right below the trigger, instead of as a
-// floating/portalled popover. A floating panel lives outside the modal's own box, so opening it
-// never changed the modal's size — it just overlaid whatever happened to be underneath, which is
-// what caused it to cover the priority field/footer buttons, and kept the modal itself from
-// recentering around the taller content. Inline, the calendar becomes part of the modal's actual
-// height, so the surrounding Dialog (which centers itself via top:50%/translate(-50%)) recenters
-// around it automatically, the body's own overflow-y-auto scrolls if it doesn't fit, and there is
-// nothing left to overlap.
 export function DatePicker({
   value,
   onChange,
@@ -102,9 +84,6 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => startOfDay(value ?? new Date()));
-  // Which dial is showing — hour marks or minute marks. Picking an hour auto-advances to the
-  // minute dial (same flow as Material's clock time picker), since both a hour and a minute are
-  // needed and doing it in two focused steps beats cramming 24 targets onto one dial.
   const [dialMode, setDialMode] = useState<'hour' | 'minute'>('hour');
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -113,10 +92,6 @@ export function DatePicker({
   const earliestDay = minDate ? startOfDay(minDate) : null;
 
   const selectDay = (day: Date) => {
-    // Preserve whatever time-of-day was already picked; only the very first pick has no prior
-    // value to carry forward, so it seeds from the actual current clock time instead of
-    // snapping to midnight — a stray "12:00 AM" default reads as if a time had been deliberately
-    // chosen, when nobody has touched the time controls yet.
     const now = new Date();
     const withTime = showTime
       ? new Date(day.getFullYear(), day.getMonth(), day.getDate(), value ? value.getHours() : now.getHours(), value ? value.getMinutes() : now.getMinutes())
@@ -125,11 +100,6 @@ export function DatePicker({
     if (!showTime) setOpen(false);
   };
 
-  // Clock-face dial instead of a native <input type="time"> — the native control renders as the
-  // browser/OS's own widget (a totally different visual language, and one that doesn't reliably
-  // theme for dark mode), which reads as a bolted-on second field rather than part of this
-  // component. A tap on the dial jumps straight to that value instead of stepping one unit per
-  // click.
   const selectHour = (hour12: number) => {
     if (!value) return;
     const isPM = value.getHours() >= 12;
@@ -165,8 +135,6 @@ export function DatePicker({
     setOpen((prev) => !prev);
   };
 
-  // Click-outside + Escape to close, since this is no longer a Radix-managed popover that handled
-  // that itself.
   useEffect(() => {
     if (!open) return;
     const handlePointerDown = (e: MouseEvent) => {
@@ -183,12 +151,6 @@ export function DatePicker({
     };
   }, [open]);
 
-  // Expanding inline (instead of a floating popover) means the calendar grows the modal's own
-  // scroll content — but the modal's scroll position itself never moves, so opening the field
-  // near the bottom of the visible area left the newly-expanded grid sitting below the fold with
-  // no indication anything happened. Scroll it into view once it's actually done expanding (the
-  // grid-rows height transition is 300ms — scrolling any earlier targets the still-collapsed,
-  // near-zero height and undershoots).
   useEffect(() => {
     if (!open) return;
     const timer = setTimeout(() => {
@@ -198,29 +160,29 @@ export function DatePicker({
   }, [open]);
 
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <div ref={containerRef} className={cn('w-full', className)}>
       <button
         type="button"
         disabled={disabled}
         onClick={toggleOpen}
         aria-expanded={open}
         className={cn(
-          'flex items-center gap-2 w-full h-10 px-3 rounded-md border bg-surface text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-400',
-          'disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border',
-          open ? 'border-primary-500' : 'border-border hover:border-primary-400',
+          'flex items-center gap-2.5 w-full h-11 px-4 rounded-xl border bg-surface text-sm transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30',
+          'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-surface-hover',
+          open ? 'border-primary-500' : 'border-border hover:border-border-hover',
           triggerClassName,
         )}
       >
-        <CalendarIcon size={16} className="text-text-light shrink-0" />
-        <span className={cn('truncate', value ? 'text-text font-medium' : 'text-text-muted font-medium')}>
-          {value ? formatDate(value) + (showTime ? ` ${formatTime(value)}` : '') : placeholder}
+        <CalendarIcon size={18} className="text-text-light shrink-0" />
+        <span className={cn('truncate', value ? 'text-text font-medium' : 'text-text-light font-medium')}>
+          {value ? formatDate(value) + (showTime ? ` • ${formatTime(value)}` : '') : placeholder}
         </span>
         {value && (
           <span
             role="button"
             tabIndex={0}
             aria-label="Clear date"
-            className="ml-auto text-text-light hover:text-danger transition-colors shrink-0"
+            className="ml-auto p-1.5 text-text-light bg-surface-hover hover:bg-danger/10 hover:text-danger rounded-full transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
             onClick={(e) => {
               e.stopPropagation();
               onChange(null);
@@ -232,23 +194,17 @@ export function DatePicker({
               }
             }}
           >
-            <X size={14} />
+            <X size={14} strokeWidth={2.5} />
           </span>
         )}
       </button>
 
-      {/* grid-rows-[0fr]→[1fr] is a CSS-only "animate to auto height" trick: the inner overflow-hidden
-          wrapper gets clipped to the grid row's resolved size, which transitions smoothly instead of
-          snapping the way a plain height:auto toggle would. */}
-      <div className={cn('grid transition-[grid-template-rows] duration-300 ease-in-out', open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
-        <div className="overflow-hidden">
-          {/* No own border/shadow/bg-surface card here — the parent field is already bg-surface,
-              so a nested bordered-and-shadowed box on top of it looked like a separate panel
-              floating over the modal instead of a natural continuation of the field below it. A
-              plain top divider keeps it feeling like part of the same field. */}
-          <div className="mt-3 pt-3 flex flex-col gap-2.5 border-t border-border/60">
-            {/* Quick Picks */}
-            <div className="flex flex-wrap gap-1.5">
+      {open && (
+      <div className="mt-2 w-full p-4 bg-surface border border-border rounded-2xl shadow-xl shadow-black/10 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="flex flex-col sm:flex-row sm:gap-5">
+          {/* Calendar column */}
+          <div className="sm:w-[260px] shrink-0">
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {QUICK_PICKS.map((pick) => {
                 const target = startOfDay(pick.resolve(today));
                 const isActive = isSameDay(value, target);
@@ -258,10 +214,10 @@ export function DatePicker({
                     type="button"
                     onClick={() => selectDay(target)}
                     className={cn(
-                      'px-2 py-0.5 rounded-full border text-[10px] font-bold transition-colors cursor-pointer',
+                      'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40',
                       isActive
-                        ? 'bg-primary-700 border-primary-700 text-white'
-                        : 'border-border text-text-secondary hover:border-primary-400 hover:text-primary-700',
+                        ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/20'
+                        : 'bg-surface-hover text-text-secondary hover:bg-surface-active hover:text-text'
                     )}
                   >
                     {pick.label}
@@ -270,38 +226,37 @@ export function DatePicker({
               })}
             </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-3">
               <button
                 type="button"
                 onClick={() => setViewMonth((m) => addMonths(m, -1))}
-                className="w-6 h-6 rounded-md border border-border text-text-muted hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Previous month"
+                className="p-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={16} />
               </button>
-              <span className="text-xs font-display font-bold text-text">
+              <span className="text-sm font-semibold text-text tracking-wide">
                 {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
               </span>
               <button
                 type="button"
                 onClick={() => setViewMonth((m) => addMonths(m, 1))}
-                className="w-6 h-6 rounded-md border border-border text-text-muted hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Next month"
+                className="p-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
               >
-                <ChevronRight size={14} />
+                <ChevronRight size={16} />
               </button>
             </div>
 
-            {/* Days Grid Header */}
-            <div className="grid grid-cols-7">
+            <div className="grid grid-cols-7 mb-1.5">
               {WEEKDAY_LABELS.map((w) => (
-                <span key={w} className="text-[10px] font-bold text-text-light text-center">
+                <span key={w} className="text-[10px] font-bold text-text-light text-center tracking-wider">
                   {w}
                 </span>
               ))}
             </div>
 
-            {/* Days Grid */}
-            <div className="grid grid-cols-7 gap-y-0.5 gap-x-0.5">
+            <div className="grid grid-cols-7 gap-1">
               {grid.map((day) => {
                 const inMonth = day.getMonth() === viewMonth.getMonth();
                 const isBeforeMin = !!earliestDay && day < earliestDay;
@@ -315,17 +270,11 @@ export function DatePicker({
                     onClick={() => selectDay(day)}
                     disabled={!inMonth || isBeforeMin}
                     className={cn(
-                      // rounded-full (not rounded-md) — a filled square block for one day can read
-                      // as a range highlight; a circular mark is the more standard "single day
-                      // selected" affordance (Google/Apple Calendar) and avoids that ambiguity.
-                      'relative h-7 text-xs rounded-full transition-colors font-medium',
-                      (!inMonth || isBeforeMin) ? 'text-text-light/40 cursor-default' : 'text-text-secondary cursor-pointer',
-                      isSelected && 'bg-primary-700 text-white shadow-sm hover:bg-primary-800',
-                      // Today gets its own outlined-circle treatment (filled = selected, outlined =
-                      // today), same convention as Google/Apple Calendar — the old bottom-edge dot
-                      // was too subtle to register as "this is today" at a glance.
-                      isToday && !isSelected && 'ring-1 ring-inset ring-primary-400 text-primary-600 font-bold',
-                      inMonth && !isBeforeMin && !isSelected && 'hover:bg-surface-hover hover:text-primary-700',
+                      'h-8 w-full flex items-center justify-center text-sm rounded-xl transition-all font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40',
+                      (!inMonth || isBeforeMin) ? 'text-text-light/60 cursor-default' : 'text-text-secondary cursor-pointer',
+                      isSelected && 'bg-primary-600 text-white font-semibold shadow-sm shadow-primary-500/25 hover:bg-primary-700',
+                      isToday && !isSelected && 'text-primary-600 bg-primary-500/10 font-bold',
+                      inMonth && !isBeforeMin && !isSelected && 'hover:bg-surface-hover hover:text-text'
                     )}
                   >
                     {day.getDate()}
@@ -333,118 +282,118 @@ export function DatePicker({
                 );
               })}
             </div>
+          </div>
 
-            {showTime && value && (() => {
-              const h24 = value.getHours();
-              const period: 'AM' | 'PM' = h24 >= 12 ? 'PM' : 'AM';
-              const hour12 = h24 % 12 === 0 ? 12 : h24 % 12;
-              const minute = value.getMinutes();
-              // Continuous angle (not snapped to the nearest mark) so the hand still points to
-              // roughly the right spot for a value that didn't come from clicking a mark — e.g.
-              // an existing ticket loaded with a minute that isn't a multiple of 5.
-              const handAngleDeg = dialMode === 'hour' ? (hour12 % 12) * 30 : (minute / 60) * 360;
+          {/* Time column — sits beside the calendar at sm+ instead of stacked below it, which is
+              what forced this popover past the modal's visible height and needed a scroll. */}
+          {showTime && value && (() => {
+            const h24 = value.getHours();
+            const period: 'AM' | 'PM' = h24 >= 12 ? 'PM' : 'AM';
+            const hour12 = h24 % 12 === 0 ? 12 : h24 % 12;
+            const minute = value.getMinutes();
 
-              return (
-                <div className="flex flex-col gap-2 pt-2.5 border-t border-border/60">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-text-muted">Time</label>
+            const handAngleDeg = dialMode === 'hour' ? (hour12 % 12) * 30 : (minute / 60) * 360;
 
-                    <div className="flex items-center gap-1">
+            return (
+              <div className="mt-4 pt-4 border-t sm:mt-0 sm:pt-0 sm:border-t-0 sm:border-l sm:pl-5 border-border sm:w-[240px] shrink-0 flex flex-col items-center gap-4">
+                <div className="flex flex-col items-center gap-3 w-full">
+                  <span className="text-[11px] font-bold text-text-light tracking-wider self-center sm:self-start">Time</span>
+
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center p-1 bg-surface-hover rounded-lg border border-border">
                       <button
                         type="button"
                         onClick={() => setDialMode('hour')}
                         className={cn(
-                          'px-1.5 py-0.5 rounded text-base font-display font-bold tabular-nums transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
-                          dialMode === 'hour' ? 'bg-primary-500/10 text-primary-600' : 'text-text hover:bg-surface-hover',
+                          'px-2 py-1 rounded-md text-sm font-semibold tabular-nums transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40',
+                          dialMode === 'hour' ? 'bg-surface text-primary-600 shadow-sm shadow-black/5' : 'text-text-muted hover:text-text hover:bg-surface-active/50',
                         )}
                       >
                         {String(hour12).padStart(2, '0')}
                       </button>
-                      <span className="text-base font-bold text-text-secondary">:</span>
+                      <span className="px-1 text-sm font-bold text-text-light">:</span>
                       <button
                         type="button"
                         onClick={() => setDialMode('minute')}
                         className={cn(
-                          'px-1.5 py-0.5 rounded text-base font-display font-bold tabular-nums transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
-                          dialMode === 'minute' ? 'bg-primary-500/10 text-primary-600' : 'text-text hover:bg-surface-hover',
+                          'px-2 py-1 rounded-md text-sm font-semibold tabular-nums transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40',
+                          dialMode === 'minute' ? 'bg-surface text-primary-600 shadow-sm shadow-black/5' : 'text-text-muted hover:text-text hover:bg-surface-active/50',
                         )}
                       >
                         {String(minute).padStart(2, '0')}
                       </button>
+                    </div>
 
-                      <div className="flex rounded-md border border-border overflow-hidden ml-2">
-                        <button
-                          type="button"
-                          onClick={() => setPeriod('AM')}
-                          aria-pressed={period === 'AM'}
-                          className={cn(
-                            'px-2 py-1 text-[10px] font-bold transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500/50',
-                            period === 'AM' ? 'bg-primary-600 text-white' : 'bg-surface text-text-muted hover:bg-surface-hover',
-                          )}
-                        >
-                          AM
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPeriod('PM')}
-                          aria-pressed={period === 'PM'}
-                          className={cn(
-                            'px-2 py-1 text-[10px] font-bold transition-colors cursor-pointer border-l border-border outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500/50',
-                            period === 'PM' ? 'bg-primary-600 text-white' : 'bg-surface text-text-muted hover:bg-surface-hover',
-                          )}
-                        >
-                          PM
-                        </button>
-                      </div>
+                    <div className="flex p-1 bg-surface-hover rounded-lg border border-border">
+                      <button
+                        type="button"
+                        onClick={() => setPeriod('AM')}
+                        aria-pressed={period === 'AM'}
+                        className={cn(
+                          'px-2 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40',
+                          period === 'AM' ? 'bg-surface text-primary-600 shadow-sm shadow-black/5' : 'text-text-muted hover:text-text hover:bg-surface-active/50',
+                        )}
+                      >
+                        AM
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPeriod('PM')}
+                        aria-pressed={period === 'PM'}
+                        className={cn(
+                          'px-2 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40',
+                          period === 'PM' ? 'bg-surface text-primary-600 shadow-sm shadow-black/5' : 'text-text-muted hover:text-text hover:bg-surface-active/50',
+                        )}
+                      >
+                        PM
+                      </button>
                     </div>
                   </div>
-
-                  {/* Watch-face dial — every value is a tap target arranged around the circle,
-                      instead of stepping through them one at a time. */}
-                  <div className="relative mx-auto shrink-0" style={{ width: DIAL_SIZE, height: DIAL_SIZE }}>
-                    <div className="absolute inset-0 rounded-full bg-surface-hover/60 border border-border/60" />
-
-                    {/* Hand, pointing from center to the current value's angle */}
-                    <div
-                      className="absolute bg-primary-500/60 rounded-full pointer-events-none"
-                      style={{
-                        width: 2,
-                        height: DIAL_RADIUS - 6,
-                        left: DIAL_CENTER - 1,
-                        top: DIAL_CENTER - (DIAL_RADIUS - 6),
-                        transform: `rotate(${handAngleDeg}deg)`,
-                        transformOrigin: `1px ${DIAL_RADIUS - 6}px`,
-                      }}
-                    />
-                    <div className="absolute size-1.5 rounded-full bg-primary-600 pointer-events-none" style={{ left: DIAL_CENTER - 3, top: DIAL_CENTER - 3 }} />
-
-                    {(dialMode === 'hour' ? HOUR_MARKS : MINUTE_MARKS).map((markValue, i) => {
-                      const pos = dialMarkPosition(i);
-                      const isActive = dialMode === 'hour' ? markValue === hour12 : markValue === minute;
-                      return (
-                        <button
-                          key={markValue}
-                          type="button"
-                          onClick={() => (dialMode === 'hour' ? selectHour(markValue) : selectMinute(markValue))}
-                          aria-label={dialMode === 'hour' ? `${markValue} o'clock` : `${markValue} minutes`}
-                          aria-pressed={isActive}
-                          className={cn(
-                            'absolute size-7 -translate-x-1/2 -translate-y-1/2 rounded-full text-[11px] font-display font-bold transition-colors cursor-pointer flex items-center justify-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
-                            isActive ? 'bg-primary-600 text-white shadow-sm' : 'text-text-secondary hover:bg-surface-active',
-                          )}
-                          style={{ left: pos.left, top: pos.top }}
-                        >
-                          {dialMode === 'minute' ? String(markValue).padStart(2, '0') : markValue}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
-              );
-            })()}
-          </div>
+
+                <div className="relative shrink-0" style={{ width: DIAL_SIZE, height: DIAL_SIZE }}>
+                  <div className="absolute inset-0 rounded-full bg-surface-hover/60 border border-border shadow-inner" />
+
+                  <div
+                    className="absolute bg-primary-500 rounded-full pointer-events-none origin-bottom transition-all duration-300 ease-out"
+                    style={{
+                      width: 2,
+                      height: DIAL_RADIUS - 6,
+                      left: DIAL_CENTER - 1,
+                      top: DIAL_CENTER - (DIAL_RADIUS - 6),
+                      transform: `rotate(${handAngleDeg}deg)`,
+                      transformOrigin: `1px ${DIAL_RADIUS - 6}px`,
+                    }}
+                  />
+                  <div className="absolute size-2 rounded-full bg-primary-600 shadow-sm pointer-events-none" style={{ left: DIAL_CENTER - 4, top: DIAL_CENTER - 4 }} />
+
+                  {(dialMode === 'hour' ? HOUR_MARKS : MINUTE_MARKS).map((markValue, i) => {
+                    const pos = dialMarkPosition(i);
+                    const isActive = dialMode === 'hour' ? markValue === hour12 : markValue === minute;
+                    return (
+                      <button
+                        key={markValue}
+                        type="button"
+                        onClick={() => (dialMode === 'hour' ? selectHour(markValue) : selectMinute(markValue))}
+                        aria-label={dialMode === 'hour' ? `${markValue} o'clock` : `${markValue} minutes`}
+                        aria-pressed={isActive}
+                        className={cn(
+                          'absolute size-7 -translate-x-1/2 -translate-y-1/2 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center justify-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 hover:scale-110',
+                          isActive ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/30' : 'text-text-secondary hover:bg-surface-hover hover:text-text',
+                        )}
+                        style={{ left: pos.left, top: pos.top }}
+                      >
+                        {dialMode === 'minute' ? String(markValue).padStart(2, '0') : markValue}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
+      )}
     </div>
   );
 }

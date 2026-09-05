@@ -39,36 +39,36 @@ export const TicketDetailHeader = ({ ticket }: TicketDetailHeaderProps) => {
   };
 
   return (
-    <SheetHeader className="p-5 pb-4 border-b border-border/60 bg-surface/80 backdrop-blur-sm text-left">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2.5">
+    <SheetHeader className="p-6 pb-5 border-b border-border bg-surface/95 backdrop-blur-xl text-left shadow-sm z-20">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
             {/* Interactive Ticket ID Badge */}
             <button
               type="button"
               onClick={handleCopyId}
-              className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-500/10 hover:bg-primary-500/15 text-primary-500 text-[11px] font-mono font-medium border border-primary-500/20 transition-all cursor-pointer"
+              className="group inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-primary-500/10 hover:bg-primary-500/20 text-primary-700 dark:text-primary-400 text-xs font-mono font-bold border border-primary-500/20 transition-all cursor-pointer shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95"
               title="Click to copy ticket ID"
               aria-label={`Copy ticket code ${ticketCode}`}
             >
               <span>{ticketCode}</span>
               {copied ? (
-                <Check size={11} className="text-emerald-500" />
+                <Check size={14} className="text-success" strokeWidth={2.5} />
               ) : (
-                <Copy size={11} className="opacity-60 group-hover:opacity-100 transition-opacity" />
+                <Copy size={14} className="opacity-50 group-hover:opacity-100 transition-opacity" strokeWidth={2.5} />
               )}
             </button>
 
             {/* Created Date */}
-            <span className="text-[11px] text-text-muted flex items-center gap-1 font-medium">
-              <Calendar size={12} className="shrink-0 opacity-70" />
+            <span className="text-xs text-text-muted flex items-center gap-1.5 font-semibold">
+              <Calendar size={14} className="shrink-0 text-text-light" strokeWidth={2.5} />
               <span>Created {formatDate(ticket.createdAt)}</span>
             </span>
           </div>
         </div>
 
         {/* Title */}
-        <SheetTitle className="text-base font-medium text-text leading-snug break-words select-text">
+        <SheetTitle className="text-xl font-bold text-text leading-tight break-words select-text mt-1">
           {ticket.title}
         </SheetTitle>
       </div>

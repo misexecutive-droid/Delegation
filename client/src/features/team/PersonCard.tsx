@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { getInitials } from '../../lib/getInitials';
-import { avatarColorClass } from '../tasks/avatarColors';
+import { avatarColorClass } from '../../lib/avatarColors';
 
 export interface PersonCardRow {
   id: string;

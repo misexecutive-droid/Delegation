@@ -66,7 +66,7 @@ export const QuestionTypePalette = ({ onAdd, storeId }: QuestionTypePaletteProps
 
   return (
     <div className="flex flex-col gap-1">
-      <h2 className="px-1 pb-2 text-xs font-display font-bold uppercase tracking-wider text-text-muted">Question Types</h2>
+      <h2 className="px-1 pb-2 text-xs font-display font-bold text-text-muted">Question Types</h2>
       {CATEGORIES.map(({ title, entries }, i) => (
         <div key={title} className={i > 0 ? 'mt-3' : ''}>
           <p className="px-2.5 pb-1 text-[10px] font-display font-bold uppercase tracking-wider text-text-light">{title}</p>
@@ -81,7 +81,7 @@ export const QuestionTypePalette = ({ onAdd, storeId }: QuestionTypePaletteProps
                   className="group relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-display font-medium text-text-secondary transition-all duration-200 hover:bg-primary-50 hover:text-primary-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
                 >
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-hover text-text-muted transition-colors duration-200 group-hover:bg-primary-100 group-hover:text-primary-700">
-                    <Icon size={15} />
+                    <Icon size={16} strokeWidth={2.25} />
                   </span>
                   <span className="min-w-0 flex-1 truncate">{entry.label}</span>
                   <span className="flex size-6 shrink-0 scale-75 items-center justify-center rounded-full border border-border text-text-light opacity-0 transition-all duration-200 group-hover:scale-100 group-hover:border-primary-400 group-hover:bg-primary-50 group-hover:text-primary-600 group-hover:opacity-100">

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { Building2, User } from 'lucide-react';
 import { TicketCard } from '../TicketCard';
+import { TicketGroupHeader } from './TicketGroupHeader';
 import { groupChecklistStats } from './ticketGrouping';
 import type { Ticket } from '../../../api/ticket';
 
@@ -17,40 +17,6 @@ interface TicketGroupedListProps {
   departmentNames: Map<string, string>;
 }
 
-// Sub-component: Clean separation for group headers
-interface GroupHeaderProps {
-  label: string;
-  groupBy: 'department' | 'assignee';
-  ticketCount: number;
-  stats: { total: number; done: number };
-}
-
-const GroupHeader = ({ label, groupBy, ticketCount, stats }: GroupHeaderProps) => {
-  const Icon = groupBy === 'department' ? Building2 : User;
-
-  return (
-    <div className="flex items-center justify-between px-1 pb-1 border-b border-border/40">
-      <div className="flex items-center gap-2">
-        <Icon size={13} className="text-primary-500 shrink-0" />
-        <h3 className="text-xs font-display font-medium text-text-secondary capitalize tracking-wider">
-          {label}
-        </h3>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {stats.total > 0 && (
-          <span className="text-[11px] font-display font-medium px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-300">
-            <span className="tabular-nums">{stats.done}/{stats.total}</span> checklist done
-          </span>
-        )}
-        <span className="text-[11px] font-display font-medium px-2 py-0.5 rounded bg-surface-hover text-text-muted">
-          <span className="tabular-nums">{ticketCount}</span> {ticketCount === 1 ? 'ticket' : 'tickets'}
-        </span>
-      </div>
-    </div>
-  );
-};
-
 export const TicketGroupedList = ({
   groups,
   groupBy,
@@ -66,14 +32,14 @@ export const TicketGroupedList = ({
   ), [groups]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       {groups.map((group, groupIdx) => {
         const stats = groupChecklistStats(group.tickets);
         const groupOffset = groupOffsets[groupIdx];
 
         return (
-          <div key={group.key} className="flex flex-col gap-3">
-            <GroupHeader
+          <div key={group.key} className="flex flex-col gap-4">
+            <TicketGroupHeader
               label={group.label}
               groupBy={groupBy}
               ticketCount={group.tickets.length}

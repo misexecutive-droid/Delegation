@@ -1,5 +1,7 @@
-import type { TicketStatus } from '../../api/ticket';
+import type { Ticket, TicketStatus } from '../../api/ticket';
 import type { Task } from '../../api/task';
+import type { Todo } from '../../api/todos';
+import type { ChecklistInstance } from '../../api/checklistInstances';
 
 // Mirrors taskDisplay.tsx's STATUS_CONFIG badge classes exactly — the feed sits on the same
 // dashboard as the KPI modal that already uses those tokens, so the same task's status color
@@ -9,6 +11,22 @@ export const TASK_STATUS_COLORS: Record<Task['status'], string> = {
   in_progress: 'bg-status-progress/10 text-status-progress',
   pending_verification: 'bg-status-verify/10 text-status-verify',
   done: 'bg-status-done/10 text-status-done',
+};
+
+// Humanized recency for feed timestamps — "2h ago" reads as more alive/scannable than a bare
+// date, and falls back to a short absolute date once the item is old enough that "14d ago" stops
+// being a meaningful unit of time.
+export const formatRelativeTime = (isoDate: string) => {
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return new Date(isoDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
 export const greeting = () => {
@@ -33,17 +51,9 @@ export const lastMonths = (count: number) => {
   });
 };
 
-const isSameMonth = (isoDate: string, year: number, month: number) => {
-  const d = new Date(isoDate);
-  return d.getFullYear() === year && d.getMonth() === month;
-};
-
-export const countInMonth = (dates: string[], year: number, month: number) =>
-  dates.filter(d => isSameMonth(d, year, month)).length;
-
-// Per-month counts across a set of month buckets, e.g. for a stat card sparkline.
-export const seriesInMonths = (dates: string[], months: { year: number; month: number }[]) =>
-  months.map(m => countInMonth(dates, m.year, m.month));
+// `isSameMonth`/`countInMonth`/`seriesInMonths` used to sit here — a per-month bucketing chain
+// whose only stated purpose was feeding StatCard's `sparkline` prop, which was declared but never
+// rendered. Nothing imported any of the three, so they went out with the prop.
 
 export type Trend = { direction: 'up' | 'down'; label: string };
 
@@ -91,6 +101,17 @@ export const PERIOD_END_LABEL: Record<CompliancePeriod, string> = {
   week: 'end of week',
   month: 'end of month',
   year: 'end of year',
+};
+
+// Single source for every CompliancePeriod tab row (CompareDashboard, MonthlyTargetCard) so both
+// widgets' Day/Week/Month/Year controls stay in the same order with the same labels.
+export const COMPLIANCE_PERIOD_OPTIONS: CompliancePeriod[] = ['day', 'week', 'month', 'year'];
+
+export const PERIOD_TAB_LABEL: Record<CompliancePeriod, string> = {
+  day: 'Day',
+  week: 'Week',
+  month: 'Month',
+  year: 'Year',
 };
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -167,6 +188,13 @@ export const ACTIVITY_BUCKET_COUNT: Record<ActivityGroupBy, number> = {
   day: 7, month: 6, quarter: 4, year: 4,
 };
 
+// Describes the same trailing window ACTIVITY_BUCKET_COUNT covers — used by the Compliance gauges,
+// which scope to that whole window (see ActivityComplianceGauges) rather than only the single
+// current bucket, so the label under "Compliance" needs to say "last 6 months", not "this month".
+export const ACTIVITY_GROUP_RANGE_LABEL: Record<ActivityGroupBy, string> = {
+  day: 'last 7 days', month: 'last 6 months', quarter: 'last 4 quarters', year: 'last 4 years',
+};
+
 export interface ActivityBucket {
   label: string;
   start: Date;
@@ -204,3 +232,132 @@ export const lastActivityBuckets = (groupBy: ActivityGroupBy, count: number, now
 
 export const countInRange = (dates: string[], start: Date, end: Date) =>
   dates.filter(d => { const t = new Date(d).getTime(); return t >= start.getTime() && t < end.getTime(); }).length;
+
+// The four kinds of activity the bar chart/gauges can show, each toggleable independently — order
+// matches how the filter chips read left to right.
+export type ActivityCategory = 'checklist' | 'todo' | 'ticket' | 'delegation';
+export const ACTIVITY_CATEGORY_ORDER: ActivityCategory[] = ['checklist', 'todo', 'ticket', 'delegation'];
+export const ACTIVITY_CATEGORY_LABEL: Record<ActivityCategory, string> = {
+  checklist: 'Checklist',
+  todo: 'Todo',
+  ticket: 'Ticket',
+  delegation: 'Delegation',
+};
+// One navy family, not four unrelated hues — darkest for Checklist, stepping lighter through
+// Ticket and Delegation down to Todo, so the stacked bar reads as one coherent brand palette
+// instead of a mixed success/warning/info set.
+export const ACTIVITY_CATEGORY_COLOR: Record<ActivityCategory, string> = {
+  checklist: 'var(--color-primary-900)',
+  ticket: 'var(--color-primary-700)',
+  delegation: 'var(--color-primary-500)',
+  todo: 'var(--color-primary-300)',
+};
+export const ACTIVITY_CATEGORY_DOT_CLASS: Record<ActivityCategory, string> = {
+  checklist: 'bg-primary-900',
+  ticket: 'bg-primary-700',
+  delegation: 'bg-primary-500',
+  todo: 'bg-primary-300',
+};
+
+export interface ActivityWorkItem {
+  category: ActivityCategory;
+  createdAt: string;
+  completed: boolean;
+  overdue: boolean;
+  // Everyone who owns/is assigned to this item — a task/ticket has an owner plus one or more
+  // assignees, a checklist instance can have several assignees, a todo has none client-side (it's
+  // implicitly "mine"). Kept as an array (not a single userId) so the Compliance card's "Person"
+  // filter can match on any of them rather than just the primary assignee.
+  userIds: string[];
+  // Ticket and Task carry a department; a checklist instance is store-scoped, not
+  // department-scoped (there's no reliable department-to-store mapping — see
+  // StoresPerformanceSection's own note on this), and a todo has neither — those come through
+  // as null and simply won't match a Department/Store filter once one is applied.
+  departmentId: string | null;
+  storeId: string | null;
+}
+
+const inTimeRange = (createdAt: string, start: Date, end: Date) => {
+  const t = new Date(createdAt).getTime();
+  return t >= start.getTime() && t < end.getTime();
+};
+
+// Normalizes four differently-shaped record types into one common shape so the bar chart and
+// compliance gauges can filter/aggregate them identically instead of each re-deriving its own
+// per-kind "is this done / is this overdue" mapping.
+export const buildActivityItems = (
+  tasks: Task[],
+  tickets: Ticket[],
+  checklists: ChecklistInstance[],
+  todos: Todo[],
+  now: number,
+): ActivityWorkItem[] => [
+  ...tasks.map((t): ActivityWorkItem => ({
+    category: 'delegation',
+    createdAt: t.createdAt,
+    completed: t.status === 'done',
+    overdue: t.status !== 'done' && !!t.dueDate && new Date(t.dueDate).getTime() < now,
+    // additionalAssigneeIds is typed as always an array, but real records have been seen missing
+    // it entirely — spreading a null/undefined value throws "is not iterable" at runtime, so it's
+    // defaulted defensively here rather than trusting the type.
+    userIds: [t.userId, t.assigneeId, ...(t.additionalAssigneeIds ?? [])].filter((id): id is string => !!id),
+    departmentId: t.departmentId,
+    storeId: null,
+  })),
+  ...tickets.map((t): ActivityWorkItem => ({
+    category: 'ticket',
+    createdAt: t.createdAt,
+    completed: t.status === 'CLOSED',
+    overdue: t.isOverdue,
+    userIds: [t.userId, t.assigneeId].filter((id): id is string => !!id),
+    departmentId: t.departmentId,
+    storeId: t.storeId,
+  })),
+  ...checklists.map((c): ActivityWorkItem => {
+    const total = c.items.length;
+    const done = c.items.filter((i) => i.isDone).length;
+    const completed = total > 0 && done === total;
+    return {
+      category: 'checklist',
+      // Checklist instances have no createdAt of their own — generatedAt (when this recurring
+      // instance was spun up) is the closest equivalent for bucketing "when this happened".
+      createdAt: c.generatedAt,
+      completed,
+      overdue: !completed && !!c.cutoffTime && new Date(c.cutoffTime).getTime() < now,
+      userIds: c.assigneeIds ?? [],
+      departmentId: null,
+      storeId: c.storeId,
+    };
+  }),
+  ...todos.map((t): ActivityWorkItem => ({
+    category: 'todo',
+    createdAt: t.createdAt,
+    completed: t.completed,
+    overdue: !t.completed && !!t.dueDate && new Date(t.dueDate).getTime() < now,
+    // Todos carry no owner/department/store client-side — they're implicitly "mine" — so they
+    // simply drop out once any Person/Department/Store filter is applied, rather than matching
+    // as though they belonged to whoever's selected.
+    userIds: [],
+    departmentId: null,
+    storeId: null,
+  })),
+];
+
+export const countItemsInRange = (items: ActivityWorkItem[], category: ActivityCategory, start: Date, end: Date) =>
+  items.filter((i) => i.category === category && inTimeRange(i.createdAt, start, end)).length;
+
+export type RateTone = 'success' | 'warning' | 'danger' | 'neutral';
+
+// Below this many total items, a percentage is noise, not signal — "1 of 1 done" reading as a
+// strong 100% (or "0 of 1" as an alarming 0%) tells you nothing. Neutral until there's enough
+// volume for the number to actually mean something.
+const RATE_VOLUME_FLOOR = 5;
+
+// Below 50% reads as at-risk, 50-79% as on-track, 80%+ as strong — the same three-tier language
+// the rest of the app uses for status tones, applied consistently everywhere a rate is shown.
+export const rateTone = (percent: number, total: number): RateTone => {
+  if (total < RATE_VOLUME_FLOOR) return 'neutral';
+  if (percent >= 80) return 'success';
+  if (percent >= 50) return 'warning';
+  return 'danger';
+};

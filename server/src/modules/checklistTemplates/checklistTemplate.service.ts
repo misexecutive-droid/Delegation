@@ -10,6 +10,7 @@ import type {
     CreateChecklistTemplateItemInput,
     UpdateChecklistTemplateItemInput,
 } from "./checklistTemplate.validation.js"
+import { auditService } from "../audit/audit.service.js"
 
 // Not using Drizzle's relational query API (`db.query...with:{...}`) here — that API compiles
 // every relation into a `LEFT JOIN LATERAL (...)` subquery, and the actual database this app
@@ -74,11 +75,13 @@ export const checklistTemplateService = {
             )
         }
 
-        return getTemplateWithItems(id)
+        const created = await getTemplateWithItems(id)
+        await auditService.record({ entityType: "ChecklistTemplate", entityId: id, action: "CREATE", actorId: user.sub, after: created })
+        return created
     },
 
-    async update(id: string, input: UpdateChecklistTemplateInput) {
-        const [existing] = await db.select({ id: checklistTemplates.id }).from(checklistTemplates).where(eq(checklistTemplates.id, id)).limit(1)
+    async update(id: string, input: UpdateChecklistTemplateInput, actorId: string) {
+        const [existing] = await db.select().from(checklistTemplates).where(eq(checklistTemplates.id, id)).limit(1)
         if (!existing) throw AppError.notFound("Checklist template not found")
 
         const patch: Partial<typeof checklistTemplates.$inferInsert> = { updatedAt: new Date() }
@@ -87,10 +90,11 @@ export const checklistTemplateService = {
 
         await db.update(checklistTemplates).set(patch).where(eq(checklistTemplates.id, id))
         const [template] = await db.select().from(checklistTemplates).where(eq(checklistTemplates.id, id)).limit(1)
+        await auditService.record({ entityType: "ChecklistTemplate", entityId: id, action: "UPDATE", actorId, before: existing, after: template })
         return template
     },
 
-    async remove(id: string) {
+    async remove(id: string, actorId: string) {
         const [template] = await db.select().from(checklistTemplates).where(eq(checklistTemplates.id, id)).limit(1)
         if (!template) throw AppError.notFound("Checklist template not found")
         // wrapped in a transaction (source had none)
@@ -98,6 +102,7 @@ export const checklistTemplateService = {
             await tx.delete(checklistTemplateItems).where(eq(checklistTemplateItems.templateId, id))
             await tx.delete(checklistTemplates).where(eq(checklistTemplates.id, id))
         })
+        await auditService.record({ entityType: "ChecklistTemplate", entityId: id, action: "DELETE", actorId, before: template })
         return template
     },
 

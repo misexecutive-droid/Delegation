@@ -1,13 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import { PageNav } from '../../../components';
 import { Link } from 'react-router';
-import { Store, Clock, AlertCircle } from 'lucide-react';
-import { Skeleton, SelectDropdown } from '../../../components';
-import { useStoresQuery, useAssignableUsersQuery, useChecklistInstancesBoardQuery } from '../hook';
+import { Store, AlertCircle } from 'lucide-react';
+import { Skeleton, SelectDropdown, StatusChip } from '../../../components';
+import { Badge } from '@/components/ui/badge';
+import { useStoresQuery, useAssignableUsersQuery, useChecklistInstancesBoardQuery, useChecklistInstanceSummaryQuery } from '../hook';
 import {
-  formatDate, instanceProgressStatus, VERIFICATION_STATUS_LABEL, VERIFICATION_STATUS_STYLE,
+  formatDate, instanceProgressStatus, VERIFICATION_STATUS_LABEL,
   rateToneClass, rateBarClass, isInstanceOverdue,
 } from '../checklistDisplay';
-import type { ChecklistInstance, ChecklistInstanceStatus } from '../../../api/checklistInstances';
+import { ChecklistComplianceQuickStats, type ComplianceQuickFilterKey } from './ChecklistComplianceQuickStats';
+import type { ChecklistInstance, ChecklistInstanceStatus, ChecklistVerificationStatus } from '../../../api/checklistInstances';
 
 const STATUS_OPTIONS: { value: '' | ChecklistInstanceStatus; label: string }[] = [
   { value: '', label: 'All' },
@@ -15,12 +19,14 @@ const STATUS_OPTIONS: { value: '' | ChecklistInstanceStatus; label: string }[] =
   { value: 'COMPLETED', label: 'Completed' },
 ];
 
-const SummaryTile = ({ label, value, tone }: { label: string; value: number; tone?: string }) => (
-  <div className="flex flex-col gap-1 p-4 rounded-lg border border-border bg-surface">
-    <span className="text-xs font-display font-medium text-text-muted">{label}</span>
-    <span className={`text-2xl font-display font-bold ${tone ?? 'text-text'}`}>{value}</span>
-  </div>
-);
+// Semantic Badge variant per verification status — mirrors the success/warning/destructive
+// meaning used everywhere else in this feature instead of a hand-rolled color map.
+const VERIFICATION_STATUS_VARIANT: Record<ChecklistVerificationStatus, 'success' | 'warning' | 'destructive' | 'neutral'> = {
+  NOT_SUBMITTED: 'neutral',
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'destructive',
+};
 
 interface ComplianceRowProps {
   instance: ChecklistInstance;
@@ -53,14 +59,10 @@ const ComplianceRow = ({ instance, storeName, nameById }: ComplianceRowProps) =>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-xs font-display font-medium px-2 py-0.5 rounded-full border ${VERIFICATION_STATUS_STYLE[instance.verificationStatus]}`}>
+          <Badge variant={VERIFICATION_STATUS_VARIANT[instance.verificationStatus]}>
             {VERIFICATION_STATUS_LABEL[instance.verificationStatus]}
-          </span>
-          {overdue && (
-            <span className="flex items-center gap-1 text-xs font-display font-medium px-2 py-0.5 rounded-full bg-danger/10 text-danger">
-              <Clock size={11} /> Overdue
-            </span>
-          )}
+          </Badge>
+          {overdue && <StatusChip status="overdue" />}
         </div>
       </div>
 
@@ -85,9 +87,9 @@ const ComplianceRow = ({ instance, storeName, nameById }: ComplianceRowProps) =>
                 key={id}
                 className={`flex items-center gap-1 text-[11px] font-display font-medium px-2 py-0.5 rounded-full border ${
                   allDone
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                    ? 'bg-success/10 text-success border-success/20'
                     : started
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                    ? 'bg-warning/10 text-warning border-warning/20'
                     : 'bg-surface-hover text-text-muted border-border'
                 }`}
               >
@@ -104,10 +106,29 @@ const ComplianceRow = ({ instance, storeName, nameById }: ComplianceRowProps) =>
 // Admin-only dashboard answering "who has/hasn't filled their checklist" — dynamically filterable
 // by store and by person. Spans every checklist definition's generated instances (unlike
 // ChecklistDefinitionDetail, which only shows instances for one definition at a time).
+// The board spans every store org-wide, so it's the one list here that realistically reaches
+// thousands of rows. 50 keeps the window virtualizer's job small and the hydration bounded.
+const PAGE_SIZE = 50;
+
 export const ChecklistComplianceBoard = () => {
-  const [storeId, setStoreId] = useState('');
-  const [assigneeId, setAssigneeId] = useState('');
-  const [status, setStatus] = useState<'' | ChecklistInstanceStatus>('');
+  const [storeId, setStoreIdState] = useState('');
+  const [assigneeId, setAssigneeIdState] = useState('');
+  const [status, setStatusState] = useState<'' | ChecklistInstanceStatus>('');
+  // Layered on top of the store/person/status filters above, same as TicketList's quickFilter —
+  // click a tile to narrow the list further, click it again (or "Instances") to clear.
+  const [quickFilter, setQuickFilter] = useState<ComplianceQuickFilterKey>('all');
+  const [page, setPage] = useState(1);
+
+  // Every filter resets the page, because page 4 of the old result set is meaningless against the
+  // new one and usually past its end. Done in the setters rather than an effect watching them —
+  // an effect would render the stale page once before correcting itself.
+  const setStoreId = (value: string) => { setStoreIdState(value); setPage(1); };
+  const setAssigneeId = (value: string) => { setAssigneeIdState(value); setPage(1); };
+  const setStatus = (value: '' | ChecklistInstanceStatus) => { setStatusState(value); setPage(1); };
+  const toggleQuickFilter = (key: ComplianceQuickFilterKey) => {
+    setQuickFilter((prev) => (key === 'all' || prev === key ? 'all' : key));
+    setPage(1);
+  };
 
   const { data: stores = [] } = useStoresQuery();
   // Scoped to the selected store, for the Person filter's own option list.
@@ -123,25 +144,59 @@ export const ChecklistComplianceBoard = () => {
   }, [allPeople]);
   const storeNameById = useMemo(() => new Map(stores.map(s => [s.id, s.name])), [stores]);
 
-  const { data: instances = [], isPending, isError } = useChecklistInstancesBoardQuery({
+  // The tile and the Status dropdown narrow the same dimension, so they resolve to one server
+  // `status` — the tile wins when set. All of this used to be a client-side pass over the full
+  // list, which is why the endpoint had to return every matching instance.
+  const effectiveStatus: ChecklistInstanceStatus | undefined =
+    quickFilter === 'completed' ? 'COMPLETED'
+    : quickFilter === 'pending' ? 'OPEN'
+    : quickFilter === 'overdue' ? 'OVERDUE'
+    : (status || undefined);
+
+  const { data: instancePage, isPending, isError } = useChecklistInstancesBoardQuery({
     storeId: storeId || undefined,
     assigneeId: assigneeId || undefined,
-    status: status || undefined,
+    status: effectiveStatus,
+    page,
+    limit: PAGE_SIZE,
   });
+  const visibleInstances = instancePage?.data ?? [];
+  const totalPages = instancePage?.meta.totalPages ?? 1;
 
-  const summary = useMemo(() => {
-    const withStatus = instances.map(i => {
-      const done = i.items.filter(x => x.isDone).length;
-      const isComplete = instanceProgressStatus(done, i.items.length) === 'COMPLETED';
-      return { isComplete, overdue: isInstanceOverdue(i.periodEnd, isComplete) };
-    });
-    return {
-      total: instances.length,
-      completed: withStatus.filter(i => i.isComplete).length,
-      pending: withStatus.filter(i => !i.isComplete).length,
-      overdue: withStatus.filter(i => i.overdue).length,
-    };
-  }, [instances]);
+  // Counted by the database rather than by reducing the fetched page. These four numbers were the
+  // reason this endpoint had to return every matching instance: a tile that says "23" derived from
+  // `instances.length` silently becomes the page size the moment the list paginates. With them
+  // coming from /summary, the list below is free to page without the tiles lying.
+  const { data: counts } = useChecklistInstanceSummaryQuery({
+    storeId: storeId || undefined,
+    assigneeId: assigneeId || undefined,
+  });
+  const summary: Record<ComplianceQuickFilterKey, number> = {
+    all: counts?.total ?? 0,
+    completed: counts?.completed ?? 0,
+    pending: counts?.pending ?? 0,
+    overdue: counts?.overdue ?? 0,
+  };
+
+  // This board spans every store's checklist instances org-wide (unlike the per-user MyChecklists
+  // page), so it's the one list here that can realistically reach hundreds of rows. Windowed
+  // instead of a fixed-height inner scroll container since the list scrolls with the page itself —
+  // row height varies (the assignee-chip row wraps differently per instance), hence
+  // `measureElement` rather than a fixed estimateSize.
+  const listRef = useRef<HTMLDivElement>(null);
+  // Reading listRef.current directly in the hook call (the pattern TanStack Virtual's own docs
+  // show) trips React's "no ref reads during render" rule — measuring in a layout effect instead
+  // keeps the ref read out of render entirely.
+  const [scrollMargin, setScrollMargin] = useState(0);
+  useLayoutEffect(() => {
+    setScrollMargin(listRef.current?.offsetTop ?? 0);
+  }, []);
+  const rowVirtualizer = useWindowVirtualizer({
+    count: visibleInstances.length,
+    estimateSize: () => 132,
+    overscan: 6,
+    scrollMargin,
+  });
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
@@ -174,29 +229,27 @@ export const ChecklistComplianceBoard = () => {
             aria-label="Filter by person"
           />
         </div>
-        <div className="flex items-center gap-1 p-1 rounded-full border border-border bg-surface">
-          {STATUS_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setStatus(opt.value)}
-              aria-pressed={status === opt.value}
-              className={`px-3 py-1.5 rounded-full text-xs font-display font-medium transition-all duration-200 cursor-pointer ${
-                status === opt.value ? 'bg-primary-700 text-white shadow-sm' : 'text-text-secondary hover:bg-surface-hover'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-display font-medium text-text-secondary">Status</label>
+          <div className="flex items-center gap-1 h-11 p-1 rounded-full border border-border bg-surface">
+            {STATUS_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setStatus(opt.value)}
+                aria-pressed={status === opt.value}
+                className={`px-3 py-1.5 rounded-full text-xs font-display font-medium transition-all duration-200 cursor-pointer ${
+                  status === opt.value ? 'bg-primary-700 text-white shadow-sm' : 'text-text-secondary hover:bg-surface-hover'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <SummaryTile label="Instances" value={summary.total} />
-        <SummaryTile label="Completed" value={summary.completed} tone="text-success" />
-        <SummaryTile label="Not yet complete" value={summary.pending} tone="text-warning" />
-        <SummaryTile label="Overdue" value={summary.overdue} tone="text-danger" />
-      </div>
+      <ChecklistComplianceQuickStats counts={summary} active={quickFilter} onToggle={toggleQuickFilter} isLoading={isPending} />
 
       {isPending && (
         <div className="flex flex-col gap-2">
@@ -211,22 +264,38 @@ export const ChecklistComplianceBoard = () => {
         </div>
       )}
 
-      {!isPending && !isError && instances.length === 0 && (
+      {!isPending && !isError && visibleInstances.length === 0 && (
         <div className="p-10 text-center text-sm text-text-muted bg-surface rounded-xl border border-dashed border-border">
           No checklist instances match these filters.
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        {instances.map(instance => (
-          <ComplianceRow
-            key={instance.id}
-            instance={instance}
-            storeName={storeNameById.get(instance.storeId) ?? 'Unknown store'}
-            nameById={nameById}
-          />
-        ))}
-      </div>
+      {visibleInstances.length > 0 && (
+        <div ref={listRef} className="relative w-full" style={{ height: rowVirtualizer.getTotalSize() }}>
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const instance = visibleInstances[virtualRow.index];
+            return (
+              <div
+                key={instance.id}
+                data-index={virtualRow.index}
+                ref={rowVirtualizer.measureElement}
+                className="absolute top-0 left-0 w-full pb-3"
+                style={{ transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)` }}
+              >
+                <ComplianceRow
+                  instance={instance}
+                  storeName={storeNameById.get(instance.storeId) ?? 'Unknown store'}
+                  nameById={nameById}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <PageNav page={page} totalPages={totalPages} onPageChange={setPage} />
+      )}
     </div>
   );
 };

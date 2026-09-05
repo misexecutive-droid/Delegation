@@ -41,7 +41,7 @@ function PopoverContent({
           // primitive Combobox portals its own search-result list through, so it needs to escape
           // a Modal's own overflow clipping and render above it, not get cut off by it.
           "z-[80] w-(--radix-popover-trigger-width) min-w-[12rem] origin-(--radix-popover-content-transform-origin) outline-none",
-          "bg-white rounded-2xl border border-slate-200 p-3 shadow-xl shadow-slate-200/50",
+          "bg-surface rounded-2xl border border-border p-3 shadow-xl shadow-black/10",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200",
           className,
         )}

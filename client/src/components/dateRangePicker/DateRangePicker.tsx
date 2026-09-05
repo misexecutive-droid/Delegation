@@ -122,25 +122,35 @@ export function DateRangePicker({
         disabled={disabled}
         onClick={() => setOpen(true)}
         className={cn(
-          "flex items-center gap-2 w-full h-10 px-3 rounded-md border bg-surface text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-coral-400",
-          "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border",
-          "border-border hover:border-primary-400",
+          "flex items-center gap-2.5 w-full h-11 px-4 rounded-xl border bg-surface text-sm transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30",
+          "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-surface-hover",
+          "border-border hover:border-border-hover",
           triggerClassName
         )}
       >
-        <CalendarIcon size={16} className="text-text-light shrink-0" />
+        <CalendarIcon size={18} className="text-text-light shrink-0" />
         <span className={cn("truncate", hasValue ? 'text-text font-medium' : 'text-text-muted font-medium')}>
           {label}
         </span>
         {hasValue && (
-          <X
-            size={14}
-            className="ml-auto text-text-light hover:text-danger transition-colors shrink-0"
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Clear date range"
+            className="ml-auto p-1.5 text-text-light bg-surface-hover hover:bg-danger/10 hover:text-danger rounded-full transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
             onClick={(e) => {
               e.stopPropagation();
               onChange({ from: null, to: null });
             }}
-          />
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                onChange({ from: null, to: null });
+              }
+            }}
+          >
+            <X size={14} strokeWidth={2.5} />
+          </span>
         )}
       </button>
 
@@ -170,7 +180,8 @@ export function DateRangePicker({
           <button
             type="button"
             onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-            className="w-8 h-8 rounded-md border border-border text-text-muted hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
+            aria-label="Previous month"
+            className="w-8 h-8 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text flex items-center justify-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
           >
             <ChevronLeft size={16} />
           </button>
@@ -180,7 +191,8 @@ export function DateRangePicker({
           <button
             type="button"
             onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-            className="w-8 h-8 rounded-md border border-border text-text-muted hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
+            aria-label="Next month"
+            className="w-8 h-8 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text flex items-center justify-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
           >
             <ChevronRight size={16} />
           </button>
@@ -211,7 +223,7 @@ export function DateRangePicker({
                 onMouseEnter={() => setHoverDate(day)}
                 disabled={!inMonth}
                 className={cn(
-                  'h-9 text-xs rounded-md transition-colors font-medium',
+                  'h-9 text-xs rounded-lg transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40',
                   !inMonth ? 'text-text-light/40 cursor-default' : 'text-text-secondary cursor-pointer',
                   (isFrom || isTo) && 'bg-primary-700 text-white shadow-sm hover:bg-primary-800',
                   inRange && 'bg-primary-500/15 text-primary-700',
@@ -235,7 +247,7 @@ export function DateRangePicker({
                 type="time"
                 value={formatTime(value.from)}
                 onChange={(e) => setTime('from', e.target.value)}
-                className="w-full h-10 rounded-md border border-border px-3 text-base sm:text-sm text-text focus:outline-none focus:ring-2 focus:ring-coral-400 focus:border-primary-400"
+                className="w-full h-10 rounded-md border border-border px-3 text-base sm:text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:border-primary-500"
               />
             </div>
             <div className="flex-1 flex flex-col gap-1.5">
@@ -247,7 +259,7 @@ export function DateRangePicker({
                 value={value.to ? formatTime(value.to) : ''}
                 disabled={!value.to}
                 onChange={(e) => setTime('to', e.target.value)}
-                className="w-full h-10 rounded-md border border-border px-3 text-base sm:text-sm text-text focus:outline-none focus:ring-2 focus:ring-coral-400 focus:border-primary-400 disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed"
+                className="w-full h-10 rounded-md border border-border px-3 text-base sm:text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:border-primary-500 disabled:bg-surface-hover disabled:text-text-light disabled:cursor-not-allowed"
               />
             </div>
           </div>

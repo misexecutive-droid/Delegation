@@ -30,19 +30,18 @@ const UPLOADS_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'ht
 const ItemRow = ({
   item, ticketId, isAdmin, canWork,
 }: {
-  item:     ChecklistItem;
+  item: ChecklistItem;
   ticketId: string;
-  isAdmin:  boolean;
-  canWork:  boolean; // assignee or admin — allowed to upload/complete/remark
+  isAdmin: boolean;
+  canWork: boolean; 
 }) => {
   const [remarks, setRemarks] = useState(item.remarks ?? '');
-
-  const updateItem    = useUpdateChecklistItemMutation(ticketId);
+  const updateItem = useUpdateChecklistItemMutation(ticketId);
   const updateRemarks = useUpdateChecklistItemRemarksMutation(ticketId);
-  const completeItem  = useCompleteChecklistItemMutation(ticketId);
-  const deleteItem    = useDeleteChecklistItemMutation(ticketId);
-  const uploadImages  = useUploadChecklistImagesMutation(ticketId);
-  const deleteImage   = useDeleteChecklistImageMutation(ticketId);
+  const completeItem = useCompleteChecklistItemMutation(ticketId);
+  const deleteItem = useDeleteChecklistItemMutation(ticketId);
+  const uploadImages = useUploadChecklistImagesMutation(ticketId);
+  const deleteImage = useDeleteChecklistImageMutation(ticketId);
 
   const images = item.images ?? [];
   const qualifying = item.requiresLivePhoto
@@ -54,23 +53,17 @@ const ItemRow = ({
     uploadImages.mutate({ itemId: item.id, files: Array.from(files), captureMethod });
   };
 
-  // Photo requirement badge shown in the eyebrow row — green once enough
-  // qualifying photos are attached, amber while still short of the requirement.
   const photosSatisfied = item.requiredImageCount > 0 && qualifying >= item.requiredImageCount;
 
   return (
-    // Card wrapper: each checklist item is its own bordered card (not a divided
-    // row anymore) — eyebrow, header, hero image strip, body, action row, same
-    // shape as TicketCard's Hero-Card layout.
+
     <div className="flex flex-col gap-3 p-3 rounded-lg border border-border bg-surface">
 
-      {/* Eyebrow row: small icon square + the photo-requirement status, mirroring
-          the reference card's small icon + label row above the main header. */}
       {item.requiredImageCount > 0 && (
         <div className="flex items-center gap-1.5">
           <span className={[
             'flex items-center justify-center size-4 rounded shrink-0',
-            photosSatisfied ? 'bg-emerald-500' : 'bg-amber-500',
+            photosSatisfied ? 'bg-success' : 'bg-warning',
           ].join(' ')}>
             <Camera size={10} className="text-white" />
           </span>
@@ -82,12 +75,6 @@ const ItemRow = ({
         </div>
       )}
 
-      {/* Header: checkbox icon in a tinted square (done = green, pending = neutral)
-          + item label as title + due/completed date as subtitle. This is a
-          status indicator only — completing an item goes through the dedicated
-          "Mark complete" action below (server-side validates photo requirements
-          etc.), so the icon itself isn't clickable. Admin-only reopen/delete
-          controls sit in the top-right corner. */}
       <div className="flex items-start gap-3">
         <span
           className={[
@@ -115,7 +102,7 @@ const ItemRow = ({
           <button
             onClick={() => updateItem.mutate({ id: item.id, payload: { isDone: false } })}
             disabled={updateItem.isPending}
-            className="shrink-0 text-text-light hover:text-amber-500 transition-colors cursor-pointer disabled:opacity-50"
+            className="shrink-0 text-text-light hover:text-warning transition-colors cursor-pointer disabled:opacity-50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -135,9 +122,7 @@ const ItemRow = ({
         )}
       </div>
 
-      {/* Hero image strip: evidence photos attached to this item — the natural
-          equivalent of the reference card's hero image slot. Only rendered when
-          photos actually exist. */}
+
       {images.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {images.map(img => (
@@ -149,7 +134,7 @@ const ItemRow = ({
               />
               <span className={[
                 'absolute -top-1 -left-1 text-[9px] font-display px-1 rounded-full text-white',
-                img.captureMethod === 'LIVE' ? 'bg-emerald-500' : 'bg-text-light',
+                img.captureMethod === 'LIVE' ? 'bg-success' : 'bg-text-light',
               ].join(' ')}>
                 {img.captureMethod === 'LIVE' ? 'Live' : 'Gallery'}
               </span>
@@ -167,8 +152,7 @@ const ItemRow = ({
         </div>
       )}
 
-      {/* Body: read-only remarks quote when this viewer can't edit (or the item
-          is already done) — editable textarea + action-pill row otherwise. */}
+
       {(!canWork || item.isDone) && item.remarks && (
         <p className="text-xs text-text-secondary font-display italic">"{item.remarks}"</p>
       )}
@@ -194,9 +178,7 @@ const ItemRow = ({
             </p>
           )}
 
-          {/* Action-pill row: outlined chips (border + tinted text, no fill) for
-              every item action — take photo, gallery, save remarks, mark
-              complete — mirroring the reference card's row of outlined buttons. */}
+
           <div className="flex items-center gap-2 flex-wrap pt-0.5">
             <label className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1 rounded-md border border-primary-500/50 text-primary-600 hover:bg-primary-500/10 cursor-pointer transition-colors">
               <Camera size={12} />
@@ -235,7 +217,7 @@ const ItemRow = ({
             <button
               onClick={() => completeItem.mutate(item.id)}
               disabled={completeItem.isPending}
-              className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 ml-auto"
+              className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1 rounded-md border border-success/50 text-success hover:bg-success/10 cursor-pointer transition-colors disabled:opacity-50 ml-auto"
             >
               {completeItem.isPending && <Loader2 size={12} className="animate-spin" />}
               Mark complete
@@ -250,9 +232,9 @@ const ItemRow = ({
 const ChecklistBlock = ({
   checklist, ticketId, isAdmin, currentUserId,
 }: {
-  checklist:      Checklist;
-  ticketId:       string;
-  isAdmin:        boolean;
+  checklist: Checklist;
+  ticketId: string;
+  isAdmin: boolean;
   currentUserId?: string;
 }) => {
   const [open, setOpen] = useState(true);
@@ -293,8 +275,6 @@ const ChecklistBlock = ({
       </div>
 
       {open && (
-        // Padding + gap here (rather than on the outer block) since each item
-        // is now its own rounded card and needs breathing room, not divider lines.
         <div className="flex flex-col gap-2 p-2">
           {checklist.items.length === 0 && (
             <p className="px-1 py-1.5 text-xs text-text-muted font-display">No items yet.</p>
@@ -315,12 +295,12 @@ const ChecklistBlock = ({
 };
 
 type ItemDraft = {
-  label:              string;
-  assigneeId:         string;
-  dueAt:              string;
+  label: string;
+  assigneeId: string;
+  dueAt: string;
   requiredImageCount: string;
-  maxImageCount:      string;
-  requiresLivePhoto:  boolean;
+  maxImageCount: string;
+  requiresLivePhoto: boolean;
 };
 
 const emptyItemDraft = (): ItemDraft => ({
@@ -329,7 +309,6 @@ const emptyItemDraft = (): ItemDraft => ({
 
 export const ChecklistPanel = ({ ticketId, checklists }: ChecklistPanelProps) => {
   const { user } = useAuth();
-  // PC has full parity with ADMIN throughout this app.
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'PC';
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
@@ -360,12 +339,12 @@ export const ChecklistPanel = ({ ticketId, checklists }: ChecklistPanelProps) =>
     const items = itemDrafts
       .filter(d => d.label.trim())
       .map(d => ({
-        label:              d.label.trim(),
-        assigneeId:         d.assigneeId || undefined,
-        dueAt:              d.dueAt ? new Date(d.dueAt).toISOString() : undefined,
+        label: d.label.trim(),
+        assigneeId: d.assigneeId || undefined,
+        dueAt: d.dueAt ? new Date(d.dueAt).toISOString() : undefined,
         requiredImageCount: Number(d.requiredImageCount) || 0,
-        maxImageCount:      d.maxImageCount ? Number(d.maxImageCount) : undefined,
-        requiresLivePhoto:  d.requiresLivePhoto,
+        maxImageCount: d.maxImageCount ? Number(d.maxImageCount) : undefined,
+        requiresLivePhoto: d.requiresLivePhoto,
       }));
     addChecklist.mutate(
       { title: title.trim(), items: items.length ? items : undefined },
@@ -382,6 +361,7 @@ export const ChecklistPanel = ({ ticketId, checklists }: ChecklistPanelProps) =>
             {!!templates?.length && (
               <div className="flex items-center gap-1.5">
                 <select
+                  aria-label="Apply a checklist template"
                   value={templateId}
                   onChange={e => setTemplateId(e.target.value)}
                   className="px-2 py-1 text-xs bg-surface text-text rounded border border-border cursor-pointer"
@@ -438,11 +418,12 @@ export const ChecklistPanel = ({ ticketId, checklists }: ChecklistPanelProps) =>
                   placeholder={`Item ${i + 1} label…`}
                   className="px-2 py-1.5 text-xs bg-surface text-text rounded border border-border focus:outline-none focus:border-primary-500 placeholder:text-text-muted"
                 />
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-1.5">
                   <select
+                    aria-label={`Assignee for item ${i + 1}`}
                     value={draft.assigneeId}
                     onChange={e => updateDraft(i, { assigneeId: e.target.value })}
-                    className="px-2 py-1 text-xs bg-surface text-text rounded border border-border cursor-pointer"
+                    className="w-full sm:w-auto px-2 py-1 text-xs bg-surface text-text rounded border border-border cursor-pointer"
                   >
                     <option value="">Unassigned</option>
                     {assignableUsers?.map(u => (
@@ -453,14 +434,14 @@ export const ChecklistPanel = ({ ticketId, checklists }: ChecklistPanelProps) =>
                     type="date"
                     value={draft.dueAt}
                     onChange={e => updateDraft(i, { dueAt: e.target.value })}
-                    className="px-2 py-1 text-xs bg-surface text-text rounded border border-border"
+                    className="w-full sm:w-auto px-2 py-1 text-xs bg-surface text-text rounded border border-border"
                   />
                   <input
                     type="number"
                     min={0}
                     value={draft.requiredImageCount}
                     onChange={e => updateDraft(i, { requiredImageCount: e.target.value })}
-                    className="w-16 px-2 py-1 text-xs bg-surface text-text rounded border border-border"
+                    className="w-full sm:w-16 px-2 py-1 text-xs bg-surface text-text rounded border border-border"
                     title="Required photo count"
                   />
                   <input
@@ -469,10 +450,10 @@ export const ChecklistPanel = ({ ticketId, checklists }: ChecklistPanelProps) =>
                     value={draft.maxImageCount}
                     onChange={e => updateDraft(i, { maxImageCount: e.target.value })}
                     placeholder="Max"
-                    className="w-16 px-2 py-1 text-xs bg-surface text-text rounded border border-border placeholder:text-text-light"
+                    className="w-full sm:w-16 px-2 py-1 text-xs bg-surface text-text rounded border border-border placeholder:text-text-light"
                     title="Maximum photo count"
                   />
-                  <label className="flex items-center gap-1 text-xs text-text-secondary px-1">
+                  <label className="col-span-2 sm:col-span-1 flex items-center gap-1 text-xs text-text-secondary px-1">
                     <input
                       type="checkbox"
                       checked={draft.requiresLivePhoto}

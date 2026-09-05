@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { ShieldCheck, ShieldX, Loader2, X, Send } from 'lucide-react';
 import { Button } from '../../components';
+import { useVerifyDecision } from '../../lib/useVerifyDecision';
 import { useVerifyTaskMutation } from './hook';
 import type { Task } from '../../api/task';
 
@@ -24,10 +24,11 @@ const iconButtonClass = (tone: 'success' | 'danger') =>
 // server-side), so it expands into a small textarea instead of firing immediately.
 export const TaskVerifyActions = ({ task, compact = false }: TaskVerifyActionsProps) => {
   const verifyMut = useVerifyTaskMutation();
-  const [rejecting, setRejecting] = useState(false);
-  const [note, setNote] = useState('');
+  // Shared with TicketVerificationActions — same two-phase flow and same "a reason is required"
+  // rule, which the server enforces too. Rendering below is unchanged.
+  const { isRejecting, note, setNote, startReject, cancelReject, trimmedNote, canSubmitReject } = useVerifyDecision();
 
-  if (rejecting) {
+  if (isRejecting) {
     return (
       <div
         className="flex flex-col gap-2.5 p-3 bg-danger/10 border border-danger/20 rounded-lg animate-in fade-in zoom-in-95 duration-200"
@@ -49,7 +50,7 @@ export const TaskVerifyActions = ({ task, compact = false }: TaskVerifyActionsPr
                 aria-label="Cancel"
                 title="Cancel"
                 disabled={verifyMut.isPending}
-                onClick={() => { setRejecting(false); setNote(''); }}
+                onClick={cancelReject}
                 className="flex items-center justify-center size-7 rounded-full text-text-muted hover:bg-surface-hover transition-colors disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-border-hover shrink-0"
               >
                 <X size={13} strokeWidth={2.5} />
@@ -58,8 +59,8 @@ export const TaskVerifyActions = ({ task, compact = false }: TaskVerifyActionsPr
                 type="button"
                 aria-label="Send back"
                 title="Send back"
-                disabled={verifyMut.isPending || !note.trim()}
-                onClick={() => verifyMut.mutate({ id: task.id, payload: { action: 'REJECT', note: note.trim() } })}
+                disabled={verifyMut.isPending || !canSubmitReject}
+                onClick={() => verifyMut.mutate({ id: task.id, payload: { action: 'REJECT', note: trimmedNote } })}
                 className={iconButtonClass('danger')}
               >
                 {verifyMut.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} strokeWidth={2.5} />}
@@ -72,7 +73,7 @@ export const TaskVerifyActions = ({ task, compact = false }: TaskVerifyActionsPr
                 variant="outline"
                 className="text-xs h-7 px-3 font-medium border-border text-text-secondary hover:bg-surface-hover bg-surface"
                 disabled={verifyMut.isPending}
-                onClick={() => { setRejecting(false); setNote(''); }}
+                onClick={cancelReject}
               >
                 Cancel
               </Button>
@@ -80,8 +81,8 @@ export const TaskVerifyActions = ({ task, compact = false }: TaskVerifyActionsPr
                 size="sm"
                 variant="primary"
                 className="text-xs h-7 px-3 font-medium bg-danger hover:bg-danger/90 text-white shadow-sm"
-                disabled={verifyMut.isPending || !note.trim()}
-                onClick={() => verifyMut.mutate({ id: task.id, payload: { action: 'REJECT', note: note.trim() } })}
+                disabled={verifyMut.isPending || !canSubmitReject}
+                onClick={() => verifyMut.mutate({ id: task.id, payload: { action: 'REJECT', note: trimmedNote } })}
               >
                 {verifyMut.isPending ? <Loader2 size={14} className="animate-spin" /> : 'Send back'}
               </Button>
@@ -110,7 +111,7 @@ export const TaskVerifyActions = ({ task, compact = false }: TaskVerifyActionsPr
           aria-label="Reject"
           title="Reject"
           disabled={verifyMut.isPending}
-          onClick={() => setRejecting(true)}
+          onClick={startReject}
           className={iconButtonClass('danger')}
         >
           <ShieldX size={13} strokeWidth={2.5} />
@@ -140,7 +141,7 @@ export const TaskVerifyActions = ({ task, compact = false }: TaskVerifyActionsPr
         variant="outline"
         className="flex-1 gap-1.5 border-border bg-surface text-danger hover:bg-danger/10 hover:border-danger/30 font-medium text-xs h-8 px-3 shadow-sm transition-all"
         disabled={verifyMut.isPending}
-        onClick={() => setRejecting(true)}
+        onClick={startReject}
       >
         <ShieldX size={14} strokeWidth={2.5} />
         Reject

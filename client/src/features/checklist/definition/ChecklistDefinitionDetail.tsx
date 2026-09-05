@@ -9,8 +9,6 @@ import {
   Gauge,
   Camera,
   Store,
-  Clock,
-  CheckCircle2,
   ListTodo,
 } from 'lucide-react';
 import { Skeleton, Breadcrumbs } from '../../../components';
@@ -38,15 +36,15 @@ interface RateTileProps {
 }
 
 const RateTile = ({ icon: Icon, label, rate, emptyLabel }: RateTileProps) => (
-  <div className="flex flex-col gap-2.5 p-4 rounded-xl border border-border bg-surface shadow-xs flex-1 min-w-[12rem] transition-all hover:shadow-sm">
+  <div className="flex flex-col gap-2.5 p-4 rounded-lg border border-border bg-surface flex-1 min-w-[12rem]">
     <div className="flex items-center justify-between">
       <span className="flex items-center gap-1.5 text-xs font-display font-semibold text-text-muted uppercase tracking-wider">
         <Icon size={14} className="text-text-muted" />
         {label}
       </span>
       {rate !== null && (
-        <span className={`font-display text-xs font-bold ${rateToneClass(rate)}`}>
-          {rate >= 80 ? 'Good' : rate >= 50 ? 'Fair' : 'Attention'}
+        <span className={`text-[11px] font-display font-medium ${rateToneClass(rate)}`}>
+          {rate}%
         </span>
       )}
     </div>
@@ -82,7 +80,10 @@ export const ChecklistDefinitionDetail = () => {
   const { definitionId = '' } = useParams();
   const navigate = useNavigate();
   const { data: definition, isPending, isError } = useChecklistDefinitionQuery(definitionId);
-  const { data: instances = [] } = useInstancesForDefinitionQuery(definitionId);
+  // The instance list is now paginated server-side (default 50). This panel shows a recent
+  // history for one definition rather than an audit of all time, so it asks for the newest
+  // 100 explicitly instead of silently receiving whatever the default happens to be.
+  const { data: instances = [] } = useInstancesForDefinitionQuery(definitionId, { limit: 100 });
   const { data: stores = [] } = useStoresQuery();
 
   const storeNames = definition
@@ -95,7 +96,7 @@ export const ChecklistDefinitionDetail = () => {
     return (
       <div className="flex flex-col gap-5 w-full max-w-4xl mx-auto py-4">
         <Skeleton className="h-9 w-48 rounded-lg" />
-        <Skeleton className="h-40 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-lg" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Skeleton className="h-28 w-full rounded-xl" />
           <Skeleton className="h-28 w-full rounded-xl" />
@@ -107,7 +108,7 @@ export const ChecklistDefinitionDetail = () => {
   if (isError || !definition) {
     return (
       <div className="w-full max-w-4xl mx-auto py-6">
-        <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm font-display shadow-xs">
+        <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm font-display">
           <AlertCircle size={18} className="shrink-0" />
           <span>Failed to load checklist details. Please check your network and try again.</span>
         </div>
@@ -147,11 +148,11 @@ export const ChecklistDefinitionDetail = () => {
       </div>
 
       {/* Main Overview Card */}
-      <div className="flex flex-col gap-4 p-5 sm:p-6 rounded-2xl border border-border bg-surface shadow-xs">
+      <div className="flex flex-col gap-4 p-5 sm:p-6 rounded-lg border border-border bg-surface">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3.5 min-w-0">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 border border-primary-100 dark:border-primary-900/40 shadow-2xs shrink-0 mt-0.5">
-              <Repeat size={20} />
+            <span className="flex size-10 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 border border-primary-100 dark:border-primary-900/40 shrink-0 mt-0.5">
+              <Repeat size={20} strokeWidth={2.25} />
             </span>
             <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-display font-bold text-text tracking-tight truncate">
@@ -170,37 +171,30 @@ export const ChecklistDefinitionDetail = () => {
           </div>
 
           {/* Status Badge */}
-          {definition.isActive ? (
-            <Badge variant="outline" className="gap-1.5 text-[11px] py-1 px-2.5 shrink-0 bg-success/5 border-success/30 text-success">
-              <span className="size-1.5 rounded-full bg-success animate-pulse" />
-              Active
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="gap-1 text-[11px] py-1 px-2.5 shrink-0 bg-muted/60 text-text-muted border-border">
-              Paused
-            </Badge>
-          )}
+          <Badge variant={definition.isActive ? 'success' : 'neutral'} className="shrink-0">
+            {definition.isActive ? 'Active' : 'Paused'}
+          </Badge>
         </div>
 
         {/* Metadata Badges & Tags */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-wrap text-xs font-display text-text-secondary pt-4 border-t border-border/60">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-display text-text-secondary pt-4 border-t border-border/60">
           <div className="flex items-center gap-1.5">
-            <Store size={13} className="text-text-muted shrink-0" />
+            <Store size={14} className="text-text-muted shrink-0" />
             <span className="truncate max-w-xs">{storeNames || 'No stores'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Repeat size={13} className="text-text-muted shrink-0" />
+            <Repeat size={14} className="text-text-muted shrink-0" />
             <span>{RECURRENCE_LABEL[definition.recurrence] ?? definition.recurrence}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Users size={13} className="text-text-muted shrink-0" />
+            <Users size={14} className="text-text-muted shrink-0" />
             <span>{definition.assigneeIds.length} assigned</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Calendar size={13} className="text-text-muted shrink-0" />
+            <Calendar size={14} className="text-text-muted shrink-0" />
             <span>Starts {formatDate(definition.startDate)}</span>
           </div>
-          <span className="ml-auto font-mono text-[11px] px-2 py-0.5 rounded-md bg-muted/60 text-text-muted border border-border/60">
+          <span className="sm:ml-auto font-mono text-[11px] px-2 py-0.5 rounded-md bg-muted/60 text-text-muted border border-border/60">
             v{definition.version}
           </span>
         </div>
@@ -225,8 +219,8 @@ export const ChecklistDefinitionDetail = () => {
       {/* Generated Instances Section */}
       <div className="flex flex-col gap-4 pt-2">
         <div className="flex items-center justify-between pb-1">
-          <h2 className="text-xs font-display font-bold uppercase tracking-wider text-text-muted">
-            Generated Instances ({instances.length})
+          <h2 className="text-sm font-display font-bold text-text">
+            Generated Instances ({instances.length}{instances.length === 100 ? '+' : ''})
           </h2>
         </div>
 
@@ -245,9 +239,13 @@ export const ChecklistDefinitionDetail = () => {
             {groupByStatus(instances).map((group) => (
               <div key={group.status} className="flex flex-col gap-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-display font-bold text-text uppercase tracking-wider">
+                  <Badge
+                    variant={
+                      group.status === 'COMPLETED' ? 'success' : group.status === 'IN_PROGRESS' ? 'info' : 'neutral'
+                    }
+                  >
                     {INSTANCE_STATUS_LABEL[group.status]}
-                  </span>
+                  </Badge>
                   <span className="text-[11px] font-mono font-medium px-1.5 py-0.5 rounded-full bg-muted/70 text-text-muted border border-border/60">
                     {group.instances.length}
                   </span>

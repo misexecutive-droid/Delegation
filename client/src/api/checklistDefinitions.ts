@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { apiFetch } from './http';
+import { arrayField, withArrayDefaults, normalizeWith } from './normalize';
 
 export type ChecklistRecurrence = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'ONE_TIME';
 
@@ -126,28 +128,58 @@ const buildQuery = (params: Record<string, string | undefined>) => {
   return query ? `?${query}` : '';
 };
 
+// Every array field on a definition and its items. The UI reads all of them without guards
+// (`definition.items.some(...)`, `definition.assigneeIds.length`, `item.options.map(...)`), so a
+// response missing any one of them throws where it's rendered rather than where it arrived —
+// the exact failure mode that took the dashboard down when a task came back with no
+// `additionalAssigneeIds`. Tasks, tickets and checklist *instances* were guarded then;
+// definitions and templates were the two that never got the same treatment.
+const definitionItemDefaults = withArrayDefaults({
+  auditUserIds: arrayField(z.string()),
+  accessories: arrayField(z.string()),
+  options: arrayField(z.string()),
+  signatureLabels: arrayField(z.string()),
+  conditionalActions: arrayField(z.string()),
+});
+
+const definitionDefaults = withArrayDefaults({
+  storeIds: arrayField(z.string()),
+  assigneeIds: arrayField(z.string()),
+  assigneeRoles: arrayField(z.string()),
+  proofRequired: arrayField(z.string()),
+  items: arrayField(definitionItemDefaults),
+});
+
+const normalizeDefinition = (raw: unknown) => normalizeWith<ChecklistDefinition>(definitionDefaults, raw);
+const normalizeDefinitions = (raw: unknown[]) => raw.map(normalizeDefinition);
+
 export const checklistDefinitionApi = {
   getAll: (params: ListChecklistDefinitionsParams = {}) =>
     apiFetch<ApiResponse<ChecklistDefinition[]>>(`/checklist-definitions${buildQuery({
       storeId: params.storeId,
       recurrence: params.recurrence,
       isActive: params.isActive === undefined ? undefined : String(params.isActive),
-    })}`),
+    })}`).then((r) => ({ ...r, data: normalizeDefinitions(r.data) })),
 
   getOne: (id: string) =>
-    apiFetch<ApiResponse<ChecklistDefinition>>(`/checklist-definitions/${id}`),
+    apiFetch<ApiResponse<ChecklistDefinition>>(`/checklist-definitions/${id}`).then((r) => ({
+      ...r,
+      data: normalizeDefinition(r.data),
+    })),
 
   create: (payload: CreateChecklistDefinitionPayload) =>
-    apiFetch<ApiResponse<ChecklistDefinition>>('/checklist-definitions', { method: 'POST', body: JSON.stringify(payload) }),
+    apiFetch<ApiResponse<ChecklistDefinition>>('/checklist-definitions', { method: 'POST', body: JSON.stringify(payload) })
+      .then((r) => ({ ...r, data: normalizeDefinition(r.data) })),
 
   update: (id: string, payload: UpdateChecklistDefinitionPayload) =>
-    apiFetch<ApiResponse<ChecklistDefinition>>(`/checklist-definitions/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    apiFetch<ApiResponse<ChecklistDefinition>>(`/checklist-definitions/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+      .then((r) => ({ ...r, data: normalizeDefinition(r.data) })),
 
   setActive: (id: string, isActive: boolean) =>
     apiFetch<ApiResponse<ChecklistDefinition>>(`/checklist-definitions/${id}/active`, {
       method: 'PATCH',
       body: JSON.stringify({ isActive }),
-    }),
+    }).then((r) => ({ ...r, data: normalizeDefinition(r.data) })),
 
   remove: (id: string) =>
     apiFetch<ApiResponse<{ deleted: boolean }>>(`/checklist-definitions/${id}`, { method: 'DELETE' }),

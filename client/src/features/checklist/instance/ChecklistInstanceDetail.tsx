@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
-import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, Clock, History, Check } from 'lucide-react';
-import { Skeleton } from '../../../components';
+import { useParams, useNavigate, Link } from 'react-router';
+import { ArrowLeft, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, History, Check, Pencil } from 'lucide-react';
+import { Skeleton, StatusChip } from '../../../components';
 import { useChecklistInstanceQuery, useAssignableUsersQuery } from '../hook';
 import { ChecklistInstanceItemCard } from './ChecklistInstanceItemCard';
 import { ChecklistInstanceItemAuditCard } from './ChecklistInstanceItemAuditCard';
@@ -113,7 +113,8 @@ export const ChecklistInstanceDetail = () => {
   const done = instance.items.filter(i => i.isDone).length;
   const progress = total ? Math.round((done / total) * 100) : 0;
   // PC has full parity with ADMIN throughout this app.
-  const canWork = user?.role === 'ADMIN' || user?.role === 'PC' || (!!user && instance.assigneeIds.includes(user.id));
+  const isAdminOrPC = user?.role === 'ADMIN' || user?.role === 'PC';
+  const canWork = isAdminOrPC || (!!user && instance.assigneeIds.includes(user.id));
   const isLocked = instance.verificationStatus === 'APPROVED';
   const isComplete = total > 0 && done === total;
   const overdue = isInstanceOverdue(instance.periodEnd, isComplete);
@@ -124,12 +125,24 @@ export const ChecklistInstanceDetail = () => {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-xs font-display text-text-muted hover:text-text transition-colors cursor-pointer w-fit"
-      >
-        <ArrowLeft size={13} /> Back
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-xs font-display text-text-muted hover:text-text transition-colors cursor-pointer w-fit"
+        >
+          <ArrowLeft size={13} /> Back
+        </button>
+
+        {isAdminOrPC && (
+          <Link
+            to={`/admin/scheduled-checklists/builder/${instance.definitionId}`}
+            className="flex items-center gap-1.5 text-xs font-display font-medium text-text-muted hover:text-text transition-colors w-fit"
+            title="Edit this checklist's template — affects future runs, not this one"
+          >
+            <Pencil size={13} /> Edit template
+          </Link>
+        )}
+      </div>
 
       <div className="flex flex-col gap-3 p-5 rounded-lg border border-border bg-surface">
         <div className="flex items-start justify-between gap-3">
@@ -143,11 +156,7 @@ export const ChecklistInstanceDetail = () => {
           <p className="text-xs text-text-muted font-display">
             {formatDate(instance.periodStart)} – {formatDate(instance.periodEnd)}
           </p>
-          {overdue && (
-            <span className="flex items-center gap-1 text-xs font-display font-medium px-2 py-0.5 rounded-full bg-danger/10 text-danger">
-              <Clock size={11} /> Overdue
-            </span>
-          )}
+          {overdue && <StatusChip status="overdue" />}
         </div>
 
         <div className="flex items-center gap-2 mt-1">
@@ -169,7 +178,7 @@ export const ChecklistInstanceDetail = () => {
       )}
 
       {instance.verificationStatus === 'APPROVED' && (
-        <div className="flex items-center gap-2.5 p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-display">
+        <div className="flex items-center gap-2.5 p-3.5 rounded-lg bg-success/10 border border-success/25 text-success text-xs font-display">
           <ShieldCheck size={16} className="shrink-0" />
           Verified{instance.verifiedAt ? ` on ${formatDateTime(instance.verifiedAt)}` : ''}.
           {instance.verificationNote ? ` "${instance.verificationNote}"` : ''}
@@ -177,7 +186,7 @@ export const ChecklistInstanceDetail = () => {
       )}
 
       {instance.verificationStatus === 'REJECTED' && (
-        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-display">
+        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-danger/10 border border-danger/25 text-danger text-xs font-display">
           <ShieldAlert size={16} className="shrink-0 mt-0.5" />
           <span>
             Sent back for changes{instance.verificationNote ? `: "${instance.verificationNote}"` : '.'} Fix the
@@ -205,7 +214,7 @@ export const ChecklistInstanceDetail = () => {
           <div className="flex flex-col gap-2.5">
             {timeline.map(item => (
               <div key={item.id} className="flex items-start gap-2.5">
-                <span className="flex items-center justify-center size-5 rounded-full bg-emerald-500/10 text-emerald-600 shrink-0 mt-0.5">
+                <span className="flex items-center justify-center size-5 rounded-full bg-success/10 text-success shrink-0 mt-0.5">
                   <Check size={11} strokeWidth={3} />
                 </span>
                 <div className="flex-1 min-w-0">

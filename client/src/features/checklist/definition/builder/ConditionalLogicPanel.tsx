@@ -46,11 +46,11 @@ export const ConditionalLogicPanel = ({
       <button
         type="button"
         onClick={() => onTriggerChange('NO')}
-        className={`group/trigger inline-flex items-center gap-2 px-3 py-1.5 mt-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-950/20 text-xs font-display font-medium text-amber-800 dark:text-amber-300 transition-all duration-150 hover:border-amber-400 hover:bg-amber-100/70 hover:shadow-xs active:scale-[0.98] cursor-pointer w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 ${className}`}
+        className={`group/trigger inline-flex items-center gap-2 px-3 py-1.5 mt-2 rounded-lg border border-dashed border-warning/40 bg-warning/10 text-xs font-display font-medium text-warning transition-all duration-150 hover:border-warning/60 hover:bg-warning/20 hover:shadow-xs active:scale-[0.98] cursor-pointer w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-warning/50 ${className}`}
       >
         <Zap
           size={13}
-          className="text-amber-600 dark:text-amber-400 transition-transform duration-200 group-hover/trigger:scale-110 group-hover/trigger:-rotate-6"
+          className="text-warning transition-transform duration-200 group-hover/trigger:scale-110 group-hover/trigger:-rotate-6"
         />
         <span>Add conditional logic</span>
       </button>
@@ -68,12 +68,12 @@ export const ConditionalLogicPanel = ({
     <div
       role="region"
       aria-label="Conditional logic settings"
-      className={`flex flex-col gap-3 p-3.5 mt-2.5 rounded-xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 shadow-xs transition-all ${className}`}
+      className={`flex flex-col gap-3 p-3.5 mt-2.5 rounded-xl bg-warning/10 border border-warning/30 shadow-xs transition-all ${className}`}
     >
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 text-xs font-display font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
-          <Zap size={13} className="text-amber-600 dark:text-amber-400 shrink-0" />
+        <span className="flex items-center gap-1.5 text-xs font-display font-bold uppercase tracking-wider text-warning">
+          <Zap size={13} className="text-warning shrink-0" />
           Conditional Logic
         </span>
         <button
@@ -107,7 +107,7 @@ export const ConditionalLogicPanel = ({
                 className={[
                   'px-2.5 py-1 rounded text-xs font-display font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
                   isSelected
-                    ? 'bg-surface text-amber-900 dark:text-amber-300 font-bold shadow-xs border border-border/40'
+                    ? 'bg-surface text-warning font-bold shadow-xs border border-border/40'
                     : 'text-text-muted hover:text-text hover:bg-surface/50',
                 ].join(' ')}
               >
@@ -132,9 +132,9 @@ export const ConditionalLogicPanel = ({
               onClick={() => toggleAction(opt.value)}
               aria-pressed={isChecked}
               className={[
-                'group/chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-display font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50',
+                'group/chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-display font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-warning/50',
                 isChecked
-                  ? 'border-amber-400 dark:border-amber-600 bg-amber-100/70 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 shadow-2xs font-semibold'
+                  ? 'border-warning/50 bg-warning/15 text-warning shadow-2xs font-semibold'
                   : 'border-border bg-surface text-text-secondary hover:bg-surface-hover hover:border-border/80 hover:text-text',
               ].join(' ')}
             >
@@ -142,7 +142,7 @@ export const ConditionalLogicPanel = ({
                 className={[
                   'flex items-center justify-center size-3.5 rounded-full border transition-all duration-150 shrink-0',
                   isChecked
-                    ? 'border-amber-600 bg-amber-600 dark:bg-amber-500 text-white'
+                    ? 'border-warning bg-warning text-white'
                     : 'border-border bg-transparent group-hover/chip:border-text-muted',
                 ].join(' ')}
               >
@@ -156,7 +156,7 @@ export const ConditionalLogicPanel = ({
 
       {/* Action Summary / Guidance */}
       {activeSummary ? (
-        <div className="flex items-center gap-1.5 text-[11px] font-display text-amber-900/80 dark:text-amber-300/80 bg-amber-100/40 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-800/40 rounded-md px-2.5 py-1.5">
+        <div className="flex items-center gap-1.5 text-[11px] font-display text-warning/80 bg-warning/10 border border-warning/20 rounded-md px-2.5 py-1.5">
           <span>
             Rule: When answered <strong className="font-bold">{trigger === 'YES' ? labels.yes : labels.no}</strong> &rarr; {activeSummary}
           </span>

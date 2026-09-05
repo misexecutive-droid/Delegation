@@ -133,29 +133,29 @@ export const StoresPerformanceSection = ({ groupBy, from, to }: StoresPerformanc
                 <p className="font-display font-medium text-text text-sm">{row.name}</p>
                 <div className="grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-text-muted uppercase tracking-wide text-[10px]">Checklist</span>
+                    <span className="text-text-muted tracking-wide text-[10px]">Checklist</span>
                     <span className="font-display font-medium tabular-nums text-text">
                       {row.checklistRate != null ? `${row.checklistRate}%` : '—'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-text-muted uppercase tracking-wide text-[10px]">Audit score</span>
+                    <span className="text-text-muted tracking-wide text-[10px]">Audit score</span>
                     <span className="font-display font-medium tabular-nums text-text">
                       {row.auditScore != null ? row.auditScore : '—'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-text-muted uppercase tracking-wide text-[10px]">Open issues</span>
+                    <span className="text-text-muted tracking-wide text-[10px]">Open issues</span>
                     <span className="font-display font-medium tabular-nums text-text">{row.openIssues}</span>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-text-muted uppercase tracking-wide text-[10px]">Avg TAT</span>
+                    <span className="text-text-muted tracking-wide text-[10px]">Avg TAT</span>
                     <span className="font-display font-medium tabular-nums text-text">
                       {row.avgTat != null ? `${row.avgTat}h` : '—'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-text-muted uppercase tracking-wide text-[10px]">SLA met</span>
+                    <span className="text-text-muted tracking-wide text-[10px]">SLA met</span>
                     <span className="font-display font-medium tabular-nums text-text">
                       {row.slaMet != null ? `${row.slaMet}%` : '—'}
                     </span>

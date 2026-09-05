@@ -27,13 +27,13 @@ export const AttachFilesToolbar = ({ onFiles, disabled }: AttachFilesToolbarProp
       <input ref={fileInputRef} type="file" accept={ACCEPTED_ATTACHMENT_TYPES} multiple className="hidden" onChange={handleChange} />
       <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleChange} />
 
-      <button type="button" title="Attach file" disabled={disabled} className={ICON_BTN_CLASS} onClick={() => fileInputRef.current?.click()}>
+      <button type="button" title="Attach file" aria-label="Attach file" disabled={disabled} className={ICON_BTN_CLASS} onClick={() => fileInputRef.current?.click()}>
         <Paperclip size={15} />
       </button>
-      <button type="button" title="Attach photo" disabled={disabled} className={ICON_BTN_CLASS} onClick={() => photoInputRef.current?.click()}>
+      <button type="button" title="Attach photo" aria-label="Attach photo" disabled={disabled} className={ICON_BTN_CLASS} onClick={() => photoInputRef.current?.click()}>
         <ImageIcon size={15} />
       </button>
-      <button type="button" title="Attach document" disabled={disabled} className={ICON_BTN_CLASS} onClick={() => fileInputRef.current?.click()}>
+      <button type="button" title="Attach document" aria-label="Attach document" disabled={disabled} className={ICON_BTN_CLASS} onClick={() => fileInputRef.current?.click()}>
         <FileText size={15} />
       </button>
     </div>

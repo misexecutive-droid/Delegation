@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { apiFetch } from './http';
+import { arrayField, withArrayDefaults, normalizeWith } from './normalize';
 
 export type ChecklistTemplateTarget = 'TASK' | 'TICKET';
 
@@ -49,18 +51,28 @@ export type UpdateChecklistTemplateItemPayload = Omit<Partial<CreateChecklistTem
   defaultAssigneeId?: string | null;
 };
 
+// `template.items.map(...)` is read unguarded wherever a template is applied (the builder's
+// import-from-template path, ChecklistPanel's template picker), so a template arriving without
+// `items` throws at render. Same guard the other checklist APIs carry.
+const templateDefaults = withArrayDefaults({ items: arrayField(z.object({}).passthrough()) });
+const normalizeTemplate = (raw: unknown) => normalizeWith<ChecklistTemplate>(templateDefaults, raw);
+
 export const checklistTemplateApi = {
   getAll: (appliesTo?: ChecklistTemplateTarget) =>
-    apiFetch<ApiResponse<ChecklistTemplate[]>>(`/checklist-templates${appliesTo ? `?appliesTo=${appliesTo}` : ''}`),
+    apiFetch<ApiResponse<ChecklistTemplate[]>>(`/checklist-templates${appliesTo ? `?appliesTo=${appliesTo}` : ''}`)
+      .then((r) => ({ ...r, data: r.data.map(normalizeTemplate) })),
 
   getOne: (id: string) =>
-    apiFetch<ApiResponse<ChecklistTemplate>>(`/checklist-templates/${id}`),
+    apiFetch<ApiResponse<ChecklistTemplate>>(`/checklist-templates/${id}`)
+      .then((r) => ({ ...r, data: normalizeTemplate(r.data) })),
 
   create: (payload: CreateChecklistTemplatePayload) =>
-    apiFetch<ApiResponse<ChecklistTemplate>>('/checklist-templates', { method: 'POST', body: JSON.stringify(payload) }),
+    apiFetch<ApiResponse<ChecklistTemplate>>('/checklist-templates', { method: 'POST', body: JSON.stringify(payload) })
+      .then((r) => ({ ...r, data: normalizeTemplate(r.data) })),
 
   update: (id: string, payload: UpdateChecklistTemplatePayload) =>
-    apiFetch<ApiResponse<ChecklistTemplate>>(`/checklist-templates/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+    apiFetch<ApiResponse<ChecklistTemplate>>(`/checklist-templates/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      .then((r) => ({ ...r, data: normalizeTemplate(r.data) })),
 
   delete: (id: string) =>
     apiFetch<ApiResponse<{ deleted: boolean }>>(`/checklist-templates/${id}`, { method: 'DELETE' }),

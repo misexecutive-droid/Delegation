@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { z } from "zod"
 import type { AnyMySqlColumn, MySqlTableWithColumns } from "drizzle-orm/mysql-core"
-import { asc, eq, sql } from "drizzle-orm"
+import { asc, eq, sql, getTableName } from "drizzle-orm"
 // Middleware that checks the user is logged in (authenticate) and that they have a
 // specific role, like "ADMIN" (requireRole).
 import { authenticate, requireRole } from "../middleware/auth/auth.js"
@@ -11,6 +11,7 @@ import { asyncHandler } from "./asyncHandler.js"
 // Our custom error class that carries an HTTP status code (see AppError.ts).
 import { AppError } from "./AppError.js"
 import { db } from "../config/db.js"
+import { cached, invalidate, cacheKey } from "../config/queryCache.js"
 
 // This is a "router factory": a function that BUILDS and returns an Express Router,
 // instead of a router being hand-written directly.
@@ -37,6 +38,17 @@ const listQuerySchema = z.object({
 })
 
 export const createLookupRouter = (table: LookupTable) => {
+    // Lookup rows change a few times a year and are read on nearly every page (every dropdown,
+    // the org tree, filter bars), so they cache well.
+    //
+    // The key MUST include the table name: this factory builds a router per lookup table, and a
+    // shared key would serve one table's rows for another's request. Drizzle's own getTableName()
+    // rather than poking at internal symbols, which would silently return undefined — and
+    // undefined would collapse every router onto the same key, which is exactly the bug.
+    const CACHE_PREFIX = cacheKey("lookup", getTableName(table))
+    const CACHE_TTL_SECONDS = 300
+    const dropCache = () => invalidate(CACHE_PREFIX)
+
     // Create a fresh, isolated set of routes. This gets "mounted" onto a path like
     // `/api/stores` or `/api/departments` wherever this function is used.
     const router = Router()
@@ -47,10 +59,10 @@ export const createLookupRouter = (table: LookupTable) => {
         const { page, limit } = listQuerySchema.parse(req.query)
 
         if (page && limit) {
-            const [items, totalRows] = await Promise.all([
+            const [items, totalRows] = await cached(cacheKey(CACHE_PREFIX, "page", page, limit), CACHE_TTL_SECONDS, () => Promise.all([
                 db.select().from(table).orderBy(asc(table.name)).offset((page - 1) * limit).limit(limit),
                 db.select({ count: sql<number>`count(*)` }).from(table),
-            ])
+            ]))
             const total = Number(totalRows[0]?.count ?? 0)
             res.json({
                 success: true,
@@ -61,7 +73,8 @@ export const createLookupRouter = (table: LookupTable) => {
         }
 
         // Fetch every row for this table, sorted alphabetically by `name`.
-        const items = await db.select().from(table).orderBy(asc(table.name));
+        const items = await cached(cacheKey(CACHE_PREFIX, "all"), CACHE_TTL_SECONDS, () =>
+            db.select().from(table).orderBy(asc(table.name)));
         // Send a consistent JSON shape: { success, data } so the frontend always knows
         // what to expect regardless of which lookup type this is.
         res.json({ success: true, data: items })
@@ -89,6 +102,7 @@ export const createLookupRouter = (table: LookupTable) => {
         const [item] = await db.select().from(table).where(eq(table.name, req.body.name)).limit(1);
         // 201 = "Created" - the conventional success status code for a successful POST
         // that creates a new resource.
+        await dropCache()
         res.status(201).json({ success: true, data: item })
     }))
 
@@ -100,6 +114,7 @@ export const createLookupRouter = (table: LookupTable) => {
         // If no row was found with that id, `item` will be undefined - throw a 404 instead
         // of silently sending back nothing.
         if (!item) throw AppError.notFound("Not Found")
+        await dropCache()
         res.json({ success: true, data: item })
     }))
 
@@ -109,6 +124,7 @@ export const createLookupRouter = (table: LookupTable) => {
         // If nothing was found, treat it as "not found" rather than pretending the delete succeeded.
         if (!existing) throw AppError.notFound("Not Found")
         await db.delete(table).where(eq(table.id, req.params.id));
+        await dropCache()
         // Note: response shape here is `{ delete: true }` (not `deleted`) - kept as-is,
         // just flagging it in case it looks like a typo when reading the frontend code
         // that consumes this response.

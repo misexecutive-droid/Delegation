@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
-import { Clock } from 'lucide-react';
-import { formatDateShort, rateToneClass, rateBarClass, isInstanceOverdue } from '../checklistDisplay';
+import { Badge } from '@/components/ui/badge';
+import { StatusChip } from '@/components/statusChip';
+import { formatDateShort, rateBarClass, isInstanceOverdue } from '../checklistDisplay';
 import type { ChecklistInstance } from '../../../api/checklistInstances';
 
 interface ChecklistInstanceCardProps {
@@ -23,26 +24,16 @@ export const ChecklistInstanceCard = ({ instance }: ChecklistInstanceCardProps) 
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-display font-medium text-text">{instance.title}</p>
-        {isComplete ? (
-          <span className="flex items-center gap-1 text-[10px] font-display font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-            Done
-          </span>
-        ) : (
-          <span className={`flex items-center gap-1 text-[10px] font-display font-medium px-2 py-0.5 rounded-full shrink-0 ${rateToneClass(progress)} bg-surface-hover`}>
-            Mark {progress}%
-          </span>
-        )}
+        <Badge variant={isComplete ? 'success' : 'warning'} className="shrink-0">
+          {isComplete ? 'Done' : `Mark ${progress}%`}
+        </Badge>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-xs text-text-muted font-display">
           {formatDateShort(instance.periodStart)} – {formatDateShort(instance.periodEnd)}
         </p>
-        {overdue && (
-          <span className="flex items-center gap-1 text-[10px] font-display font-medium px-1.5 py-0.5 rounded-full bg-danger/10 text-danger">
-            <Clock size={10} /> Overdue
-          </span>
-        )}
+        {overdue && <StatusChip status="overdue" />}
       </div>
 
       <div className="flex items-center gap-2">

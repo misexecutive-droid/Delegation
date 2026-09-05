@@ -14,6 +14,8 @@
     "test watch": "vitest",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "seed:demo": "tsx src/scripts/seedDemoData.ts",
+    "wipe:checklists": "tsx src/scripts/wipeChecklists.ts",
+    "backup:data": "tsx src/scripts/backupData.ts",
     "test:whatsapp": "tsx src/scripts/testWhatsAppWebhook.ts",
     "test:rules": "tsx src/scripts/testRuleBasedExtraction.ts",
     "db:generate": "drizzle-kit generate",

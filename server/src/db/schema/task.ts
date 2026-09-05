@@ -241,6 +241,29 @@ export const taskImages = mysqlTable(
 // ---------------------------------------------------------------------------
 // TaskComment — a comment on a Task (location embed flattened to columns)
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// TaskStatusUpdate — audit trail entry for a Task's status changes.
+//
+// Mirrors TicketStatusUpdate: tickets have always required a remark to move status and kept the
+// history; delegations changed status with nothing recorded, so there was no way to see who moved
+// a delegation, when, or why. `remark` is NOT NULL for the same reason it is on tickets — an entry
+// with no explanation is the thing this table exists to prevent.
+// ---------------------------------------------------------------------------
+export const taskStatusUpdates = mysqlTable(
+  'TaskStatusUpdate',
+  {
+    id: varchar('id', { length: 191 }).primaryKey().$defaultFn(() => createId()),
+    taskId: varchar('taskId', { length: 191 }).notNull().references(() => tasks.id),
+    changedBy: varchar('changedBy', { length: 191 }).notNull().references(() => users.id),
+    fromStatus: mysqlEnum('fromStatus', TASK_STATUSES).notNull(),
+    toStatus: mysqlEnum('toStatus', TASK_STATUSES).notNull(),
+    remark: text('remark').notNull(),
+    createdAt: datetime('createdAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+    updatedAt: datetime('updatedAt', { mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index('TaskStatusUpdate_taskId_createdAt_idx').on(table.taskId, table.createdAt)],
+);
+
 export const taskComments = mysqlTable(
   'TaskComment',
   {

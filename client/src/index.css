@@ -3,27 +3,24 @@
 @import "tw-animate-css";
 @plugin "tailwindcss-debug-screens";
 
+/* Theme toggling is driven by ThemeContext setting [data-theme="dark"] on <html> — nothing in
+   this app ever adds a `.dark` class, so `dark:` must resolve against that attribute. */
 @variant dark ([data-theme="dark"] &);
+
 @theme {
-  --color-primary-50: #eef4fa;
-  --color-primary-100: #dde8f3;
-  --color-primary-200: #b9cce0;
-  --color-primary-300: #8fb0d1;
-  --color-primary-400: #4e83bf;
-  --color-primary-500: #2a66a8;
-  --color-primary-600: #1d4f86;
-  --color-primary-700: #143d6b;
-  --color-primary-800: #0f2f54;
-  --color-primary-900: #0a2240;
-  --color-cobalt-50: #eef4fa;
-  --color-cobalt-100: #dde8f3;
-  --color-cobalt-200: #b9cce0;
-  --color-cobalt-400: #4e83bf;
-  --color-cobalt-500: #2a66a8;
-  --color-cobalt-600: #1d4f86;
-  --color-cobalt-700: #143d6b;
-  --color-cobalt-800: #0f2f54;
-  --color-cobalt-900: #0a2240;
+  /* --- Navy Primary Palette --- */
+  --color-primary-50: #f0f4f8;
+  --color-primary-100: #dbe4f0;
+  --color-primary-200: #bacce2;
+  --color-primary-300: #8daed2;
+  --color-primary-400: #618abd;
+  --color-primary-500: #426a9f;
+  --color-primary-600: #2c4b77;
+  --color-primary-700: #213e6a; /* Sharp Brand Navy */
+  --color-primary-800: #1d3558;
+  --color-primary-900: #0f2240; /* Midnight Navy */
+
+  /* --- Coral Accent (decorative: OrbitDecoration, SidebarNavButton, dashboard blobs) --- */
   --color-coral-50: #fdf8ec;
   --color-coral-100: #faf3dd;
   --color-coral-200: #f3e6bb;
@@ -32,61 +29,57 @@
   --color-coral-500: #d4af37;
   --color-coral-600: #b8922a;
   --color-coral-700: #9c7a1e;
-  --color-success: #2f7d5b;
-  --color-warning: #c08a1e;
-  --color-danger: #b23b3b;
-  --color-info: #2a66a8;
-  --color-status-todo: #9ca3af;
+
+  /* --- Status Colors (High Contrast) --- */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #426a9f;
+  --color-status-todo: #94a3b8;
   --color-status-progress: #f59e0b;
   --color-status-verify: #6366f1;
   --color-status-done: #10b981;
+
+  /* --- Light Theme Surface & Text (Cool, Crisp) --- */
   --color-background: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-hover: #eef0f3;
-  --color-surface-active: #e2e5ea;
-  --color-border: #e2e5ea;
-  --color-border-hover: #cfd4db;
-  --color-text: #2c3138;
-  --color-text-secondary: #545b66;
-  --color-text-muted: #6f7783;
-  --color-text-light: #9aa1ad;
+  --color-surface-hover: #eef2f6;
+  --color-surface-active: #e1e7ef;
+  --color-border: #e1e7ef;
+  --color-border-hover: #cbd6e2;
+  --color-text: #0b1626; /* Deep navy-black text */
+  --color-text-secondary: #364a63;
+  --color-text-muted: #64748b;
+  --color-text-light: #94a3b8;
   --color-white: #ffffff;
-  --font-sans: "Poppins", "Calibri", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Poppins", "Century Gothic", "Segoe UI", sans-serif;
-  --container-width: min(90rem, 100% - 2rem);
-  --sidebar-width: 18rem;
-  --header-height: 4.5rem;
+
+  /* --- Typography --- */
+  --font-sans: "Poppins", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Poppins", "Segoe UI", sans-serif;
+
+  /* --- Layout (Using rem) --- */
+  --container-width: min(96rem, 100% - 3rem);
+  --sidebar-width-expanded: 16.25rem;
+  --sidebar-width-collapsed: 4.5rem;
+  --header-height: 4rem;
+
+  /* --- Borders & Radius --- */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* --- Shadows --- */
+  --shadow-sm: 0 1px 2px 0 rgb(15 34 64 / 0.06);
+  --shadow-soft: 0 4px 6px -1px rgb(15 34 64 / 0.06), 0 2px 4px -2px rgb(15 34 64 / 0.03);
+
+  /* --- Transitions --- */
   --transition-fast: 150ms ease;
-  --transition-normal: 220ms ease;
-  --transition-slow: 350ms ease;
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --animate-slide-in-right: slideInRight 0.3s ease-out;
-  --animate-fade-in-up: fadeInUp 0.3s ease-out;
-  --animate-fade-in: fadeIn 0.2s ease-out;
-  --animate-float-blob: floatBlob 7s ease-in-out infinite;
+
+  /* --- Animations (only ones actually rendered: OrbitDecoration, LightBeams) --- */
   --animate-orbit-slow: orbitSpin 22s linear infinite;
   --animate-light-beam: lightBeamSweep 7s linear infinite;
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes fadeInUp {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes floatBlob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-8px, 6px) scale(1.2); }
-  66% { transform: translate(5px, -6px) scale(0.9); }
 }
 
 @keyframes orbitSpin {
@@ -146,7 +139,6 @@ input:-webkit-autofill:active {
 }
 
 :root {
-  --bg-body: var(--color-background);
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(226, 229, 234, 0.7);
   --glass-blur: blur(12px);
@@ -171,7 +163,7 @@ body {
 }
 
 :root[data-theme="dark"] {
-  --color-background: #0b1220;
+  --color-background: #070f1e;
   --color-surface: #121a2c;
   --color-surface-hover: #1a2338;
   --color-surface-active: #232f49;
@@ -231,6 +223,18 @@ body {
   }
 }
 
+/* Recharts renders its own focusable wrapper div/svg for keyboard support; some browsers also
+   treat an <svg> as natively focusable regardless of any tabIndex Recharts sets (or doesn't, once
+   its accessibilityLayer is turned off) — either way, clicking a chart draws the browser's default
+   focus outline as a stray black box around the whole plot area. !important is warranted here:
+   this overrides a browser UA default, not another rule in this codebase, and Tailwind's
+   `outline-none` utility on its own wasn't consistently winning against it. */
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-surface {
+  outline: none !important;
+}
+
 /* tailwindcss-animate's `animate-in`/`animate-out` utilities (entrance fades, slide-ins, modal/
    sheet transitions, staggered list reveals) never checked prefers-reduced-motion anywhere in the
    app — collapsing their duration to near-zero here means content still ends up in its final state
@@ -253,6 +257,9 @@ body {
   display: none;
 }
 
+/* Bridges this app's own token names to the generic shadcn/ui component vocabulary (card,
+   popover, secondary, muted, accent, ring, etc.) that some components/ui/*.tsx primitives were
+   originally scaffolded against, so those keep working without every primitive needing a rewrite. */
 @theme inline {
   --color-foreground: var(--color-text);
   --color-card: var(--color-surface);

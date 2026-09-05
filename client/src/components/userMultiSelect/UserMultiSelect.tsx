@@ -1,6 +1,6 @@
 import { Check, Loader2 } from 'lucide-react';
 import { useAssignableUsersQuery } from '../../features/tickets/hook';
-import { avatarColorClass } from '../../features/tasks/avatarColors';
+import { avatarColorClass } from '../../lib/avatarColors';
 import { getInitials } from '../../lib/getInitials';
 
 interface UserMultiSelectProps {

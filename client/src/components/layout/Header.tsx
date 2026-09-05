@@ -6,8 +6,8 @@ import {
   ChevronDown,
   LayoutDashboard,
   LogOut,
+  Menu,
   Moon,
-
   Settings,
   Sun,
   User,
@@ -43,7 +43,7 @@ const PAGE_LABELS: { pattern: RegExp; label: string }[] = [
 
 const getPageLabel = (pathname: string) => PAGE_LABELS.find((p) => p.pattern.test(pathname))?.label;
 
-export const Header = ({ onToggleSidebar: _onToggleSidebar }: { onToggleSidebar?: () => void }) => {
+export const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -76,10 +76,21 @@ export const Header = ({ onToggleSidebar: _onToggleSidebar }: { onToggleSidebar?
         WebkitBackdropFilter: 'var(--glass-blur, blur(12px))'
       }}
     >
-      <div className="max-w-[1600px] mx-auto px-2 sm:px-6">
-        <div className="h-16 flex items-center gap-3 sm:gap-4">
+      <div className="max-w-(--container-width) mx-auto px-2 sm:px-6">
+        <div className="h-(--header-height) flex items-center gap-3 sm:gap-4">
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+
+            {onToggleSidebar && (
+              <button
+                type="button"
+                onClick={onToggleSidebar}
+                className={`${ICON_BUTTON_CLASS} md:hidden -ml-1.5`}
+                aria-label="Open menu"
+              >
+                <Menu size={20} strokeWidth={2} />
+              </button>
+            )}
 
             <NavLink
               to="/"

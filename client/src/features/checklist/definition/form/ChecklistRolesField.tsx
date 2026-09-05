@@ -2,6 +2,10 @@ import { Briefcase, Check, UserCheck } from 'lucide-react';
 import { LABEL_CLASS } from './formConstants';
 import type { ChecklistAssigneeRole } from '../../../../api/checklistDefinitions';
 
+// Colocated with the component like ui/badge.tsx's own badgeVariants export — only affects Fast
+// Refresh granularity (a full reload instead of a hot-swap when this file changes), not runtime
+// correctness.
+// eslint-disable-next-line react-refresh/only-export-components
 export const ROLE_OPTIONS: { value: ChecklistAssigneeRole; label: string }[] = [
   { value: 'STORE_MANAGER', label: 'Store Manager' },
   { value: 'FLOOR_MANAGER', label: 'Floor Manager' },

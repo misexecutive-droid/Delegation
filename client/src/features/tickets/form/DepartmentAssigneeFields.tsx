@@ -14,7 +14,6 @@ interface DepartmentAssigneeFieldsProps {
   locked: boolean;
 }
 
-// Locked (disabled) whenever a Category is selected, since the category already decides these.
 export const DepartmentAssigneeFields = ({
   departmentId,
   onDepartmentChange,

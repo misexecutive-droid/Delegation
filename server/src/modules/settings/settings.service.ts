@@ -3,6 +3,7 @@ import { settings } from "../../db/schema/core.js"
 import { eq } from "drizzle-orm"
 import { createId } from "@paralleldrive/cuid2"
 import type { UpdateSettingsInput } from "./settings.validation.js"
+import { auditService } from "../audit/audit.service.js";
 
 // In-memory cache of the single Settings row. Anything that needs settings synchronously
 // (e.g. building a multer instance per upload request, see config/upload.ts) reads this cache
@@ -48,12 +49,16 @@ export const settingsService = {
     // used) matched no schema path and were silently dropped by Mongoose. The Drizzle `settings`
     // table below is spelled correctly (`maxUploadFiles`), so this update now actually persists
     // that field — a real, previously-live bug fix, not just a straight port.
-    async update(input: UpdateSettingsInput) {
+    async update(input: UpdateSettingsInput, actorId: string) {
         if (!cache) await this.init();
         const id = cache!.id;
+        const before = cache!;
         await db.update(settings).set({ ...input, updatedAt: new Date() }).where(eq(settings.id, id));
         const [updated] = await db.select().from(settings).where(eq(settings.id, id)).limit(1);
         cache = updated!;
+        // Worth recording even though it's a single row: these are app-wide switches (maintenance
+        // mode, upload limits), so "who turned this on and when" is exactly the audit question.
+        await auditService.record({ entityType: "Settings", entityId: id, action: "UPDATE", actorId, before, after: cache });
         return cache;
     },
 };

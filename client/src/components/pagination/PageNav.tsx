@@ -53,8 +53,8 @@ export const PageNav = ({ page, totalPages, onPageChange, className }: PageNavPr
             aria-label="Go to previous page"
             className={cn(
               "flex items-center gap-1.5 h-10 sm:h-11 px-3 sm:px-4 text-[13px] sm:text-sm font-bold tracking-wide rounded-xl transition-all duration-200 cursor-pointer active:scale-95",
-              "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-              "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-100",
+              "text-text-muted hover:bg-surface-hover hover:text-text",
+              "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/10",
               "disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed"
             )}
           >
@@ -67,7 +67,7 @@ export const PageNav = ({ page, totalPages, onPageChange, className }: PageNavPr
         {pages.map((p, i) =>
           p === 'ellipsis' ? (
             <li key={`ellipsis-${i}`} aria-hidden="true">
-              <div className="flex items-center justify-center h-10 sm:h-11 min-w-[2.5rem] sm:min-w-[2.75rem] text-slate-400">
+              <div className="flex items-center justify-center h-10 sm:h-11 min-w-[2.5rem] sm:min-w-[2.75rem] text-text-muted/60">
                 <MoreHorizontal className="size-5" strokeWidth={2.5} />
               </div>
             </li>
@@ -79,11 +79,11 @@ export const PageNav = ({ page, totalPages, onPageChange, className }: PageNavPr
                 aria-current={p === page ? 'page' : undefined}
                 aria-label={`Page ${p}`}
                 className={cn(
-                  "flex items-center justify-center h-10 sm:h-11 min-w-[2.5rem] sm:min-w-[2.75rem] px-2 text-[13px] sm:text-sm font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95",
+                  "flex items-center justify-center h-10 sm:h-11 min-w-[2.5rem] sm:min-w-[2.75rem] px-2 text-[13px] sm:text-sm font-bold rounded-xl border transition-all duration-200 cursor-pointer active:scale-95",
                   "focus-visible:outline-none focus-visible:ring-4",
                   p === page
-                    ? "bg-primary-600 text-white shadow-md shadow-primary-600/30 hover:bg-primary-700 focus-visible:ring-primary-100/50"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-100"
+                    ? "bg-primary-600 border-primary-600 text-white shadow-md shadow-primary-600/30 hover:bg-primary-700 focus-visible:ring-primary-500/20"
+                    : "border-transparent text-text-secondary hover:bg-surface-hover hover:border-border/60 hover:text-text focus-visible:ring-primary-500/10"
                 )}
               >
                 {p}
@@ -101,8 +101,8 @@ export const PageNav = ({ page, totalPages, onPageChange, className }: PageNavPr
             aria-label="Go to next page"
             className={cn(
               "flex items-center gap-1.5 h-10 sm:h-11 px-3 sm:px-4 text-[13px] sm:text-sm font-bold tracking-wide rounded-xl transition-all duration-200 cursor-pointer active:scale-95",
-              "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-              "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-100",
+              "text-text-muted hover:bg-surface-hover hover:text-text",
+              "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/10",
               "disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed"
             )}
           >

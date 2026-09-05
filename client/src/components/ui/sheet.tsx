@@ -34,8 +34,8 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-60 bg-slate-900/20 backdrop-blur-sm",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-400 data-[state=closed]:duration-200",
+        "fixed inset-0 z-60 bg-black/40 backdrop-blur-sm",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-200 data-[state=closed]:duration-150",
         className,
       )}
       {...props}
@@ -62,9 +62,9 @@ function SheetContent({
           // Theme tokens (not raw slate/white) — those never adapted to dark mode, so a sheet
           // opened in dark mode rendered as a jarring bright-white panel while the rest of the app
           // was dark. bg-surface/text-text/border-border track the app's actual theme instead.
-          "fixed z-60 flex flex-col bg-surface text-text shadow-2xl shadow-slate-900/10 outline-none",
-          "transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)]",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-400 data-[state=closed]:duration-200",
+          "fixed z-60 flex flex-col bg-surface text-text shadow-2xl shadow-black/10 outline-none",
+          "transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-200 data-[state=closed]:duration-150",
 
           side === "right" &&
             "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-full sm:max-w-md border-l border-border",

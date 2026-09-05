@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { ListTodo } from 'lucide-react';
 import { Button, Modal, Input, DatePicker } from '../../components';
 import { TaskFormPrioritySelector } from '../tasks/TaskFormPrioritySelector';
-import { TODO_FIELD_WRAPPER_CLASS, TODO_FIELD_LABEL_CLASS } from './CreateTodoModal';
+import { TODO_FIELD_WRAPPER_CLASS, TODO_FIELD_LABEL_CLASS, TODO_OPTIONAL_LABEL_CLASS } from './CreateTodoModal';
 import { useUpdateTodoMutation } from './hook';
 import type { Todo } from '../../api/todos';
 
@@ -39,6 +39,8 @@ export const EditTodoModal = ({ todo, onClose }: EditTodoModalProps) => {
     <Modal
       open
       onClose={onClose}
+      size="xl"
+      bodyClassName="no-scrollbar"
       icon={<ListTodo className="w-6 h-6 text-primary-500" />}
       title={<span className="text-xl font-bold text-text">Edit todo task</span>}
       description={<span className="text-text-muted">A personal task, not assigned to anyone else.</span>}
@@ -88,8 +90,8 @@ export const EditTodoModal = ({ todo, onClose }: EditTodoModalProps) => {
         </div>
 
         <div className={TODO_FIELD_WRAPPER_CLASS}>
-          <label className={TODO_FIELD_LABEL_CLASS}>
-            Due date & time <span className="text-text-light font-normal ml-1">(optional)</span>
+          <label className={TODO_OPTIONAL_LABEL_CLASS}>
+            Due date &amp; time <span className="text-text-light font-normal">(optional)</span>
           </label>
           <DatePicker
             value={dueDate}

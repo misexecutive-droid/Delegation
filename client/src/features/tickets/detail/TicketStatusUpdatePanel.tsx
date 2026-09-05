@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react';
-import { RefreshCcw, Camera, ImageUp, X, AlertCircle } from 'lucide-react';
+import { RefreshCcw, Camera, ImageUp, AlertCircle } from 'lucide-react';
 import { Button } from '../../../components';
-import { SECTION_HEADER, STATUS_UPDATE_OPTIONS } from './detailConstants';
+import { STATUS_UPDATE_OPTIONS } from './detailConstants';
+import { StatusPhotoThumbnail } from './StatusPhotoThumbnail';
 import type { RestrictedStatus, CaptureMethod } from '../../../api/ticket';
 
 interface TicketStatusUpdatePanelProps {
@@ -16,37 +16,6 @@ interface TicketStatusUpdatePanelProps {
   isSubmitting: boolean;
   submitErrorMessage: string | null;
 }
-
-const StatusPhotoThumbnail = ({
-  file,
-  index,
-  onRemove,
-}: {
-  file: File;
-  index: number;
-  onRemove: (index: number) => void;
-}) => {
-  // Derived synchronously from `file` — no need to route it through state/effect, which would
-  // cost an extra render (mount with an empty url, then the effect setting it).
-  const previewUrl = useMemo(() => URL.createObjectURL(file), [file]);
-  useEffect(() => () => URL.revokeObjectURL(previewUrl), [previewUrl]);
-
-  return (
-    <div className="group relative size-14 rounded-md border border-border overflow-hidden bg-surface-muted shrink-0 transition-all">
-      {previewUrl && (
-        <img src={previewUrl} alt={file.name} className="size-full object-cover" />
-      )}
-      <button
-        type="button"
-        onClick={() => onRemove(index)}
-        className="absolute top-1 right-1 p-0.5 rounded-sm bg-surface/90 text-text-muted hover:text-danger hover:bg-surface border border-border/80 opacity-0 group-hover:opacity-100 transition-all duration-150 shadow-sm cursor-pointer"
-        aria-label={`Remove ${file.name}`}
-      >
-        <X size={10} />
-      </button>
-    </div>
-  );
-};
 
 export const TicketStatusUpdatePanel = ({
   statusPick,
@@ -63,13 +32,13 @@ export const TicketStatusUpdatePanel = ({
   const isSubmitDisabled = !statusPick || !statusRemark.trim() || isSubmitting;
 
   return (
-    <div className="px-4 py-3.5 border-t border-border/60 bg-surface/50 flex flex-col gap-3">
-      <h3 className={`${SECTION_HEADER} flex items-center gap-1.5`}>
-        <RefreshCcw size={13} className="text-text-muted" />
+    <div className="px-6 py-5 border-t border-border bg-surface-hover/90 backdrop-blur-xl flex flex-col gap-4 font-sans shadow-[0_-10px_30px_rgba(0,0,0,0.02)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.2)] pb-safe">
+      <h3 className="flex items-center gap-2 text-sm font-bold text-text-secondary">
+        <RefreshCcw size={16} className="text-primary-500" strokeWidth={2.5} />
         <span>Update Status</span>
       </h3>
 
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 gap-2">
         {STATUS_UPDATE_OPTIONS.map((opt) => {
           const isSelected = statusPick === opt.value;
           return (
@@ -77,10 +46,10 @@ export const TicketStatusUpdatePanel = ({
               key={opt.value}
               type="button"
               onClick={() => onPickStatus(opt.value)}
-              className={`text-xs font-medium px-2.5 py-2 rounded-md border transition-all text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 cursor-pointer ${
+              className={`text-sm font-bold px-3 py-2.5 rounded-xl border transition-all text-center outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 ${
                 isSelected
-                  ? 'border-primary-500/60 bg-primary-500/10 text-primary-500 font-medium shadow-xs'
-                  : 'border-border/80 bg-surface text-text-secondary hover:bg-surface-muted hover:text-text'
+                  ? 'border-primary-500 bg-primary-500/10 text-primary-700 dark:text-primary-400 shadow-sm ring-1 ring-primary-500/20'
+                  : 'border-border bg-surface text-text-secondary hover:bg-surface-hover hover:text-text shadow-sm'
               }`}
             >
               {opt.label}
@@ -93,12 +62,12 @@ export const TicketStatusUpdatePanel = ({
         value={statusRemark}
         onChange={(e) => onRemarkChange(e.target.value)}
         placeholder="Remark — explain what changed... (required)"
-        rows={2}
-        className="w-full px-3 py-2 text-xs bg-surface border border-border/80 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-text placeholder:text-text-muted/60 resize-none transition-all"
+        rows={3}
+        className="w-full px-4 py-3 text-sm font-medium bg-surface border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 text-text placeholder:text-text-light resize-none transition-all shadow-inner"
       />
 
       {statusPhotos.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3 p-3 bg-surface border border-border rounded-xl shadow-sm">
           {statusPhotos.map((file, index) => (
             <StatusPhotoThumbnail
               key={`${file.name}-${file.lastModified}-${index}`}
@@ -111,16 +80,16 @@ export const TicketStatusUpdatePanel = ({
       )}
 
       {submitErrorMessage && (
-        <div className="flex items-center gap-2 p-2 rounded-md bg-danger/10 border border-danger/20 text-danger text-xs font-medium">
-          <AlertCircle size={14} className="shrink-0" />
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-danger/10 border border-danger/30 text-danger text-sm font-semibold shadow-sm animate-in fade-in slide-in-from-top-1">
+          <AlertCircle size={16} className="shrink-0" strokeWidth={2.5} />
           <span>{submitErrorMessage}</span>
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2 flex-wrap pt-0.5">
-        <div className="flex items-center gap-2">
-          <label className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border border-primary-500/40 text-primary-500 bg-primary-500/5 hover:bg-primary-500/10 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-primary-500/40">
-            <Camera size={13} />
+      <div className="flex items-center justify-between gap-3 flex-wrap pt-1 mt-1 border-t border-border pt-4">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 text-sm font-bold px-3 py-2 rounded-xl border border-primary-500/30 text-primary-700 dark:text-primary-400 bg-primary-500/10 hover:bg-primary-500/20 cursor-pointer transition-all focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-1 focus-within:ring-offset-background shadow-sm active:scale-95">
+            <Camera size={16} strokeWidth={2.5} />
             <span>Camera</span>
             <input
               type="file"
@@ -135,8 +104,8 @@ export const TicketStatusUpdatePanel = ({
             />
           </label>
 
-          <label className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border border-border/80 text-text-secondary bg-surface hover:bg-surface-muted hover:text-text cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-primary-500/40">
-            <ImageUp size={13} />
+          <label className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 text-sm font-bold px-3 py-2 rounded-xl border border-border text-text-secondary bg-surface hover:bg-surface-hover cursor-pointer transition-all focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-1 focus-within:ring-offset-background shadow-sm active:scale-95">
+            <ImageUp size={16} strokeWidth={2.5} />
             <span>Gallery</span>
             <input
               type="file"
@@ -154,7 +123,7 @@ export const TicketStatusUpdatePanel = ({
         <Button
           size="sm"
           variant="primary"
-          className="font-medium text-xs gap-1.5 px-3.5 py-1.5 rounded-md"
+          className="w-full sm:w-auto font-bold text-sm gap-2 px-5 py-2.5 rounded-xl shadow-md shadow-primary-500/20 hover:shadow-lg hover:shadow-primary-500/30 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none active:scale-95"
           disabled={isSubmitDisabled}
           isLoading={isSubmitting}
           onClick={onSubmit}

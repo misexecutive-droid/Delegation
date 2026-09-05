@@ -1,29 +1,34 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ListTodo, Plus } from 'lucide-react';
-import { GradientIconTile } from '../../components';
+import { GradientIconTile, Input, Loader } from '../../components';
 import { TodoList } from './TodoList';
-import { CreateTodoModal } from './CreateTodoModal';
+import { useCreateTodoMutation } from './hook';
 
 interface TodoDrawerProps {
   open: boolean;
   onClose: () => void;
 }
 
-// A right-side slide-in panel for the Dashboard's "Todo Task" shortcut — shows the existing list
-// right away instead of jumping straight to a blank add-task form; "Add todo" inside it opens the
-// same CreateTodoModal used everywhere else.
-export const TodoDrawer = ({ open, onClose }: TodoDrawerProps) => {
-  const [showCreate, setShowCreate] = useState(false);
 
-  // Portalled to <body> — DashboardHeader (where this is triggered from) has `overflow-hidden` on
-  // its own root div for the LightBeams effect, which would otherwise clip this fixed-position
-  // panel to the header's own bounding box instead of the full viewport.
+export const TodoDrawer = ({ open, onClose }: TodoDrawerProps) => {
+  const [quickText, setQuickText] = useState('');
+  const createMut = useCreateTodoMutation();
+
+  // Only entry point for adding a todo from the drawer — the floating + (full Create modal) was
+  // removed as redundant once this covered the instant-add case.
+  const handleQuickAdd = (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = quickText.trim();
+    if (!trimmed) return;
+    createMut.mutate({ text: trimmed }, { onSuccess: () => setQuickText('') });
+  };
+
   return createPortal(
     <>
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-200"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-200"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -34,15 +39,19 @@ export const TodoDrawer = ({ open, onClose }: TodoDrawerProps) => {
         aria-modal="true"
         aria-label="Your to-do list"
         aria-hidden={!open}
-        className={`fixed top-0 bottom-0 right-0 z-[60] w-full sm:w-96 max-w-[90vw] bg-surface border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full pointer-events-none'
+        // `inert` alongside aria-hidden: aria-hidden on a container whose children are still
+        // focusable is an a11y violation — Tab could land inside the closed drawer. inert removes
+        // the whole subtree from the tab order and from hit-testing in one go.
+        inert={!open}
+        className={`fixed top-0 bottom-0 right-0 z-[60] w-full sm:w-96 max-w-[90vw] bg-surface border-l border-border flex flex-col transition-transform duration-300 ease-in-out motion-reduce:transition-none ${
+          open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <GradientIconTile icon={ListTodo} size="sm" />
             <div className="min-w-0">
-              <h2 className="text-sm font-display font-medium text-text truncate">Your To-Do List</h2>
+              <h2 className="text-sm font-display font-semibold text-text tracking-tight truncate">Your to-do list</h2>
               <p className="text-xs text-text-muted truncate">Personal tasks, just for you</p>
             </div>
           </div>
@@ -50,30 +59,38 @@ export const TodoDrawer = ({ open, onClose }: TodoDrawerProps) => {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 p-1.5 rounded-full text-text-light hover:text-text hover:bg-surface-hover transition-colors cursor-pointer"
+            // Was `focus:ring-surface-hover` — a near-invisible ring against the surface it sits
+            // on. Uses the same primary focus treatment as every other control in this feature.
+            className="shrink-0 flex items-center justify-center size-9 rounded-full text-text-light hover:text-text hover:bg-surface-hover transition-all duration-200 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
           >
-            <X size={16} />
+            <X size={18} strokeWidth={2.5} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4 pb-24">
+        <form onSubmit={handleQuickAdd} className="px-5 py-3 border-b border-border shrink-0">
+          <Input
+            value={quickText}
+            onChange={(e) => setQuickText(e.target.value)}
+            placeholder="Quick add a task…"
+            maxLength={200}
+            aria-label="Quick add a task"
+            suffix={
+              <button
+                type="submit"
+                disabled={!quickText.trim() || createMut.isPending}
+                aria-label="Add task"
+                className="flex items-center justify-center size-7 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+              >
+                {createMut.isPending ? <Loader size="sm" variant="white" className="w-3.5 h-3.5" /> : <Plus size={14} strokeWidth={2.5} />}
+              </button>
+            }
+          />
+        </form>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4">
           <TodoList />
         </div>
-
-        {/* Pinned to the panel's own bottom-right corner (not the button that opens this drawer)
-            so it stays reachable no matter how far the list above it is scrolled. */}
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          aria-label="Add todo"
-          title="Add todo"
-          className="absolute bottom-5 right-5 z-10 flex items-center justify-center size-12 rounded-full bg-gradient-to-br from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-600/30 transition-transform duration-200 hover:scale-105 active:scale-95 cursor-pointer"
-        >
-          <Plus size={20} strokeWidth={2.5} />
-        </button>
       </aside>
-
-      <CreateTodoModal open={showCreate} onClose={() => setShowCreate(false)} />
     </>,
     document.body,
   );

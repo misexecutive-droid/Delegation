@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, AlertCircle, Trash2, ListChecks, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Skeleton, GradientIconTile, Breadcrumbs } from '../../../../components';
+import { Skeleton, GradientIconTile, Breadcrumbs, Button } from '../../../../components';
 import { Badge } from '@/components/ui/badge';
 import {
   useChecklistDefinitionQuery,
@@ -376,14 +376,16 @@ export const ChecklistBuilder = () => {
           </div>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={() => navigate('/admin/scheduled-checklists')}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover hover:text-text hover:border-border/80 shadow-2xs transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:scale-[0.98]"
+          className="font-display"
         >
           <ArrowLeft size={13} />
           <span>Back to Templates</span>
-        </button>
+        </Button>
       </div>
 
       {/* Main Wizard Card */}
@@ -423,14 +425,16 @@ export const ChecklistBuilder = () => {
           {/* Footer Navigation Bar */}
           <div className="flex items-center justify-between pt-6 mt-8 border-t border-border/60">
             {step > 0 ? (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => goToStep(step - 1)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs sm:text-sm font-display font-medium text-text-secondary border border-border bg-surface hover:bg-surface-hover hover:text-text transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:scale-[0.98]"
+                className="font-display"
               >
                 <ChevronLeft size={15} />
                 <span>Back</span>
-              </button>
+              </Button>
             ) : <span />}
 
             {step < STEPS.length - 1 && (
@@ -441,15 +445,17 @@ export const ChecklistBuilder = () => {
                     {STEP_BLOCK_REASON[step]}
                   </p>
                 )}
-                <button
+                <Button
                   type="button"
+                  variant="primary"
+                  size="md"
                   onClick={() => goToStep(step + 1)}
                   disabled={!sectionValidity[step]}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs sm:text-sm font-display font-medium text-white bg-primary-700 shadow-xs transition-all duration-150 hover:bg-primary-800 hover:shadow-sm active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                  className="font-display"
                 >
                   <span>Next</span>
                   <ChevronRight size={15} />
-                </button>
+                </Button>
               </div>
             )}
           </div>

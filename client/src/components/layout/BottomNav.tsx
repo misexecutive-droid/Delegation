@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from 'react-router';
-import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -25,14 +24,13 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/checklists', label: 'Checklists', icon: ClipboardCheck, exact: false },
 ];
 
-const INDICATOR_SPRING = { type: 'spring', stiffness: 420, damping: 32 } as const;
 
 export const BottomNav = () => {
   const location = useLocation();
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 rounded-t-[28px] border-t border-slate-300 bg-surface/85 dark:bg-background/85 transition-colors pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 rounded-t-[28px] border-t border-border bg-surface/85 dark:bg-background/85 transition-colors pb-[env(safe-area-inset-bottom)]"
       style={{
         backdropFilter: 'var(--glass-blur, blur(16px))',
         WebkitBackdropFilter: 'var(--glass-blur, blur(16px))',
@@ -67,21 +65,16 @@ export const BottomNav = () => {
               to={to}
               className="group relative flex flex-col items-center justify-center flex-1 h-full pt-1.5 pb-1.5 cursor-pointer select-none active:scale-[0.92] transition-transform duration-150"
             >
+              {/* Was a `layoutId` span that slid along the bar between tabs. A shared-element
+                  slide needs one element moving between two DOM nodes, which CSS can't express —
+                  so the bar now grows in place from the centre. Same cue, no travel. */}
               {isActive && (
-                <motion.span
-                  layoutId="bottom-nav-indicator"
-                  transition={INDICATOR_SPRING}
-                  className="absolute -top-px h-[3px] w-7 rounded-full bg-gradient-to-r from-primary-600 to-primary-400"
-                />
+                <span className="absolute -top-px h-[3px] w-7 rounded-full bg-gradient-to-r from-primary-600 to-primary-400 origin-center animate-in fade-in zoom-in-50 duration-200 motion-reduce:animate-none" />
               )}
 
               <div className="relative flex items-center justify-center w-12 h-[30px]">
                 {isActive && (
-                  <motion.span
-                    layoutId="bottom-nav-pill"
-                    transition={INDICATOR_SPRING}
-                    className="absolute inset-0 rounded-full bg-primary-500/10 dark:bg-primary-400/10"
-                  />
+                  <span className="absolute inset-0 rounded-full bg-primary-500/10 dark:bg-primary-400/10 animate-in fade-in duration-200 motion-reduce:animate-none" />
                 )}
                 <Icon
                   size={18}

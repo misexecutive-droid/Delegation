@@ -90,11 +90,7 @@ export function FiltersPopover<TFilters extends object>({
   };
 
   const updateDraft = (updater: (d: TFilters) => TFilters) => {
-    setDraft((prev) => {
-      const next = updater(prev);
-      if (isMobile) onChange(next);
-      return next;
-    });
+    setDraft((prev) => updater(prev));
   };
 
   const closePopover = () => setOpen(false);
@@ -193,7 +189,7 @@ export function FiltersPopover<TFilters extends object>({
             className="w-[28rem] max-h-[85vh] p-0 flex flex-col rounded-[1.5rem] border border-border shadow-2xl overflow-hidden bg-surface animate-in fade-in-80 zoom-in-95 duration-200"
           >
             {/* 1. STICKY HEADER */}
-            <div className="flex flex-col gap-4 p-5 border-b border-border bg-surface/95 backdrop-blur-md sticky top-0 z-20 shrink-0">
+            <div className="flex flex-col gap-4 p-5 border-b border-border  backdrop-blur-md sticky top-0 z-20 shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-primary-50 text-primary-600 ring-1 ring-primary-100/50">
@@ -214,10 +210,7 @@ export function FiltersPopover<TFilters extends object>({
               {chipsRow}
             </div>
 
-            {/* 2. SCROLLABLE BODY — flex-1 min-h-0 is load-bearing: without it this div sizes to
-                its own content instead of the remaining space between the sticky header/footer,
-                so the outer panel's overflow-hidden just clips whatever doesn't fit instead of
-                this div actually scrolling. */}
+            {/* 2. SCROLLABLE BODY */}
             <div className="flex flex-col gap-6 p-6 flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar bg-surface">
               {sectionsBody}
             </div>
@@ -242,6 +235,9 @@ export function FiltersPopover<TFilters extends object>({
           {chipsRow}
           {sectionsBody}
           {mobileOnlyBody}
+          <div className="flex items-center justify-between gap-4 pt-4 border-t border-border mt-4">
+            {footerButtons}
+          </div>
         </Modal>
       )}
     </>

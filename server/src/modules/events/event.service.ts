@@ -4,6 +4,7 @@ import { eq, gte, asc } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { AppError } from "../../utils/AppError.js";
 import type { CreateEventInput, UpdateEventInput } from "./event.validation.js";
+import { auditService } from "../audit/audit.service.js";
 
 // Only pull the fields the UI actually shows for the creator (mirrors the old
 // `.populate("createdBy", "firstName lastName")`). Built as a plain LEFT JOIN rather than the
@@ -54,10 +55,11 @@ export const eventService = {
             createdBy,
         });
         const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
+        await auditService.record({ entityType: "Event", entityId: id, action: "CREATE", actorId: createdBy, after: event });
         return event
     },
 
-    async update(id: string, input: UpdateEventInput) {
+    async update(id: string, input: UpdateEventInput, actorId: string) {
         const [existing] = await db.select().from(events).where(eq(events.id, id)).limit(1);
         if (!existing) throw AppError.notFound("Event not found")
 
@@ -70,13 +72,15 @@ export const eventService = {
         }).where(eq(events.id, id));
 
         const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
+        await auditService.record({ entityType: "Event", entityId: id, action: "UPDATE", actorId, before: existing, after: event });
         return event
     },
 
-    async remove(id: string) {
+    async remove(id: string, actorId: string) {
         const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
         if (!event) throw AppError.notFound("Event not found")
         await db.delete(events).where(eq(events.id, id));
+        await auditService.record({ entityType: "Event", entityId: id, action: "DELETE", actorId, before: event });
         return event
     }
 }

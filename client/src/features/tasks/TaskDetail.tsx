@@ -7,14 +7,14 @@ import { useDepartmentsQuery } from '../tickets/hook';
 import { TaskVerifyActions } from './TaskVerifyActions';
 import { TaskFormDepartmentField } from './TaskFormDepartmentField';
 import { TaskAssigneesField } from './TaskAssigneesField';
-import { TaskActivitySection } from './TaskActivitySection';
 import { AttachFilesToolbar } from './AttachFilesToolbar';
 import { TaskAttachmentsGrid } from './TaskAttachmentsGrid';
-import { TaskVerificationBanner } from './TaskVerificationBanner';
+import { VerificationNoteBanner } from '../../components/verificationBanner';
 import { STATUS_LABEL, PRIORITY_MAP, NEXT_STATUS } from './taskDisplay';
 import { PRIORITY_SELECTED_CLASS } from './TaskFormPrioritySelector';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { TaskScoreBadge } from './TaskScoreBadge';
+import { TaskStatusRemarkDialog } from './TaskStatusRemarkDialog';
 import { taskAssigneeIds } from './cardFields';
 import { useAuth } from '../../context/AuthContext';
 import { SECTION_LABEL_CLASS } from './taskFormFieldStyles';
@@ -88,7 +88,8 @@ interface TaskFooterProps {
   isVerifier: boolean;
   nextStatus: Task['status'] | null;
   onEdit: () => void;
-  onAdvance: (payload: UpdateTaskPayload) => void;
+  /** Opens the remark dialog — the status change itself can't be fired without one. */
+  onAdvance: () => void;
   isAdvancing: boolean;
   onClose: () => void;
 }
@@ -120,7 +121,7 @@ const TaskFooter = ({ task, mode, isPC, isVerifier, nextStatus, onEdit, onAdvanc
           size="sm"
           className="border-primary-200 text-primary-700 hover:bg-primary-50"
           disabled={isAdvancing}
-          onClick={() => onAdvance({ status: nextStatus })}
+          onClick={onAdvance}
         >
           {isAdvancing ? <Loader2 size={14} className="animate-spin mr-1" /> : <ChevronRight size={14} className="mr-1" />}
           Advance to {STATUS_LABEL[nextStatus as keyof typeof STATUS_LABEL]}
@@ -213,52 +214,99 @@ const formatStepDate = (date: Date) => date.toLocaleDateString(undefined, { mont
 const formatStepTime = (date: Date) => date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
 
-const TaskStatusTimeline = ({ task }: { task: Task }) => {
+/**
+ * Where the delegation sits in the four-stage pipeline — and, for every stage it has actually
+ * reached, the remark somebody wrote when they moved it there.
+ *
+ * The remark is the point of the row, so it takes the readable body size and the stage's generic
+ * blurb ("Work is underway.") steps aside whenever there's a real one to show. Without this the
+ * remarks were write-only: required on every status change, stored, returned by the API, and
+ * rendered nowhere.
+ *
+ * Step timestamps used to come from `task.updatedAt`, which changes on ANY edit — retitling,
+ * reassigning, attaching a file — so the date against the current stage was frequently not when
+ * the delegation reached that stage at all. Each step is now stamped from the entry that produced
+ * it, and date and remark always describe the same event.
+ */
+const TaskStatusStepper = ({ task }: { task: Task }) => {
   const currentIndex = STATUS_ORDER.indexOf(task.status);
-  const createdAt = new Date(task.createdAt);
-  const updatedAt = new Date(task.updatedAt);
+
+  // statusUpdates is newest-first, so `find` is the MOST RECENT arrival at a stage — the right one
+  // for a delegation that looped (sent for verification, rejected, sent again): what describes the
+  // stage now is the latest move into it, not the first.
+  const arrivalAt = (status: Task['status']) =>
+    (task.statusUpdates ?? []).find((u) => u.toStatus === status) ?? null;
 
   return (
-    <div className="flex flex-col">
-      {STATUS_ORDER.map((s, i) => {
-        const isDone = i < currentIndex;
-        const isCurrent = i === currentIndex;
-        const isLast = i === STATUS_ORDER.length - 1;
-        const stamp = i === 0 ? createdAt : isCurrent ? updatedAt : null;
+    <section className="flex flex-col gap-3">
+      <h3 className={SECTION_LABEL_CLASS}>Progress</h3>
 
-        return (
-          <div key={s} className="flex gap-3">
-            <div className="flex flex-col items-center">
-              <span
-                className={`flex items-center justify-center size-6 rounded-full shrink-0 ${
-                  isDone
-                    ? 'bg-primary-500/20 text-primary-700'
-                    : isCurrent
-                      ? 'border-2 border-primary-500 bg-primary-50'
-                      : 'border-2 border-border bg-surface'
-                }`}
-              >
-                {isDone && <Check size={12} strokeWidth={3} />}
-                {isCurrent && <span className="size-2 rounded-full bg-primary-500" />}
-              </span>
-              {!isLast && <span className={`w-px flex-1 min-h-5 ${isDone ? 'bg-primary-500/20' : 'bg-border'}`} />}
-            </div>
-            <div className={`flex-1 min-w-0 flex items-start justify-between gap-3 ${isLast ? '' : 'pb-5'}`}>
-              <div>
-                <p className={`text-sm font-semibold ${isDone || isCurrent ? 'text-text' : 'text-text-light'}`}>{STATUS_LABEL[s]}</p>
-                <p className="text-xs text-text-muted">{TIMELINE_STEP_DESCRIPTION[s]}</p>
+      <div className="flex flex-col">
+        {STATUS_ORDER.map((s, i) => {
+          const isDone = i < currentIndex;
+          const isCurrent = i === currentIndex;
+          const isLast = i === STATUS_ORDER.length - 1;
+          const reached = i <= currentIndex;
+
+          const arrival = reached ? arrivalAt(s) : null;
+          // 'todo' is where every delegation starts, so it has no status-change entry of its own.
+          const stamp = arrival ? new Date(arrival.createdAt)
+            : reached && s === 'todo' ? new Date(task.createdAt)
+            : null;
+          const author = arrival?.changedByUser?.firstName;
+
+          return (
+            <div key={s} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <span
+                  className={`flex items-center justify-center size-6 rounded-full shrink-0 transition-colors duration-200 ${
+                    isDone
+                      ? 'bg-primary-500/20 text-primary-700'
+                      : isCurrent
+                        ? 'border-2 border-primary-500 bg-primary-50'
+                        : 'border-2 border-border bg-surface'
+                  }`}
+                >
+                  {isDone && <Check size={12} strokeWidth={3} />}
+                  {isCurrent && <span className="size-2 rounded-full bg-primary-500" />}
+                </span>
+                {!isLast && <span className={`w-px flex-1 min-h-5 ${isDone ? 'bg-primary-500/20' : 'bg-border'}`} />}
               </div>
-              {stamp && (
-                <div className="text-right shrink-0">
-                  <p className="text-xs font-medium text-text-secondary">{formatStepDate(stamp)}</p>
-                  <p className="text-[11px] text-text-light">{formatStepTime(stamp)}</p>
+
+              <div className={`flex-1 min-w-0 flex flex-col gap-1.5 ${isLast ? '' : 'pb-5'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <p className={`text-sm font-bold tracking-tight leading-tight ${reached ? 'text-text' : 'text-text-light'}`}>
+                    {STATUS_LABEL[s]}
+                  </p>
+                  {stamp && (
+                    <div className="text-right shrink-0">
+                      <p className="text-[11px] font-semibold text-text-secondary tabular-nums leading-tight">{formatStepDate(stamp)}</p>
+                      <p className="text-[11px] font-medium text-text-light tabular-nums leading-tight">{formatStepTime(stamp)}</p>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {arrival?.remark ? (
+                  // Quoted with a rule rather than boxed in a filled card — it sits inside a
+                  // timeline that already has a rail, and a second filled block per stage would
+                  // make the column read as a stack of cards instead of one continuous track.
+                  <div className="flex flex-col gap-1 pl-2.5 border-l-2 border-primary-500/25">
+                    <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap break-words">
+                      {arrival.remark}
+                    </p>
+                    {author && (
+                      <p className="text-[11px] font-semibold text-text-light tracking-tight">— {author}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs font-medium text-text-muted leading-snug">{TIMELINE_STEP_DESCRIPTION[s]}</p>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </section>
   );
 };
 
@@ -310,7 +358,7 @@ const TaskEditLayout = ({
 
       <TaskStatusProgressBar status={task.status} />
 
-      <TaskVerificationBanner task={task} />
+      <VerificationNoteBanner note={task.verificationNote} approved={task.status === 'done'} verifiedBy={task.verifiedBy} />
 
       {isVerifier && task.status === 'pending_verification' && (
         <TaskVerifyActions task={task} />
@@ -419,11 +467,11 @@ const TaskEditLayout = ({
 
       <hr className="border-border/60" />
 
-      <TaskStatusTimeline task={task} />
-
-      <hr className="border-border/60" />
-
-      <TaskActivitySection taskId={task.id} />
+      {/* The Activity feed (comment box + comment/status history) used to sit below this. It's
+          gone by request: the only place to write anything about a delegation is now the dialog
+          that opens from "Advance to …", which won't move the status without a remark. The stepper
+          is what's left here, answering "where is this now" at a glance. */}
+      <TaskStatusStepper task={task} />
     </div>
 
     <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-card to-transparent" />
@@ -443,6 +491,9 @@ export const TaskDetail = ({ task: initialTask, onClose, initialMode = 'view' }:
   const { user } = useAuth();
 
   const [mode, setMode] = useState<'view' | 'edit'>(initialMode);
+  // The status the footer's "Advance" button is proposing. Held here rather than fired straight
+  // at the API because the server requires a remark with every status change.
+  const [advanceTo, setAdvanceTo] = useState<Task['status'] | null>(null);
 
   const isPC = user?.role === 'PC';
   const isRestrictedUser = user?.role === 'USER';
@@ -492,13 +543,17 @@ export const TaskDetail = ({ task: initialTask, onClose, initialMode = 'view' }:
           isVerifier={isVerifier}
           nextStatus={nextStatus}
           onEdit={() => setMode('edit')}
-          onAdvance={handleUpdate}
+          onAdvance={() => nextStatus && setAdvanceTo(nextStatus)}
           isAdvancing={updateMutation.isPending}
           onClose={onClose}
         />
       }
     >
-      <div className="flex flex-col md:flex-row flex-1 min-h-0 h-[75vh]">
+      {/* dvh, not vh, below md: on mobile `vh` measures the viewport with the browser's URL bar
+          hidden, so 75vh + header + footer overflowed the visible area and pushed the footer —
+          Edit, "Advance to…", Close — off the bottom of the screen. dvh tracks what's actually
+          visible. Desktop keeps the original 75vh panel. */}
+      <div className="flex flex-col md:flex-row flex-1 min-h-0 h-[70dvh] md:h-[75vh]">
         <TaskEditLayout
           task={task}
           isVerifier={isVerifier}
@@ -517,6 +572,25 @@ export const TaskDetail = ({ task: initialTask, onClose, initialMode = 'view' }:
           uploadMutation={uploadAttachmentsMutation}
         />
       </div>
+
+      {/* Every status change goes through here, on both this modal's Advance button and a board
+          drag — the server rejects a move with no remark, and the two entry points share this one
+          dialog so they can't ask for different things. */}
+      {advanceTo && (
+        <TaskStatusRemarkDialog
+          nested
+          task={task}
+          toStatus={advanceTo}
+          isSubmitting={updateMutation.isPending}
+          onCancel={() => setAdvanceTo(null)}
+          onConfirm={(statusRemark) => {
+            updateMutation.mutate(
+              { id: task.id, payload: { status: advanceTo, statusRemark } },
+              { onSuccess: () => setAdvanceTo(null) },
+            );
+          }}
+        />
+      )}
     </Modal>
   );
 };

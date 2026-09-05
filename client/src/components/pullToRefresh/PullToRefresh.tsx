@@ -1,5 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from 'react';
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from 'react';
 import { ArrowDown, Loader2 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -8,12 +7,18 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Tuned for the new size-10 indicator footprint + margins
+// Tuned for the size-10 indicator footprint + margins
 const PULL_THRESHOLD = 80;
 const MAX_PULL = 120;
 const HOLD_HEIGHT = 64;
 const RESISTANCE = 0.5;
-const SPRING = { type: 'spring', stiffness: 400, damping: 30 } as const;
+const SETTLE_MS = 280;
+
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+// Matches the ease the rest of the app uses for settling motion (cubic-bezier(0.22, 1, 0.36, 1)
+// closely enough at this duration) — framer-motion's spring overshot slightly on release; this
+// eases in without the bounce.
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
 export interface PullToRefreshProps {
   /** Called once the user releases past the threshold. Resolve/return to end the refresh state. */
@@ -29,19 +34,51 @@ export interface PullToRefreshProps {
  * This owns the scroll container itself — the gesture only engages when the *wrapper* is
  * already scrolled to its top, so it never fights native scrolling of the content inside it.
  * Desktop pointers never fire touch events, so this is a no-op there by construction.
+ *
+ * The pull distance is held in a ref and written straight to the indicator's style, never to
+ * React state. That's the same reason the previous version used framer-motion's `useMotionValue`
+ * — a finger drag produces a value per animation frame, and routing that through `useState` would
+ * re-render the whole dashboard underneath on every one of them.
  */
 export const PullToRefresh = ({ onRefresh, children, className, disabled }: PullToRefreshProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const puckRef = useRef<HTMLDivElement>(null);
+  const arrowRef = useRef<HTMLSpanElement>(null);
   const touchStartY = useRef<number | null>(null);
   const pulling = useRef(false);
+  const pull = useRef(0);
+  const frame = useRef<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  
-  const pull = useMotionValue(0);
-  const indicatorOpacity = useTransform(pull, [0, PULL_THRESHOLD], [0, 1]);
-  const indicatorRotate = useTransform(pull, [0, PULL_THRESHOLD], [0, 180]);
-  const indicatorScale = useTransform(pull, [0, PULL_THRESHOLD], [0.8, 1]); // Premium scale-in effect
 
-  const settle = useCallback((to: number) => animate(pull, to, SPRING), [pull]);
+  const paint = useCallback((value: number) => {
+    pull.current = value;
+    const progress = clamp01(value / PULL_THRESHOLD);
+    const track = trackRef.current;
+    if (track) {
+      track.style.height = `${value}px`;
+      track.style.opacity = `${progress}`;
+    }
+    if (puckRef.current) puckRef.current.style.transform = `scale(${0.8 + progress * 0.2})`;
+    if (arrowRef.current) arrowRef.current.style.transform = `rotate(${progress * 180}deg)`;
+  }, []);
+
+  const settle = useCallback((to: number) => {
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+    const from = pull.current;
+    if (from === to) return;
+    const start = performance.now();
+
+    const step = (now: number) => {
+      const t = clamp01((now - start) / SETTLE_MS);
+      paint(from + (to - from) * easeOut(t));
+      frame.current = t < 1 ? requestAnimationFrame(step) : null;
+    };
+    frame.current = requestAnimationFrame(step);
+  }, [paint]);
+
+  // A settle animation outliving its component would keep writing to detached nodes.
+  useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
 
   const onTouchStart = (e: ReactTouchEvent) => {
     if (disabled || refreshing) return;
@@ -55,12 +92,12 @@ export const PullToRefresh = ({ onRefresh, children, className, disabled }: Pull
     const delta = e.touches[0].clientY - touchStartY.current;
     if (delta <= 0 || (scrollRef.current?.scrollTop ?? 0) > 0) {
       pulling.current = false;
-      pull.set(0);
+      paint(0);
       return;
     }
     // Only steal the gesture from native scroll once we know it's a downward pull at the top.
     e.preventDefault();
-    pull.set(Math.min(delta * RESISTANCE, MAX_PULL));
+    paint(Math.min(delta * RESISTANCE, MAX_PULL));
   };
 
   const onTouchEnd = async () => {
@@ -68,7 +105,7 @@ export const PullToRefresh = ({ onRefresh, children, className, disabled }: Pull
     pulling.current = false;
     touchStartY.current = null;
 
-    if (pull.get() >= PULL_THRESHOLD) {
+    if (pull.current >= PULL_THRESHOLD) {
       setRefreshing(true);
       settle(HOLD_HEIGHT);
       try {
@@ -91,24 +128,28 @@ export const PullToRefresh = ({ onRefresh, children, className, disabled }: Pull
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
     >
-      <motion.div
+      <div
+        ref={trackRef}
         aria-hidden="true"
+        style={{ height: 0, opacity: 0 }}
         className="pointer-events-none flex items-end justify-center overflow-hidden absolute top-0 left-0 right-0 z-50"
-        style={{ height: pull, opacity: indicatorOpacity }}
       >
-        <motion.div 
-          className="flex items-center justify-center size-10 rounded-full bg-white border border-slate-200 shadow-md shadow-slate-200/50 mb-4"
-          style={{ scale: indicatorScale }}
+        {/* Was `bg-white border-slate-200 shadow-slate-200/50` — raw Tailwind defaults in a project
+            with its own palette, and invisible against a dark surface. */}
+        <div
+          ref={puckRef}
+          style={{ transform: 'scale(0.8)' }}
+          className="flex items-center justify-center size-10 rounded-full bg-surface border border-border mb-4"
         >
           {refreshing ? (
             <Loader2 size={18} className="text-primary-600 animate-spin" strokeWidth={2.5} />
           ) : (
-            <motion.span style={{ rotate: indicatorRotate }} className="flex">
+            <span ref={arrowRef} style={{ transform: 'rotate(0deg)' }} className="flex">
               <ArrowDown size={18} className="text-primary-600" strokeWidth={2.5} />
-            </motion.span>
+            </span>
           )}
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       {children}
     </div>

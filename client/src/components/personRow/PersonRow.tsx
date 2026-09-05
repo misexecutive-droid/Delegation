@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { getInitials } from '../../lib/getInitials';
-import { avatarColorClass } from '../../features/tasks/avatarColors';
+import { avatarColorClass } from '../../lib/avatarColors';
 
 interface PersonRowProps {
   name: string;

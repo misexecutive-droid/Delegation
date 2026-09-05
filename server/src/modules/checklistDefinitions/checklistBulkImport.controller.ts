@@ -23,7 +23,7 @@ export const checklistBulkImportController = {
             startDate: input.startDate,
             opensTime: input.opensTime,
             cutoffTime: input.cutoffTime,
-        })
+        }, req.user!.sub)
         res.json({ success: true, data: summary })
     }),
 }

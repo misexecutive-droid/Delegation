@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { ticketApi } from '../../api/ticket';
 import type {
+  Ticket,
   CreateTicketPayload,
   UpdateTicketPayload,
   VerifyTicketPayload,
@@ -16,7 +17,7 @@ import { userApi } from "../../api/users";
 import { departmentApi } from "../../api/departments";
 import { storeApi } from "../../api/stores";
 import { checklistTemplateApi } from "../../api/checklistTemplates";
-import { handleQueryRetry, useEntityMutation } from '../../lib/queryHelpers';
+import { handleQueryRetry, useEntityMutation, patchEntityInCache } from '../../lib/queryHelpers';
 
 const KEYS = {
   all: (page: number, assigneeId?: string) => ['tickets', page, assigneeId] as const,
@@ -59,6 +60,12 @@ export const useUpdateTicketMutation = () =>
       ticketApi.update(id, payload).then(r => r.data),
     setDetailData: (updated) => ({ key: KEYS.detail(updated.id), data: updated }),
     invalidateKeys: [['tickets']],
+    // Drag-drop status moves on the board should feel instant, not snap back to the old column
+    // until the PATCH round-trips — patch every cached ticket list/board/detail immediately.
+    optimisticUpdate: {
+      keyPrefixes: [['tickets']],
+      apply: ({ id, payload }) => (old) => patchEntityInCache<Ticket>(old, id, payload),
+    },
     successMessage: 'Ticket updated',
     errorFallback: 'Failed to update ticket',
   });
@@ -70,6 +77,19 @@ export const useAddTicketStatusUpdateMutation = (ticketId: string) =>
   useEntityMutation({
     mutationFn: (payload: { status: RestrictedStatus; remark: string; captureMethod?: CaptureMethod; files?: File[] }) =>
       ticketApi.addStatusUpdate(ticketId, payload).then(r => r.data),
+    setDetailData: (updated) => ({ key: KEYS.detail(updated.id), data: updated }),
+    invalidateKeys: [['tickets']],
+    successMessage: 'Status updated',
+    errorFallback: 'Failed to update status',
+  });
+
+// Same endpoint as useAddTicketStatusUpdateMutation, but the ticket id travels in the payload
+// rather than being bound when the hook is created — the board moves whichever card was dragged,
+// so it can't name the ticket up front the way the detail sheet can.
+export const useTicketStatusMoveMutation = () =>
+  useEntityMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { status: RestrictedStatus; remark: string } }) =>
+      ticketApi.addStatusUpdate(id, payload).then(r => r.data),
     setDetailData: (updated) => ({ key: KEYS.detail(updated.id), data: updated }),
     invalidateKeys: [['tickets']],
     successMessage: 'Status updated',
@@ -235,6 +255,15 @@ export const useApplyChecklistTemplateMutation = (ticketId: string) =>
     errorFallback: 'Failed to apply template',
   });
 
+// Org structure (who's assignable, which departments/stores exist) changes on the order of "an
+// admin edits it occasionally," not "every 30 seconds" — the app-wide default staleTime exists to
+// stop instant refetch-on-remount for data that's seconds old, but these queries get remounted
+// constantly (every filter dropdown, every form) and re-fetching the same org chart each time is
+// pure waste. 5 minutes still refreshes well within a session; any admin edit invalidates these
+// keys directly anyway (see admin/hook.ts's department/store mutations), so this never shows
+// stale data after an actual change — it only skips redundant fetches of unchanged data.
+const ORG_STRUCTURE_STALE_TIME = 5 * 60_000;
+
 export const useAssignableUsersQuery = (departmentId?: string, storeId?: string) => {
   const { token } = useAuth();
   return useQuery({
@@ -242,6 +271,7 @@ export const useAssignableUsersQuery = (departmentId?: string, storeId?: string)
     queryFn: () => userApi.getAssignable(departmentId, storeId).then(r => r.data),
     enabled: !!token,
     retry: handleQueryRetry,
+    staleTime: ORG_STRUCTURE_STALE_TIME,
   });
 };
 
@@ -266,6 +296,7 @@ export const useDepartmentsQuery = () => {
     queryFn: () => departmentApi.getAll().then(r => r.data),
     enabled: !!token,
     retry: handleQueryRetry,
+    staleTime: ORG_STRUCTURE_STALE_TIME,
   });
 };
 
@@ -276,6 +307,7 @@ export const useStoresQuery = () => {
     queryFn: () => storeApi.getAll().then(r => r.data),
     enabled: !!token,
     retry: handleQueryRetry,
+    staleTime: ORG_STRUCTURE_STALE_TIME,
   });
 };
 

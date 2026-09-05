@@ -29,12 +29,12 @@ export const checklistTemplateController = {
 
     update: asyncHandler(async (req: Request, res: Response) => {
         const input = updateChecklistTemplateSchema.parse(req.body)
-        const template = await checklistTemplateService.update(req.params.id, input)
+        const template = await checklistTemplateService.update(req.params.id, input, req.user!.sub)
         res.json({ success: true, data: template })
     }),
 
     remove: asyncHandler(async (req: Request, res: Response) => {
-        await checklistTemplateService.remove(req.params.id)
+        await checklistTemplateService.remove(req.params.id, req.user!.sub)
         res.json({ success: true, data: { deleted: true } })
     }),
 

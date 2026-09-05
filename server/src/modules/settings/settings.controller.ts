@@ -13,7 +13,7 @@ export const settingsController = {
 
     update : asyncHandler(async (req : Request , res : Response) => {
         const input = updateSettingsSchema.parse(req.body)
-        const settings = await settingsService.update(input)
+        const settings = await settingsService.update(input, req.user!.sub)
         res.json({ success : true, data : settings})
     })
 }

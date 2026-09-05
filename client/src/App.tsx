@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router';
 import { FolderKanban, Calendar, ClipboardCheck } from 'lucide-react';
 import { ComingSoon } from './components/comingSoon';
@@ -8,25 +8,22 @@ import { ForgotPasswordForm } from './features/auth/ForgotPasswordForm';
 import { ResetPasswordForm } from './features/auth/ResetPasswordForm';
 import { Dashboard } from './features/dashboard';
 import { PublicLayout } from './components/layout';
-// Socket hooks are imported directly from their own module (not the feature's barrel) so pulling
-// them in eagerly here doesn't drag the barrel's heavy page components into the main bundle —
-// those are code-split below via lazy() instead.
 import { useTicketSocket } from './features/tickets/useTicketSocket';
 import { useTaskSocket } from './features/tasks/useTaskSocket';
 import { useNotificationSocket } from './features/notifications/useNotificationSocket';
-import { AdminLayout } from './features/admin/AdminLayout';
 import { MyErrorBoundary, NotFoundPage, MaintenancePage } from './components/error';
+import { RouteFallback } from './components/skeleton';
 
-// Flip VITE_MAINTENANCE_MODE=true in the deploy's env to take the whole app down for planned
-// work — a build-time flag rather than a runtime API check, so it still works even when the API
-// itself is what's down for maintenance. Read once at module scope (not inside the component) so
-// it's a plain boolean by the time App() runs, keeping every hook call below unconditional.
-const MAINTENANCE_MODE = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
+// Both maintenance flags now live in lib/maintenance.ts — this whole-app one, and the per-page
+// list the Dashboard shell checks. Reading the env var in two places would let them drift.
+import { MAINTENANCE_ALL } from './lib/maintenance';
 
-// Route-level code splitting: every page below its own layout shell is a separate chunk, fetched
-// only when the user actually navigates to it, instead of all being bundled into the initial load.
+// Lazy like every other route. It was the one eager import among them, so its whole admin shell
+// — nav tree, header, breadcrumbs — was downloaded by every user on first paint, including the
+// large majority who are not ADMIN and can never reach a route inside it.
+const AdminLayout = lazy(() => import('./features/admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
 const HomePage = lazy(() => import('./features/dashboard/HomePage').then(m => ({ default: m.HomePage })));
-const TicketList = lazy(() => import('./features/tickets/TicketList').then(m => ({ default: m.TicketList })));
+const TicketList = lazy(() => import('./features/tickets/TicketList').then(m => ({ default: m.TicketList})));
 const TaskList = lazy(() => import('./features/tasks/TaskList').then(m => ({ default: m.TaskList })));
 const TodoPage = lazy(() => import('./features/todo/TodoPage').then(m => ({ default: m.TodoPage })));
 const EventList = lazy(() => import('./features/events/EventList').then(m => ({ default: m.EventList })));
@@ -58,8 +55,7 @@ const AuthRoute = () => {
   return token ? <Navigate to="/" replace /> : <Outlet />;
 };
 
-// PC has full parity with ADMIN throughout this app, so it gets the same access to every
-// /admin/* page too.
+
 const AdminRoute = () => {
   const { token, user } = useAuth();
   if (!token) return <Navigate to="/login" replace />;
@@ -72,19 +68,12 @@ const PCRoute = () => {
   return user?.role === 'PC' || user?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
-// MANAGER (department-scoped) and SENIOR (store-scoped) reach the same merged Overview/Analytics
-// page ADMIN/PC get at /admin, but from a route under the regular Dashboard shell instead of
-// AdminLayout — they don't get the org-management tools (Users/Stores/Departments/Settings) that
-// shell exposes.
 const AnalyticsRoute = () => {
   const { token, user } = useAuth();
   if (!token) return <Navigate to="/login" replace />;
   return user?.role === 'MANAGER' || user?.role === 'SENIOR' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
-// The one deliberate exception to "PC has full parity with ADMIN": Checklist Templates is ADMIN
-// only for now, PC gets the same Coming Soon treatment as every other role sees on the main
-// /checklists page — everyone else is already blocked from /admin/* entirely by AdminRoute above.
 const ChecklistTemplatesRoute = () => {
   const { user } = useAuth();
   if (user?.role !== 'ADMIN') {
@@ -184,12 +173,16 @@ const router = createBrowserRouter([
         element: <AdminRoute />,
         children: [
           {
-            element: <AdminLayout />,
+            // Its own boundary: App has no Suspense of its own — every other lazy route resolves
+            // inside Dashboard's or AdminLayout's — so a lazy layout route needs one above it.
+            element: (
+              <Suspense fallback={<RouteFallback />}>
+                <AdminLayout />
+              </Suspense>
+            ),
             children: [
               { path: '/admin', element: <OrgOverview /> },
-              { path: '/admin/analytics', element: <Navigate to="/admin" replace /> },
-              // No page ever linked here — the identical filter/export/task-list experience
-              // already lives at /tasks/team (AdminTaskList), reachable from the sidebar.
+              { path: '/admin/analytics', element: <Navigate to="/admin" replace /> },    
               { path: '/admin/reports/tasks', element: <Navigate to="/tasks/team" replace /> },
               { path: '/admin/directory', element: <DirectoryPage /> },
               { path: '/admin/users', element: <Navigate to="/admin/directory" replace /> },
@@ -219,7 +212,7 @@ export default function App() {
   useTaskSocket();
   useNotificationSocket();
 
-  if (MAINTENANCE_MODE) return <MaintenancePage />;
+  if (MAINTENANCE_ALL) return <MaintenancePage />;
 
   return <RouterProvider router={router} />;
 }

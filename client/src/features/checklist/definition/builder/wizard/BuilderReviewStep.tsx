@@ -120,7 +120,7 @@ const SectionCard = ({
         >
           {icon}
         </span>
-        <h3 className="text-xs font-display font-bold uppercase tracking-wider text-text-secondary">
+        <h3 className="text-xs font-display font-bold text-text-secondary">
           {title}
         </h3>
         {badgeText && (
@@ -180,7 +180,7 @@ export const BuilderReviewStep = ({
 
   const incompleteSections = sectionValidity
     .map((valid, i) => (valid ? null : { index: i, label: SECTION_CONFIG[i].label }))
-    .filter((s): s is { index: number; label: string } => s !== null);
+    .filter((s): s is { index: number; label: (typeof SECTION_CONFIG)[number]['label'] } => s !== null);
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">

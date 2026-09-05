@@ -7,8 +7,11 @@ interface KpiCardConfig {
   icon: LucideIcon;
   iconTint: string;
   label: string;
-  value: string;
+  /** `number` lets StatCard apply thousands separators; pre-formatted strings ("85%", "12h") pass through. */
+  value: string | number;
   trend: Trend;
+  /** For metrics where rising is bad news (Overdue, Avg TAT) — colours the trend badge correctly. */
+  lowerIsBetter?: boolean;
 }
 
 interface KpiSectionShellProps {

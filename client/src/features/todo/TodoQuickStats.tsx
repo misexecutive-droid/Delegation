@@ -1,5 +1,4 @@
-import { CircleDashed, CheckCircle2, CalendarClock, AlertTriangle } from 'lucide-react';
-import { QuickFilterStats, type QuickFilterTile } from '../../components/quickFilterStats';
+import { QuickFilterStats, statusTiles } from '../../components/quickFilterStats';
 
 export type TodoQuickFilterKey = 'pending' | 'completed' | 'due' | 'delayed';
 
@@ -10,22 +9,20 @@ export interface TodoQuickFilterCounts {
   delayed: number;
 }
 
-const TILES: QuickFilterTile<TodoQuickFilterKey>[] = [
-  { key: 'pending', label: 'Pending', icon: CircleDashed, tint: 'text-status-todo', bgTint: 'bg-status-todo/10', accentBar: 'bg-status-todo', accentBorder: 'border-status-todo/50', accentRing: 'ring-status-todo/25' },
-  { key: 'completed', label: 'Completed', icon: CheckCircle2, tint: 'text-success', bgTint: 'bg-success/10', accentBar: 'bg-success', accentBorder: 'border-success/50', accentRing: 'ring-success/25' },
-  { key: 'due', label: 'Due', icon: CalendarClock, tint: 'text-warning', bgTint: 'bg-warning/10', accentBar: 'bg-warning', accentBorder: 'border-warning/50', accentRing: 'ring-warning/25' },
-  { key: 'delayed', label: 'Delayed', icon: AlertTriangle, tint: 'text-danger', bgTint: 'bg-danger/10', accentBar: 'bg-danger', accentBorder: 'border-danger/50', accentRing: 'ring-danger/25' },
-];
+const TILES = statusTiles<TodoQuickFilterKey>(['pending', 'completed', 'due', 'delayed']);
 
 interface TodoQuickStatsProps {
   counts: TodoQuickFilterCounts;
+  /** Everything in scope, unfiltered — the number the page header used to state in words. */
+  total: number;
   active: TodoQuickFilterKey | null;
   onToggle: (key: TodoQuickFilterKey) => void;
+  onClear: () => void;
+  isLoading?: boolean;
 }
 
-// Thin wrapper around the shared QuickFilterStats — same shape and same Pending/Completed/Due/
-// Delayed filter semantics as the Delegation page's TaskQuickStats, just over to-dos instead of
-// tasks, so the "click a tile to filter" behavior is identical across both.
-export const TodoQuickStats = ({ counts, active, onToggle }: TodoQuickStatsProps) => (
-  <QuickFilterStats tiles={TILES} counts={counts} active={active} onToggle={onToggle} itemLabel="to-dos" />
+// Identical buckets to Delegation's row, over to-dos instead of tasks. Previously this file and
+// TaskQuickStats.tsx held character-for-character identical 4-tile arrays.
+export const TodoQuickStats = ({ counts, total, active, onToggle, onClear, isLoading }: TodoQuickStatsProps) => (
+  <QuickFilterStats tiles={TILES} counts={counts} active={active} onToggle={onToggle} total={total} onClearFilter={onClear} itemLabel="to-dos" variant="navy" isLoading={isLoading} />
 );

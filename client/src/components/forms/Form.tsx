@@ -30,7 +30,7 @@ export function Form({
       onSubmit={handleSubmit}
       className={cn(
         // Premium card styling with fluid responsive padding and beautiful soft shadows
-        'w-full max-w-lg p-6 sm:p-8 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/40 flex flex-col gap-6',
+        'w-full max-w-lg p-6 sm:p-8 bg-surface border border-border rounded-2xl shadow-xl shadow-border/40 flex flex-col gap-6',
         // Smooth entrance animation
         'animate-in fade-in zoom-in-[0.98] slide-in-from-bottom-4 duration-500 ease-out',
         className
@@ -38,14 +38,14 @@ export function Form({
       {...props}
     >
       {(title || description) && (
-        <div className="flex flex-col gap-2 pb-2 border-b border-slate-100/80">
+        <div className="flex flex-col gap-2 pb-2 border-b border-border/80">
           {title && (
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-bold text-text tracking-tight">
               {title}
             </h2>
           )}
           {description && (
-            <p className="text-[15px] font-medium text-slate-500 leading-relaxed">
+            <p className="text-[15px] font-medium text-text-muted leading-relaxed">
               {description}
             </p>
           )}

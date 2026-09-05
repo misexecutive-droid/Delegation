@@ -14,6 +14,35 @@ export const handleQueryRetry = (failureCount: number, error: unknown) => {
   return failureCount < 3;
 };
 
+// Patches the entity with matching `id` inside any cached shape this app uses: a lone entity, a
+// plain array of entities, or a `{ data: T[] }` paginated wrapper (see PaginatedResponse in
+// api/ticket.ts etc.). Falls through unchanged for shapes/ids that don't match. Used as the
+// optimistic updater for mutations below so one patch covers the list, board, and detail caches
+// at once regardless of how each happens to be shaped.
+export function patchEntityInCache<T extends { id: string }>(old: unknown, id: string, patch: Partial<T>): unknown {
+  if (old == null) return old;
+  if (Array.isArray(old)) {
+    return (old as T[]).map((item) => (item?.id === id ? { ...item, ...patch } : item));
+  }
+  if (typeof old === 'object') {
+    const obj = old as Record<string, unknown> & { id?: string; data?: unknown };
+    if (obj.id === id) return { ...obj, ...patch };
+    if (Array.isArray(obj.data)) return { ...obj, data: patchEntityInCache(obj.data, id, patch) };
+  }
+  return old;
+}
+
+type OptimisticUpdate<TVars> = {
+  // Query key prefixes whose matching cached queries should be optimistically patched, e.g.
+  // [['tickets']] matches every ticket list/board/detail query however each is parameterized.
+  keyPrefixes: readonly (readonly unknown[])[];
+  // Given the mutation's vars, returns the updater applied to every matching cached query.
+  apply: (vars: TVars) => (old: unknown) => unknown;
+};
+
+type QueryEntry = readonly [readonly unknown[], unknown]; // [queryKey, cached data]
+type OptimisticContext = { snapshots: (readonly [readonly unknown[], QueryEntry[]])[] } | undefined;
+
 type EntityMutationConfig<TVars, TResult> = {
   mutationFn: (vars: TVars) => Promise<TResult>;
   // Query keys to invalidate on success, e.g. [['tickets'], KEYS.detail(ticketId)].
@@ -26,6 +55,9 @@ type EntityMutationConfig<TVars, TResult> = {
   // null/omitted = no success toast (e.g. checkbox-toggle mutations that should feel instant).
   successMessage?: string | ((result: TResult, vars: TVars) => string) | null;
   errorFallback: string;
+  // Patch the cache immediately, before the server responds, so the UI reflects the change with
+  // no perceptible wait — checkbox toggles, drag-drop status moves, etc. Rolled back on error.
+  optimisticUpdate?: OptimisticUpdate<TVars>;
 };
 
 // The shape behind nearly every ticket/task mutation in this app: run mutationFn, then on
@@ -35,8 +67,20 @@ type EntityMutationConfig<TVars, TResult> = {
 export function useEntityMutation<TVars, TResult>(config: EntityMutationConfig<TVars, TResult>) {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<TResult, unknown, TVars, OptimisticContext>({
     mutationFn: config.mutationFn,
+    onMutate: async (vars) => {
+      const opt = config.optimisticUpdate;
+      if (!opt) return undefined;
+
+      await Promise.all(opt.keyPrefixes.map((key) => queryClient.cancelQueries({ queryKey: key })));
+      const snapshots = opt.keyPrefixes.map(
+        (key) => [key, queryClient.getQueriesData({ queryKey: key })] as const,
+      );
+      const updater = opt.apply(vars);
+      opt.keyPrefixes.forEach((key) => queryClient.setQueriesData({ queryKey: key }, updater));
+      return { snapshots };
+    },
     onSuccess: (result, vars) => {
       const detail = config.setDetailData?.(result, vars);
       if (detail) queryClient.setQueryData(detail.key, detail.data);
@@ -53,6 +97,11 @@ export function useEntityMutation<TVars, TResult>(config: EntityMutationConfig<T
         toast.success(msg);
       }
     },
-    onError: (err) => toast.error(errorMessage(err, config.errorFallback)),
+    onError: (err, _vars, context) => {
+      context?.snapshots.forEach(([, entries]) => {
+        entries.forEach(([entryKey, data]) => queryClient.setQueryData(entryKey, data));
+      });
+      toast.error(errorMessage(err, config.errorFallback));
+    },
   });
 }

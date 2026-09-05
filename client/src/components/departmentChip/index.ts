@@ -1,0 +1,1 @@
+export { DepartmentChip } from './DepartmentChip';

@@ -63,7 +63,7 @@ export const TeamLeaderboardRail = () => {
     <div className="rounded-2xl border border-border bg-surface p-5 flex flex-col gap-1">
       <div className="flex items-center gap-2 mb-2">
         <Trophy size={16} className="text-coral-500" />
-        <h3 className="text-sm font-display font-bold uppercase tracking-wider text-text">Leaderboard</h3>
+        <h3 className="text-sm font-display font-bold tracking-wide text-text">Leaderboard</h3>
       </div>
 
       {leaderboard.length === 0 ? (

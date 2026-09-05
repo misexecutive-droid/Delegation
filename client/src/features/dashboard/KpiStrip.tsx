@@ -1,14 +1,11 @@
 import { useNavigate } from 'react-router';
-import { ClipboardList, ListTodo, TicketCheck, ListChecks } from 'lucide-react';
-import { Skeleton } from '../../components';
-import { StatusBreakdownCard } from './StatusBreakdownCard';
-import { isOverdueTodo } from '../todo/todoQuickFilters';
-import { useMyChecklistInstancesQuery } from '../checklist/hook';
-import { instanceProgressStatus, isInstanceOverdue } from '../checklist/checklistDisplay';
-import { getChecklistProgress } from '../../lib/checklistProgress';
+import { ClipboardList, TicketCheck, ListChecks } from 'lucide-react';
+import { StatusBreakdownCard, type StatusBreakdownVariant } from './StatusBreakdownCard';
+import { AdminChromeAccents } from '../admin/AdminChromeAccents';
+import { Skeleton } from '../../components/skeleton';
+import { useChecklistInstanceSummaryQuery } from '../checklist/hook';
 import type { Task } from '../../api/task';
 import type { Ticket } from '../../api/ticket';
-import type { Todo } from '../../api/todos';
 
 export interface WorkflowStats {
   pending: number;
@@ -20,111 +17,166 @@ export interface WorkflowStats {
 interface KpiStripProps {
   tickets: Ticket[];
   tasks: Task[];
-  todos: Todo[];
   isPending: boolean;
   workflowStats: WorkflowStats;
 }
 
-export const KpiStrip = ({ tickets, todos, isPending, workflowStats }: KpiStripProps) => {
+/**
+ * Mirrors StatusBreakdownCard's real structure — same shell, same header divider, same right-hand
+ * total box — so what loads in looks like what was loading. It takes the same `variant` as the
+ * real card for exactly that reason: with a navy hero followed by two surface cards, a skeleton
+ * row of three identical placeholders would visibly re-colour as the data arrived.
+ *
+ * On the navy shell the shared Skeleton's `bg-surface-active` default is overridden to
+ * `bg-white/10` so the placeholders read against the dark ground.
+ */
+const KpiCardSkeleton = ({ variant }: { variant: StatusBreakdownVariant }) => {
+  const isNavy = variant === 'navy';
+  const block = isNavy ? 'bg-white/10' : '';
+
+  return (
+    <div
+      className={`relative flex flex-col overflow-hidden rounded-2xl border ${
+        isNavy
+          ? 'border-transparent bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700'
+          : 'border-border/60 dark:border-white/[0.06] bg-surface'
+      }`}
+    >
+      {isNavy && <AdminChromeAccents scale="compact" />}
+
+      <div className={`relative z-10 flex items-center gap-2 px-4 py-3.5 border-b ${isNavy ? 'border-white/10' : 'border-border/60'}`}>
+        <Skeleton className={`size-4 rounded shrink-0 ${block}`} />
+        <Skeleton className={`h-4 w-28 rounded-md ${block}`} />
+      </div>
+
+      <div className="relative z-10 flex items-stretch gap-3 p-3">
+        <div className="flex-1 flex flex-col justify-center gap-3 px-1">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex items-center justify-between gap-4">
+              <Skeleton className={`h-3.5 w-20 rounded ${block}`} />
+              <Skeleton className={`h-3.5 w-6 rounded ${block}`} />
+            </div>
+          ))}
+        </div>
+        <div
+          className={`flex flex-col items-center justify-center gap-1.5 w-24 sm:w-28 shrink-0 rounded-xl border ${
+            isNavy ? 'border-white/15 bg-white/5' : 'border-border/60 bg-surface-hover/50'
+          }`}
+        >
+          <Skeleton className={`h-7 w-12 rounded-md ${block}`} />
+          <Skeleton className={`h-3 w-10 rounded ${block}`} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Process & Workflow leads as the navy hero; Tickets and Checklist sit in the page's ordinary card
+ * treatment behind it. Workflow gets the emphasis because it's the broadest of the three (every
+ * delegation, not one queue) and its "Due" figure is the most common reason to open this page.
+ *
+ * Three equal-weight navy slabs gave the row no internal hierarchy and switched the page's visual
+ * language wholesale at the top, so the dashboard opened heavy and then changed character.
+ */
+const CARD_VARIANTS: readonly StatusBreakdownVariant[] = ['navy', 'surface', 'surface'];
+
+export const KpiStrip = ({ tickets, isPending, workflowStats }: KpiStripProps) => {
   const navigate = useNavigate();
-  const { data: checklistInstances = [] } = useMyChecklistInstancesQuery();
+  const { data: checklistSummary } = useChecklistInstanceSummaryQuery({ mine: true });
 
   if (isPending) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-5">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-3 rounded-2xl bg-surface-hover p-5 animate-pulse">
-            <Skeleton className="h-4 w-32 rounded-sm" />
-            <div className="flex gap-4 mt-2">
-              <div className="flex-1 flex flex-col gap-2.5">
-                <Skeleton className="h-4 w-full rounded-sm" />
-                <Skeleton className="h-4 w-full rounded-sm" />
-                <Skeleton className="h-4 w-full rounded-sm" />
-              </div>
-              <Skeleton className="h-20 w-24 rounded-xl shrink-0" />
-            </div>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 md:gap-5">
+        {CARD_VARIANTS.map((variant, i) => (
+          <KpiCardSkeleton key={i} variant={variant} />
         ))}
       </div>
     );
   }
 
-  // Todo: pending = not completed, overdue = has a due date that's passed, completed = done —
-  // same predicates TodoPage/TodoList already use (see todoQuickFilters.ts), so this card's
-  // numbers never drift from what clicking through to /todo actually shows.
-  const pendingTodos = todos.filter(t => !t.completed);
-  const overdueTodos = todos.filter(isOverdueTodo);
-  const completedTodos = todos.filter(t => t.completed);
+  // --- Derived Metrics ---
 
-  // Tickets: OPEN stays its own row, IN_PROGRESS/IN_REVIEW/ON_HOLD fold into one "In Progress"
-  // row (all mid-lifecycle, not yet closed), CLOSED is its own row.
-  const openTickets = tickets.filter(t => t.status === 'OPEN');
-  const inProgressTickets = tickets.filter(t => t.status === 'IN_PROGRESS' || t.status === 'IN_REVIEW' || t.status === 'ON_HOLD');
-  const closedTickets = tickets.filter(t => t.status === 'CLOSED');
+  // Tickets: OPEN/IN_PROGRESS/IN_REVIEW/ON_HOLD map to 'Due'. CLOSED maps to 'Completed'.
+  const dueTickets = tickets.filter(t => t.status !== 'CLOSED');
+  const completedTickets = tickets.filter(t => t.status === 'CLOSED');
 
-  // Checklist: pending/overdue/completed mirror MyChecklists's own grouping logic (done vs total
-  // items per instance), and the compliance % reuses the same getChecklistProgress helper the
-  // instance detail page uses — so this tile's numbers never drift from what /checklists shows.
-  const checklistStatuses = checklistInstances.map(instance => {
-    const done = instance.items.filter(i => i.isDone).length;
-    const status = instanceProgressStatus(done, instance.items.length);
-    const overdue = isInstanceOverdue(instance.periodEnd, status === 'COMPLETED');
-    return { status, overdue };
-  });
-  const overdueChecklists = checklistStatuses.filter(c => c.overdue);
-  const pendingChecklists = checklistStatuses.filter(c => c.status !== 'COMPLETED' && !c.overdue);
-  const completedChecklists = checklistStatuses.filter(c => c.status === 'COMPLETED');
-  const { progress: checklistCompliance } = getChecklistProgress(checklistInstances);
+  // Checklists: counted by the database. This used to download every instance the user has ever
+  // been assigned — items, images, submissions and all — purely to call `.length` on the result,
+  // which is what forced the /mine endpoint to stay unbounded.
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 md:gap-5">
+
+      {/* Workflow Card */}
       <StatusBreakdownCard
+        variant={CARD_VARIANTS[0]}
         icon={ClipboardList}
         title="Process & Workflow"
         total={workflowStats.assigned}
         onOpen={() => navigate('/tasks')}
         rows={[
-          // "Pending" folds todo + in_progress together — no single status filter covers it, so
-          // it deep-links to the plain list instead of a status-scoped one.
-          { label: 'Pending', value: workflowStats.pending, tone: 'warning', onClick: () => navigate('/tasks') },
-          { label: 'Approvals', value: workflowStats.approvals, onClick: () => navigate('/tasks?status=pending_verification') },
-          { label: 'Completed', value: workflowStats.completed, tone: 'success', onClick: () => navigate('/tasks?status=done') },
+          { 
+            label: 'Due', 
+            value: workflowStats.pending + workflowStats.approvals, 
+            tone: 'warning', 
+            onClick: () => navigate('/tasks?quickFilter=pending') 
+          },
+          { 
+            label: 'Completed', 
+            value: workflowStats.completed, 
+            tone: 'success', 
+            onClick: () => navigate('/tasks?status=done') 
+          },
         ]}
       />
+
+      {/* Tickets Card */}
       <StatusBreakdownCard
-        icon={ListTodo}
-        title="Todo"
-        total={todos.length}
-        onOpen={() => navigate('/todo')}
-        rows={[
-          { label: 'Pending', value: pendingTodos.length, tone: 'warning', onClick: () => navigate('/todo') },
-          { label: 'Overdue', value: overdueTodos.length, onClick: () => navigate('/todo') },
-          { label: 'Completed', value: completedTodos.length, tone: 'success', onClick: () => navigate('/todo') },
-        ]}
-      />
-      <StatusBreakdownCard
+        variant={CARD_VARIANTS[1]}
         icon={TicketCheck}
         title="Tickets"
         total={tickets.length}
         onOpen={() => navigate('/tickets')}
         rows={[
-          { label: 'Open', value: openTickets.length, tone: 'warning', onClick: () => navigate('/tickets') },
-          { label: 'In Progress', value: inProgressTickets.length, onClick: () => navigate('/tickets') },
-          { label: 'Closed', value: closedTickets.length, tone: 'success', onClick: () => navigate('/tickets') },
+          { 
+            label: 'Due', 
+            value: dueTickets.length, 
+            tone: 'warning', 
+            onClick: () => navigate('/tickets?quickFilter=pending') 
+          },
+          { 
+            label: 'Completed', 
+            value: completedTickets.length, 
+            tone: 'success', 
+            onClick: () => navigate('/tickets?quickFilter=completed') 
+          },
         ]}
       />
+
+      {/* Checklist Card */}
       <StatusBreakdownCard
+        variant={CARD_VARIANTS[2]}
         icon={ListChecks}
         title="Checklist"
-        total={checklistCompliance ?? 0}
-        totalLabel="Compliance %"
+        total={checklistSummary?.total ?? 0}
         onOpen={() => navigate('/checklists')}
         rows={[
-          { label: 'Pending', value: pendingChecklists.length, tone: 'warning', onClick: () => navigate('/checklists') },
-          { label: 'Overdue', value: overdueChecklists.length, onClick: () => navigate('/checklists') },
-          { label: 'Completed', value: completedChecklists.length, tone: 'success', onClick: () => navigate('/checklists') },
+          { 
+            label: 'Due', 
+            value: checklistSummary?.pending ?? 0, 
+            tone: 'warning', 
+            onClick: () => navigate('/checklists?status=due') 
+          },
+          { 
+            label: 'Completed', 
+            value: checklistSummary?.completed ?? 0, 
+            tone: 'success', 
+            onClick: () => navigate('/checklists?status=completed') 
+          },
         ]}
       />
+      
     </div>
   );
 };

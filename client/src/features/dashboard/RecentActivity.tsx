@@ -1,9 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { Ticket as TicketIcon, CheckSquare, Clock, Activity, Search, ArrowUpDown } from 'lucide-react';
+import {
+  Ticket as TicketIcon,
+  CheckSquare,
+  CircleDot,
+  Eye,
+  PauseCircle,
+  CheckCircle2,
+  Clock,
+  Activity,
+  Search,
+  ArrowUpDown,
+  ChevronRight,
+  type LucideIcon,
+  Sparkles
+} from 'lucide-react';
 import { Skeleton, PageNav } from '../../components';
-import { TASK_STATUS_COLORS, type FeedItem } from './dashboardDisplay';
-import { STATUS_LABEL } from '../tasks/taskDisplay';
+import { formatRelativeTime, type FeedItem } from './dashboardDisplay';
+import { STATUS_ICON as TASK_STATUS_ICON, STATUS_CONFIG as TASK_STATUS_CONFIG } from '../tasks/taskDisplay';
 import { STATUS_CONFIG as TICKET_STATUS_CONFIG } from '../tickets/ticketDisplay';
 import type { TicketStatus } from '../../api/ticket';
 import type { Task } from '../../api/task';
@@ -16,18 +30,91 @@ interface RecentActivityProps {
 type SortOrder = 'newest' | 'oldest';
 
 const PAGE_SIZE = 5;
+const FRESH_WINDOW_MS = 5 * 60_000;
 
-// A searchable, sortable table over the same recent feed — same idea as a "Recent orders" panel,
-// scoped to whatever `feed` HomePage hands it (its most recent handful of tickets/tasks, not the
-// full history), so search/sort here narrows down that window rather than the whole account.
+/**
+ * How many items HomePage should hand this card. Lives here, next to `PAGE_SIZE`, because the two
+ * have to divide sensibly — the feed used to be capped at 6 against a page size of 5, so page two
+ * always held exactly one row.
+ */
+export const RECENT_ACTIVITY_FEED_SIZE = 25;
+
+/**
+ * This card shows relative times ("3m ago") and a "fresh" ping on anything under 5 minutes old,
+ * and neither used to advance on a dashboard left open — the normal case for this page. `isFresh`
+ * was measured against a single mount-time `Date.now()`, so the ping never stopped pulsing;
+ * `formatRelativeTime` reads the clock itself but nothing was triggering a re-render, so it sat at
+ * whatever it said on arrival. One low-frequency tick fixes both without being chatty.
+ */
+const CLOCK_REFRESH_MS = 30_000;
+
+// Tickets don't have a taskDisplay-style STATUS_ICON map of their own — built here from the same
+// dot-color semantics STATUS_CONFIG already assigns per status, so a ticket's icon tone always
+// agrees with its status pill instead of a flat "all tickets are primary-colored" icon.
+const TICKET_STATUS_ICON: Record<TicketStatus, ReactNode> = {
+  OPEN: <CircleDot size={16} className="text-text-muted shrink-0" strokeWidth={2.5} />,
+  IN_PROGRESS: <Clock size={16} className="text-warning shrink-0" strokeWidth={2.5} />,
+  IN_REVIEW: <Eye size={16} className="text-primary-600 dark:text-primary-400 shrink-0" strokeWidth={2.5} />,
+  CLOSED: <CheckCircle2 size={16} className="text-success shrink-0" strokeWidth={2.5} />,
+  ON_HOLD: <PauseCircle size={16} className="text-text-muted shrink-0" strokeWidth={2.5} />,
+};
+
+const TICKET_ICON_TONE: Record<TicketStatus, string> = {
+  OPEN: 'bg-surface-hover border-border/50',
+  IN_PROGRESS: 'bg-warning/10 border-warning/20',
+  IN_REVIEW: 'bg-primary-500/10 border-primary-500/20',
+  CLOSED: 'bg-success/10 border-success/20',
+  ON_HOLD: 'bg-surface-hover border-border/40',
+};
+
+// taskDisplay's STATUS_CONFIG only exposes a translucent `indicator` (meant for board-card dots);
+// the status pill's glow dot below wants the solid tone, matching TICKET_STATUS_CONFIG's `dot`.
+const TASK_DOT: Record<Task['status'], string> = {
+  todo: 'bg-status-todo',
+  in_progress: 'bg-status-progress',
+  pending_verification: 'bg-status-verify',
+  done: 'bg-status-done',
+};
+
+/**
+ * "Nothing here at all" and "nothing matched your search" were two near-identical blocks differing
+ * only in copy, icon and one decorative glow. `tinted` marks the encouraging case (an empty feed is
+ * a prompt to create something); a fruitless search gets the plainer treatment.
+ */
+const ActivityEmptyState = ({
+  icon: Icon,
+  title,
+  detail,
+  tinted,
+}: {
+  icon: LucideIcon;
+  title: string;
+  detail: ReactNode;
+  tinted: boolean;
+}) => (
+  <div className="flex flex-col items-center justify-center flex-1 py-12 text-center gap-4 animate-in fade-in duration-500">
+    <div className="relative p-4 rounded-2xl bg-surface-hover border border-border/50">
+      {tinted && <div className="absolute inset-0 bg-primary-500/10 blur-xl rounded-full" />}
+      <Icon size={24} className={`relative z-10 ${tinted ? 'text-primary-500/70' : 'text-text-muted/50'}`} />
+    </div>
+    <div className="flex flex-col gap-1">
+      <p className="text-sm font-display font-semibold text-text">{title}</p>
+      <p className="text-xs font-medium text-text-muted max-w-[220px] mx-auto">{detail}</p>
+    </div>
+  </div>
+);
+
 export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortOrder>('newest');
   const [page, setPage] = useState(1);
-  // Tracks the search/sort combo the current `page` was set for — adjusted during render
-  // (React's recommended alternative to a setState-in-effect) so that narrowing the results
-  // to a shorter list always snaps back to page 1 instead of pointing past the end.
   const [pagedFor, setPagedFor] = useState({ query, sort });
+
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), CLOCK_REFRESH_MS);
+    return () => clearInterval(id);
+  }, []);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -47,134 +134,185 @@ export const RecentActivity = ({ feed, isPending }: RecentActivityProps) => {
   const paged = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div id="recent-activity" className="relative group rounded-xl border border-border/60 bg-surface flex flex-col hover:border-primary-300 transition-colors duration-300 overflow-hidden">
-      {/* Decorative Background Glow */}
-      <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none transition-opacity group-hover:opacity-100 opacity-50" />
+    // Opaque `bg-surface` and the same `dark:border-white/[0.06]` every other card uses — this was
+    // one of three different card backgrounds in play on one page (bg-surface, bg-surface/80,
+    // none), and one of three cards missing the dark-mode border override, so in dark mode
+    // adjacent cards drew visibly different border weights. The ambient glows below are children,
+    // so they still read through on top of the opaque surface.
+    <section id="recent-activity" aria-labelledby="recent-activity-heading" className="relative group rounded-2xl border border-border/60 dark:border-white/[0.06] bg-surface flex flex-col hover:border-primary-500/30 transition-colors duration-500 overflow-hidden">
+      
+      {/* Ambient Decorative Glows */}
+      <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary-500/10 rounded-full blur-[80px] pointer-events-none transition-opacity duration-700 opacity-40 group-hover:opacity-100" />
+      <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-primary-400/5 rounded-full blur-[80px] pointer-events-none transition-opacity duration-700 opacity-40 group-hover:opacity-100" />
 
       {/* Header */}
-      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-5 border-b border-border/40 bg-surface/50 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-800/50 text-primary-600 dark:text-primary-400 shadow-sm flex items-center justify-center">
-            <Activity size={18} strokeWidth={2.5} />
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 sm:px-5 py-4 border-b border-border/40 bg-surface/50 backdrop-blur-xl">
+        <div className="flex items-center gap-3.5">
+          <div className="relative flex items-center justify-center size-10 rounded-xl bg-primary-500/10 border border-primary-500/20 text-primary-600 dark:text-primary-400 shadow-inner">
+            <div className="absolute inset-0 rounded-xl bg-primary-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <Activity size={18} strokeWidth={2.5} className="relative z-10" />
           </div>
           <div>
-            <h2 className="text-lg font-display font-bold text-text tracking-tight">Recent Activity</h2>
-            <p className="text-xs font-display text-text-muted mt-0.5">Latest updates on tickets and tasks</p>
+            <h2 id="recent-activity-heading" className="text-base sm:text-lg font-display font-bold text-text tracking-tight flex items-center gap-2">
+              Recent Activity
+            </h2>
+            <p className="text-[11px] sm:text-xs font-medium text-text-muted mt-0.5">
+              Latest updates on tickets and delegations
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+          <div className="relative group/search">
+            <label htmlFor="recent-activity-search" className="sr-only">Search activity</label>
+            <Search size={14} aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within/search:text-primary-500" />
             <input
+              id="recent-activity-search"
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search…"
-              className="h-8 w-28 sm:w-40 pl-7 pr-2.5 rounded-lg border border-border/60 bg-surface-hover/60 text-xs text-text placeholder:text-text-muted/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 focus:bg-surface"
+              placeholder="Search activity..."
+              className="h-9 w-32 sm:w-48 pl-8 pr-3 rounded-xl border border-border/60 bg-surface-hover/50 text-xs font-medium text-text placeholder:text-text-muted/70 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 focus:bg-surface focus:w-40 sm:focus:w-56"
             />
           </div>
           <button
             type="button"
             onClick={() => setSort((s) => (s === 'newest' ? 'oldest' : 'newest'))}
             title="Toggle sort order"
-            className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border/60 bg-surface hover:bg-surface-hover text-xs font-display font-medium text-text-secondary transition-colors cursor-pointer"
+            aria-label={`Sort by ${sort === 'newest' ? 'oldest' : 'newest'} first`}
+            className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl border border-border/60 bg-surface-hover/50 hover:bg-surface-hover hover:border-border text-xs font-display font-semibold text-text-secondary transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
           >
-            <ArrowUpDown size={12} />
+            <ArrowUpDown size={14} aria-hidden="true" className="text-text-muted" />
             <span className="hidden sm:inline">{sort === 'newest' ? 'Newest' : 'Oldest'}</span>
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="relative z-10 overflow-x-auto">
+      {/* List Content */}
+      <div className="relative z-10 flex flex-col min-h-[280px]">
         {isPending ? (
-          <div className="flex flex-col gap-1 p-2">
+          <div className="flex flex-col divide-y divide-border/30">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 px-4 py-3 rounded-lg">
-                <Skeleton className="size-8 rounded-lg shrink-0" />
-                <div className="flex flex-col gap-2 flex-1">
-                  <Skeleton className="h-4 w-3/4 max-w-sm rounded" />
+              <div key={i} className="flex items-center justify-between px-4 sm:px-5 py-4">
+                <div className="flex items-center gap-4 w-full">
+                  <Skeleton className="size-10 rounded-xl shrink-0 opacity-70" />
+                  <div className="flex flex-col gap-2 w-full max-w-sm">
+                    <Skeleton className="h-4 w-3/4 rounded" />
+                    <Skeleton className="h-3 w-1/3 rounded opacity-60" />
+                  </div>
                 </div>
                 <Skeleton className="h-6 w-20 rounded-full shrink-0" />
               </div>
             ))}
           </div>
         ) : feed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
-            <div className="p-3 rounded-full bg-surface-hover border border-border/50">
-              <Clock size={20} className="text-text-muted" />
-            </div>
-            <p className="text-sm font-display text-text-muted font-medium">Nothing here yet — create a ticket or task to get started.</p>
-          </div>
+          <ActivityEmptyState
+            icon={Sparkles}
+            tinted
+            title="Quiet around here"
+            detail="Create a ticket or delegation to start seeing activity."
+          />
         ) : visible.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
-            <div className="p-3 rounded-full bg-surface-hover border border-border/50">
-              <Search size={20} className="text-text-muted" />
-            </div>
-            <p className="text-sm font-display text-text-muted font-medium">No matches for "{query}".</p>
-          </div>
+          <ActivityEmptyState
+            icon={Search}
+            tinted={false}
+            title="No matches found"
+            detail={<>Nothing here matches &ldquo;{query}&rdquo;.</>}
+          />
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/40">
-                <th className="text-left font-display text-[11px] font-medium capitalize tracking-wide text-text-muted px-4 py-2.5">Item</th>
-                <th className="text-left font-display text-[11px] font-medium capitalize tracking-wide text-text-muted px-4 py-2.5 hidden sm:table-cell">Type</th>
-                <th className="text-left font-display text-[11px] font-medium capitalize tracking-wide text-text-muted px-4 py-2.5">Status</th>
-                <th className="text-right font-display text-[11px] font-medium capitalize tracking-wide text-text-muted px-4 py-2.5">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {paged.map((item) => (
-                <tr key={`${item.kind}-${item.id}`} className="group/row hover:bg-surface-hover/60 transition-colors">
-                  <td className="px-4 py-3">
-                    <Link to={item.kind === 'ticket' ? '/tickets' : '/tasks'} className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={`flex items-center justify-center size-8 rounded-lg shrink-0 transition-colors ${
-                          item.kind === 'ticket'
-                            ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 group-hover/row:bg-primary-500/15'
-                            : 'bg-warning/10 text-warning group-hover/row:bg-warning/15'
-                        }`}
-                      >
-                        {item.kind === 'ticket' ? <TicketIcon size={14} /> : <CheckSquare size={14} />}
+          <div className="flex flex-col divide-y divide-border/40">
+            {paged.map((item) => {
+              const isTicket = item.kind === 'ticket';
+              const isFresh = now - new Date(item.createdAt).getTime() < FRESH_WINDOW_MS;
+              const KindIcon = isTicket ? TicketIcon : CheckSquare;
+              const statusIcon = isTicket ? TICKET_STATUS_ICON[item.status as TicketStatus] : TASK_STATUS_ICON[item.status as Task['status']];
+              const iconToneClass = isTicket ? TICKET_ICON_TONE[item.status as TicketStatus] : TASK_STATUS_CONFIG[item.status as Task['status']].badge;
+              const pillClassName = isTicket ? TICKET_STATUS_CONFIG[item.status as TicketStatus].className : TASK_STATUS_CONFIG[item.status as Task['status']].badge;
+              const pillLabel = isTicket ? TICKET_STATUS_CONFIG[item.status as TicketStatus].label : TASK_STATUS_CONFIG[item.status as Task['status']].label;
+              // Same glowing-dot treatment already used for ticket board column headers — a soft
+              // blurred halo behind a solid dot reads as a deliberate status indicator instead of
+              // a flat tinted pill, which is what made "Pending Verification" look washed out.
+              const dotClassName = isTicket ? TICKET_STATUS_CONFIG[item.status as TicketStatus].dot : TASK_DOT[item.status as Task['status']];
+
+              return (
+                <Link
+                  key={`${item.kind}-${item.id}`}
+                  // `?open=<id>` opens this exact item's detail sheet. These rows used to link to
+                  // the bare list page, so clicking a named item dropped you on an unfiltered
+                  // table to go find the thing you'd just clicked.
+                  to={isTicket ? `/tickets?open=${item.id}` : `/tasks?open=${item.id}`}
+                  aria-label={`${item.title} — ${isTicket ? 'ticket' : 'delegation'}, ${pillLabel}, ${formatRelativeTime(item.createdAt)}`}
+                  className="group/row flex items-center justify-between px-4 sm:px-5 py-3.5 hover:bg-surface-hover/80 transition-all duration-300 relative overflow-hidden focus:outline-none focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500/40"
+                >
+                  {/* Animated Left Accent Line */}
+                  <div aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500 transform -translate-x-full group-hover/row:translate-x-0 transition-transform duration-300 ease-out" />
+
+                  <div className="flex items-center gap-4 min-w-0">
+                    {/* Icon reflects the item's actual status, not just its kind, so color carries real meaning.
+                        Decorative: the status pill on the right already states the same status as text. */}
+                    <div aria-hidden="true" className={`relative flex items-center justify-center size-10 rounded-xl shrink-0 border transition-colors duration-300 ${iconToneClass}`}>
+                      {statusIcon}
+                      {isFresh && (
+                        <span className="absolute -top-1 -right-1 flex size-2.5">
+                          <span className="absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full bg-primary-500 opacity-75" />
+                          <span className="relative inline-flex size-2.5 rounded-full bg-primary-500 ring-2 ring-surface" />
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Title & Metadata */}
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <span className="text-[13px] font-display font-bold text-text truncate group-hover/row:text-primary-600 dark:group-hover/row:text-primary-400 transition-colors duration-200">
+                        {item.title}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
+                        <KindIcon size={10} aria-hidden="true" className="shrink-0" />
+                        {/* "Delegation", not "Task" — that's what a task is called everywhere else
+                            in the app (Delegation Score, the activity category filter, the nav). */}
+                        <span>{isTicket ? 'Ticket' : 'Delegation'}</span>
+                        <span className="size-1 rounded-full bg-border shrink-0" />
+                        <span className="tabular-nums">{formatRelativeTime(item.createdAt)}</span>
                       </div>
-                      <span className="font-display font-medium text-text truncate">{item.title}</span>
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="text-xs font-display font-medium text-text-muted">
-                      {item.kind === 'ticket' ? 'Ticket' : 'Delegation'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
+                    </div>
+                  </div>
+
+                  {/* Status Badge & Chevron */}
+                  <div className="flex items-center gap-4 shrink-0 ml-4">
                     <span
-                      className={`inline-flex items-center justify-center text-[11px] font-display font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
-                        item.kind === 'ticket'
-                          ? TICKET_STATUS_CONFIG[item.status as TicketStatus].className
-                          : TASK_STATUS_COLORS[item.status as Task['status']]
-                      }`}
+                      className={`inline-flex items-center gap-1.5 justify-center text-[10px] sm:text-[11px] font-display font-bold px-2.5 py-1 rounded-full whitespace-nowrap ring-1 ring-inset ${pillClassName}`}
                     >
-                      {item.kind === 'ticket' ? TICKET_STATUS_CONFIG[item.status as TicketStatus].label : STATUS_LABEL[item.status as Task['status']]}
+                      <span className="relative flex items-center justify-center size-1.5 shrink-0">
+                        <span className={`absolute inset-0 rounded-full blur-[3px] opacity-70 ${dotClassName}`} />
+                        <span className={`relative size-1.5 rounded-full ${dotClassName}`} />
+                      </span>
+                      {pillLabel}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="text-xs text-text-muted font-display font-medium whitespace-nowrap">
-                      {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+                    {/* Sliding Chevron (Desktop only to prevent mobile clutter) */}
+                    <ChevronRight
+                      size={16}
+                      aria-hidden="true"
+                      className="hidden sm:block text-text-muted/40 transform -translate-x-2 opacity-0 group-hover/row:translate-x-0 group-hover/row:opacity-100 group-hover/row:text-primary-500 transition-all duration-300"
+                    />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         )}
       </div>
 
       {/* Pagination Footer */}
       {!isPending && visible.length > 0 && totalPages > 1 && (
-        <div className="relative z-10 px-4 py-3 border-t border-border/40">
-          <PageNav page={page} totalPages={totalPages} onPageChange={setPage} />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-3 border-t border-border/50 bg-surface/50 backdrop-blur-sm">
+          <span className="text-[11px] font-medium text-text-muted tabular-nums order-2 sm:order-1">
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, visible.length)} of {visible.length}
+          </span>
+          <div className="order-1 sm:order-2">
+            <PageNav page={page} totalPages={totalPages} onPageChange={setPage} />
+          </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };

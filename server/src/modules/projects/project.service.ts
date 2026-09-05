@@ -5,6 +5,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { AppError } from "../../utils/AppError.js" // consistent error helper (404, 403, etc.)
 import type { AccessTokenPayload } from "../../middleware/auth/auth.js" // decoded JWT info: who's calling, and their role
 import type { CreateProjectInput, UpdateProjectInput } from "./project.validation.js" // typed input shapes from the zod schemas
+import { auditService } from "../audit/audit.service.js";
 
 type ProjectRow = typeof projects.$inferSelect;
 
@@ -101,6 +102,7 @@ export const projectService = {
 
         const project = await getRawById(id);
         const [mapped] = await attachMemberIds([project!]);
+        await auditService.record({ entityType: "Project", entityId: id, action: "CREATE", actorId: user.sub, after: mapped });
         return mapped;
     },
 
@@ -135,6 +137,7 @@ export const projectService = {
 
         const updated = await getRawById(id);
         const [mapped] = await attachMemberIds([updated!]);
+        await auditService.record({ entityType: "Project", entityId: id, action: "UPDATE", actorId: user.sub, after: mapped });
         return mapped;
     },
 
@@ -149,6 +152,7 @@ export const projectService = {
         // ProjectMember.projectId has onDelete: 'cascade', so junction rows are removed
         // automatically along with the project row.
         await db.delete(projects).where(eq(projects.id, id));
+        await auditService.record({ entityType: "Project", entityId: id, action: "DELETE", actorId: user.sub, before: mapped });
         return mapped
         // note: the project is returned here *after* being deleted from the DB - the in-memory object is still valid to read from, it's just no longer in the DB
     }

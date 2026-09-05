@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { ShieldCheck, ShieldX, Loader2 } from 'lucide-react';
 import { Button } from '../../../components';
+import { useVerifyDecision } from '../../../lib/useVerifyDecision';
 
 interface TicketVerificationActionsProps {
   isPending: boolean;
@@ -8,57 +8,61 @@ interface TicketVerificationActionsProps {
   onReject: (note: string) => void;
 }
 
-// PC/Admin verification actions — only shown while the ticket is awaiting review.
 export const TicketVerificationActions = ({ isPending, onApprove, onReject }: TicketVerificationActionsProps) => {
-  const [showRejectBox, setShowRejectBox] = useState(false);
-  const [rejectNote, setRejectNote] = useState('');
+  // Shared with TaskVerifyActions — same two-phase flow and same "a reason is required" rule.
+  // This component's markup and props are unchanged; only the state lives elsewhere now.
+  const { isRejecting, note, setNote, startReject, cancelReject, trimmedNote, canSubmitReject } = useVerifyDecision();
 
   return (
-    <div className="px-4 pt-3 pb-1 border-t border-border/40 bg-surface/50 flex flex-col gap-2">
-      {!showRejectBox ? (
-        <div className="flex items-center gap-2">
+    <div className="px-6 py-5 border-t border-border bg-surface-hover/80 backdrop-blur-md flex flex-col gap-3 font-sans">
+      {!isRejecting ? (
+        <div className="flex items-center gap-3">
           <Button
-            size="sm"
             variant="primary"
-            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 font-display text-xs"
+            className="flex-1 gap-2 bg-success hover:bg-success/90 text-white font-bold shadow-md shadow-success/20 py-2.5 rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-success focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95"
             isLoading={isPending}
             onClick={onApprove}
           >
-            <ShieldCheck size={13} />
+            <ShieldCheck size={18} strokeWidth={2.5} />
             Verify & Close
           </Button>
+          
           <Button
-            size="sm"
             variant="outline"
-            className="gap-1.5 border-rose-500/40 text-rose-500 hover:bg-rose-500/10 font-display text-xs"
+            className="flex-1 gap-2 border-danger/30 text-danger bg-surface hover:bg-danger/10 font-bold shadow-sm py-2.5 rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95"
             disabled={isPending}
-            onClick={() => setShowRejectBox(true)}
+            onClick={startReject}
           >
-            <ShieldX size={13} />
+            <ShieldX size={18} strokeWidth={2.5} />
             Reject
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <textarea
             autoFocus
-            value={rejectNote}
-            onChange={e => setRejectNote(e.target.value)}
+            value={note}
+            onChange={e => setNote(e.target.value)}
             placeholder="What needs to be fixed before this can be approved?"
-            rows={2}
-            className="w-full px-3 py-2 text-xs font-display bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500/50"
+            rows={3}
+            className="w-full px-4 py-3 text-sm font-medium text-text bg-surface border border-border rounded-xl shadow-inner focus:outline-none focus:ring-2 focus:ring-danger/40 focus:border-danger placeholder:text-text-light transition-all resize-none"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
-              size="sm"
               variant="primary"
-              className="bg-rose-600 hover:bg-rose-700 font-display text-xs"
-              disabled={isPending || !rejectNote.trim()}
-              onClick={() => onReject(rejectNote.trim())}
+              className="flex-1 bg-danger hover:bg-danger/90 text-white font-bold shadow-md shadow-danger/20 py-2.5 rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isPending || !canSubmitReject}
+              onClick={() => onReject(trimmedNote)}
             >
-              {isPending ? <Loader2 size={13} className="animate-spin" /> : 'Send back'}
+              {isPending ? <Loader2 size={18} className="animate-spin" /> : 'Send back'}
             </Button>
-            <Button size="sm" variant="outline" className="font-display text-xs" disabled={isPending} onClick={() => { setShowRejectBox(false); setRejectNote(''); }}>
+            
+            <Button 
+              variant="outline" 
+              className="flex-1 py-2.5 rounded-xl font-bold border-border text-text-secondary bg-surface hover:bg-surface-hover shadow-sm transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95"
+              disabled={isPending} 
+              onClick={cancelReject}
+            >
               Cancel
             </Button>
           </div>

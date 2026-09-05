@@ -23,6 +23,9 @@ const envSchema = z.object({
     CLUSTER_WORKERS: z.coerce.number().optional(),
 
     CHECKLIST_TIMEZONE_OFFSET_MINUTES: z.coerce.number().default(330),
+    // Days of audit history to keep. 0 disables the retention sweep entirely, which is what
+    // anyone with a "retain indefinitely" compliance requirement should set.
+    AUDIT_RETENTION_DAYS: z.coerce.number().min(0).default(365),
 
     JWT_ACCESS_SECRET: z.string().min(10),
     JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),

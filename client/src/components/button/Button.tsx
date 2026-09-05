@@ -57,8 +57,9 @@ export function Button({
         // Smooth transitions and micro-interactions
         'transition-all duration-200 ease-in-out cursor-pointer select-none',
         'active:scale-[0.98]',
-        // Universal accessibility focus rings
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+        // Universal accessibility focus rings — ring-offset-background (not the Tailwind
+        // default white) so the offset gap reads correctly in dark mode too.
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         // Rock-solid disabled states based on your color scheme
         'disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 disabled:shadow-none',
         sizeMap[size],

@@ -42,8 +42,8 @@ function DialogOverlay({
         // spawned from *inside* a dialog (e.g. an assignee picker in a form modal) rather than a
         // competing full-screen surface, and being portalled to document.body as siblings of the
         // dialog, they need a higher z-index of their own to render on top of it, not beneath it.
-        "fixed inset-0 z-[70] bg-slate-900/20 backdrop-blur-sm",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-400 data-[state=closed]:duration-200",
+        "fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-200 data-[state=closed]:duration-150",
         className,
       )}
       {...props}
@@ -65,10 +65,10 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed z-[70] grid w-full gap-5 bg-surface text-text p-6 sm:p-7 shadow-2xl border border-border outline-none max-h-[90vh] overflow-y-auto custom-scrollbar",
+          "fixed z-[70] grid w-full gap-5 bg-surface text-text p-6 sm:p-7 shadow-2xl border border-border outline-none max-h-[90vh] overflow-y-auto no-scrollbar",
           
           // Buttery smooth entry/exit physics
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-400 data-[state=closed]:duration-200 data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-200 data-[state=closed]:duration-150 data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]",
           
           // Mobile: bottom sheet, pinned edge-to-edge
           "bottom-0 left-0 right-0 top-auto max-w-full translate-x-0 translate-y-0 rounded-t-[2rem] rounded-b-none pb-[max(1.5rem,env(safe-area-inset-bottom))]",
@@ -86,9 +86,14 @@ function DialogContent({
           <DialogPrimitive.Close
             data-slot="dialog-close"
             className={cn(
-              "absolute top-5 right-5 flex items-center justify-center size-8 rounded-full text-text-light z-10 cursor-pointer transition-all duration-200",
+              // Matches SheetClose's accessible sizing/contrast: size-10 clears the 44px
+              // touch-target guideline better than the old size-8, text-text-muted has real
+              // contrast against the background (text-text-light read as barely-there), and
+              // a visible ring-primary-500 focus ring replaces the old ring-surface-hover, which
+              // was nearly the same color as the button's own hover background.
+              "absolute top-4 right-4 flex items-center justify-center size-10 rounded-full text-text-muted z-10 cursor-pointer transition-all duration-200",
               "hover:text-text hover:bg-surface-hover",
-              "focus:outline-none focus:ring-4 focus:ring-surface-hover",
+              "outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40",
               "active:scale-90 disabled:pointer-events-none"
             )}
           >

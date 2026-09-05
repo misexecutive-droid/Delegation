@@ -35,8 +35,6 @@ export const AnalyticsSummaryStrip = ({ groupBy, from, to }: AnalyticsSummaryStr
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-      {/* Leads the row as the highlighted "hero" tile — the single most central org-wide metric —
-          same convention as the dashboard's own KpiStrip.tsx. */}
       <StatCard
         icon={ShieldCheck}
         label="On-time completion"
@@ -54,14 +52,17 @@ export const AnalyticsSummaryStrip = ({ groupBy, from, to }: AnalyticsSummaryStr
       />
       <StatCard
         icon={AlertTriangle}
-        iconTint="text-amber-600 dark:text-amber-400"
+        iconTint="text-warning"
         label="Overdue"
         value={overdue.value ?? '—'}
         trend={overdue.trend}
+        // A rising overdue count is bad news — without this the trend badge coloured a growing
+        // backlog green and pointed the arrow up as if it were an improvement.
+        lowerIsBetter
       />
       <StatCard
         icon={Camera}
-        iconTint="text-emerald-600 dark:text-emerald-400"
+        iconTint="text-success"
         label="Proof compliance"
         value={proofCompliance != null ? `${proofCompliance}%` : '—'}
         trend={proofTrend}

@@ -1,6 +1,5 @@
 import { Sparkles, ArrowDownToLine, Info } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { SELECT_TRIGGER_CLASS } from './formConstants';
 import type { ChecklistTemplate } from '../../../../api/checklistTemplates';
 

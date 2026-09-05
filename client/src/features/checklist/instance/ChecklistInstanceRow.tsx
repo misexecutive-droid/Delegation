@@ -1,18 +1,27 @@
 import { Link } from 'react-router';
-import { Check, Circle, ClipboardList, Clock } from 'lucide-react';
+import { Check, Circle, ClipboardList } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { StatusChip } from '@/components/statusChip';
 import {
   formatDate,
   instanceProgressStatus,
   VERIFICATION_STATUS_LABEL,
-  VERIFICATION_STATUS_STYLE,
-  rateToneClass,
   isInstanceOverdue,
 } from '../checklistDisplay';
-import type { ChecklistInstance } from '../../../api/checklistInstances';
+import type { ChecklistInstance, ChecklistVerificationStatus } from '../../../api/checklistInstances';
 
 interface ChecklistInstanceRowProps {
   instance: ChecklistInstance;
 }
+
+// Row-local mapping from the verification workflow status to a Badge tone — same status concept
+// previously rendered via VERIFICATION_STATUS_STYLE's hand-rolled border/bg classes.
+const VERIFICATION_BADGE_VARIANT: Record<ChecklistVerificationStatus, 'neutral' | 'warning' | 'success' | 'destructive'> = {
+  NOT_SUBMITTED: 'neutral',
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'destructive',
+};
 
 // One row in ChecklistDefinitionDetail's Todo/In-progress/Completed grouped instance list — the
 // row-view sibling of ChecklistInstanceCard (used by MyChecklists' grid instead).
@@ -29,13 +38,13 @@ export const ChecklistInstanceRow = ({ instance }: ChecklistInstanceRowProps) =>
       className="flex items-center gap-3 px-4 py-3.5 rounded-lg border border-border bg-surface hover:border-border-hover transition-colors duration-200"
     >
       {status === 'COMPLETED' ? (
-        <span className="flex items-center justify-center size-5 rounded-full bg-emerald-500 text-white shrink-0">
+        <span className="flex items-center justify-center size-5 rounded-full bg-success text-white shrink-0">
           <Check size={12} strokeWidth={3} />
         </span>
       ) : (
         <Circle
           size={20}
-          className={`shrink-0 ${status === 'IN_PROGRESS' ? 'text-amber-500' : 'text-text-light'}`}
+          className={`shrink-0 ${status === 'IN_PROGRESS' ? 'text-warning' : 'text-text-light'}`}
         />
       )}
 
@@ -47,19 +56,13 @@ export const ChecklistInstanceRow = ({ instance }: ChecklistInstanceRowProps) =>
           <span className="flex items-center gap-1 text-xs text-text-muted font-display">
             <ClipboardList size={11} /> {done}/{total}
           </span>
-          <span className={`text-xs font-display font-medium ${rateToneClass(progress)}`}>
-            Mark {progress}%
-          </span>
-          <span
-            className={`text-xs font-display font-medium px-2 py-0.5 rounded-full border ${VERIFICATION_STATUS_STYLE[instance.verificationStatus]}`}
-          >
+          <Badge variant={status === 'COMPLETED' ? 'success' : 'warning'}>
+            {status === 'COMPLETED' ? 'Done' : `Mark ${progress}%`}
+          </Badge>
+          <Badge variant={VERIFICATION_BADGE_VARIANT[instance.verificationStatus]}>
             {VERIFICATION_STATUS_LABEL[instance.verificationStatus]}
-          </span>
-          {overdue && (
-            <span className="flex items-center gap-1 text-xs font-display font-medium px-2 py-0.5 rounded-full bg-danger/10 text-danger">
-              <Clock size={11} /> Overdue
-            </span>
-          )}
+          </Badge>
+          {overdue && <StatusChip status="overdue" />}
         </div>
       </div>
 

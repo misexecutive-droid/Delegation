@@ -115,9 +115,9 @@ export function TimePicker({
         onClick={toggleOpen}
         aria-expanded={open}
         className={cn(
-          'flex items-center gap-2 w-full h-10 px-3 rounded-md border bg-surface text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-400',
-          'disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border',
-          open ? 'border-primary-500' : 'border-border hover:border-primary-400',
+          'flex items-center gap-2.5 w-full h-11 px-4 rounded-xl border bg-surface text-sm transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30',
+          'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-surface-hover',
+          open ? 'border-primary-500' : 'border-border hover:border-border-hover',
           triggerClassName,
         )}
       >
@@ -130,7 +130,7 @@ export function TimePicker({
             role="button"
             tabIndex={0}
             aria-label="Clear time"
-            className="ml-auto text-text-light hover:text-danger transition-colors shrink-0"
+            className="ml-auto p-1.5 text-text-light bg-surface-hover hover:bg-danger/10 hover:text-danger rounded-full transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
             onClick={(e) => {
               e.stopPropagation();
               onChange('');

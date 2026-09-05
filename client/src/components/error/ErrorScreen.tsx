@@ -22,7 +22,7 @@ export const ErrorScreen = ({ code, title, message, onRetry }: ErrorScreenProps)
   return (
     <div
       className="flex min-h-svh items-center justify-center p-4 relative overflow-hidden isolate"
-      style={{ background: 'var(--bg-body)' }}
+      style={{ background: 'var(--color-background)' }}
     >
       <OrbitDecoration corner="top-left" tone={tone === 'danger' ? 'coral' : 'primary'} className="opacity-70" />
       <OrbitDecoration corner="bottom-right" tone="primary" className="opacity-70" />

@@ -70,11 +70,11 @@ export const ChecklistDefinitionCard = ({ definition }: ChecklistDefinitionCardP
   return (
     <Link
       to={`/admin/scheduled-checklists/${definition.id}`}
-      className="flex flex-col gap-4 p-5 rounded-2xl border border-border bg-surface shadow-sm hover:shadow-md hover:border-border-hover transition-all duration-200"
+      className="flex flex-col gap-4 p-5 rounded-lg border border-border bg-surface hover:border-border-hover transition-all duration-200"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center justify-center text-coral-600 dark:text-coral-400 shrink-0">
-          <Icon size={18} />
+        <div className="flex items-center justify-center size-10 rounded-lg border bg-coral-50 dark:bg-coral-900/20 border-coral-100 dark:border-coral-800/40 text-coral-600 dark:text-coral-400 shrink-0">
+          <Icon size={18} strokeWidth={2.25} />
         </div>
         <Badge variant={definition.isActive ? 'success' : 'neutral'}>
           {definition.isActive ? 'Live' : 'Draft'}
@@ -82,7 +82,7 @@ export const ChecklistDefinitionCard = ({ definition }: ChecklistDefinitionCardP
       </div>
 
       <div className="space-y-1">
-        <h3 className="font-display text-base font-medium text-text leading-snug">{definition.name}</h3>
+        <h3 className="font-display text-base font-bold text-text leading-snug">{definition.name}</h3>
         <p className="text-xs font-display text-text-muted">
           {RECURRENCE_LABEL[definition.recurrence]}
           {roleLabel ? ` · ${roleLabel}` : ''}

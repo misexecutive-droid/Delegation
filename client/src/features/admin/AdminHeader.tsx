@@ -51,7 +51,7 @@ export const AdminHeader = ({ onToggleSidebar, pageLabel }: AdminHeaderProps) =>
   ];
 
   return (
-    <header className="relative shrink-0 mx-3 mt-3 rounded-2xl bg-gradient-to-r from-slate-950 via-primary-800 to-primary-600 shadow-lg shadow-primary-900/20 overflow-hidden">
+    <header className="relative shrink-0 mx-3 mt-3 rounded-2xl bg-gradient-to-r from-primary-900 via-primary-800 to-primary-600 shadow-lg shadow-primary-900/20 overflow-hidden">
       <AdminChromeAccents scale="wide" />
 
       <div className="relative z-10 flex items-center gap-3 sm:gap-4 h-16 px-3 sm:px-5">

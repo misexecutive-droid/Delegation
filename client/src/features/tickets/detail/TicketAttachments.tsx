@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { UploadCloud, Paperclip, Eye, Trash2 } from 'lucide-react';
 import { SECTION_HEADER, UPLOADS_BASE } from './detailConstants';
 import type { TicketAttachment } from '../../../api/ticket';
+import { Button } from '@/components';
 
 interface TicketAttachmentsProps {
   attachments: TicketAttachment[];
@@ -33,7 +34,6 @@ export const TicketAttachments = ({
         <span className="text-[11px] text-text-muted">{attachments.length} files</span>
       </div>
 
-      {/* Dropzone Container */}
       <div
         onClick={() => fileInputRef.current?.click()}
         className="group border border-dashed border-border/80 hover:border-primary-500/50 bg-surface/40 hover:bg-primary-500/5 p-4 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-200"
@@ -59,7 +59,6 @@ export const TicketAttachments = ({
         <p className="text-xs text-danger">{uploadErrorMessage}</p>
       )}
 
-      {/* Attachments Preview Grid */}
       {attachments.length > 0 && (
         <div className="grid grid-cols-3 gap-2.5 mt-2">
           {attachments.map((file) => (
@@ -73,24 +72,22 @@ export const TicketAttachments = ({
                 className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
               />
 
-              {/* Uploader Attribution */}
               {file.uploadedBy && (
                 <span className="absolute bottom-1 left-1 max-w-[calc(100%-0.5rem)] truncate text-[9px] font-display font-medium px-1.5 py-0.5 rounded bg-black/60 text-white">
                   {file.uploadedBy.firstName}
                 </span>
               )}
 
-              {/* Image Overlay Controls */}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={() => onPreview(`${UPLOADS_BASE}${file.url}`)}
                   className="p-1.5 rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors cursor-pointer"
                   title="View image"
                 >
                   <Eye size={14} />
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => onDelete(file.id)}
                   disabled={isDeleting}
@@ -98,7 +95,7 @@ export const TicketAttachments = ({
                   title="Delete image"
                 >
                   <Trash2 size={14} />
-                </button>
+                </Button>
               </div>
             </div>
           ))}

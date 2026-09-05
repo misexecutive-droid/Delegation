@@ -29,18 +29,18 @@ export const checklistDefinitionController = {
 
     update: asyncHandler(async (req: Request, res: Response) => {
         const input = updateChecklistDefinitionSchema.parse(req.body)
-        const definition = await checklistDefinitionService.update(req.params.id, input)
+        const definition = await checklistDefinitionService.update(req.params.id, input, req.user!.sub)
         res.json({ success: true, data: definition })
     }),
 
     setActive: asyncHandler(async (req: Request, res: Response) => {
         const input = setChecklistDefinitionActiveSchema.parse(req.body)
-        const definition = await checklistDefinitionService.setActive(req.params.id, input)
+        const definition = await checklistDefinitionService.setActive(req.params.id, input, req.user!.sub)
         res.json({ success: true, data: definition })
     }),
 
     remove: asyncHandler(async (req: Request, res: Response) => {
-        await checklistDefinitionService.remove(req.params.id)
+        await checklistDefinitionService.remove(req.params.id, req.user!.sub)
         res.json({ success: true, data: { deleted: true } })
     }),
 }

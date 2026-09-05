@@ -1,5 +1,7 @@
+import { z } from 'zod';
 import { apiFetch } from './http';
-import type { TaskChecklist } from './taskChecklist';
+import { arrayField, withArrayDefaults, normalizeWith } from './normalize';
+import { taskChecklistDefaults, type TaskChecklist } from './taskChecklist';
 
 export type TaskAttachment = {
     id:               string;
@@ -10,6 +12,17 @@ export type TaskAttachment = {
     taskId:           string;
     uploadedBy:       { id: string; email: string; firstName: string; role: string } | null;
     createdAt:        string;
+};
+
+export type TaskStatusUpdate = {
+    id:            string;
+    taskId:        string;
+    fromStatus:    Task['status'];
+    toStatus:      Task['status'];
+    remark:        string;
+    changedBy:     string;
+    changedByUser: { id: string; email: string; firstName: string; role: string } | null;
+    createdAt:     string;
 };
 
 export type Task = {
@@ -45,6 +58,8 @@ export type Task = {
     } | null;
     checklists?:  TaskChecklist[];
     attachments?: TaskAttachment[];
+    /** Newest first. Only the detail endpoint returns these — list responses omit them. */
+    statusUpdates?: TaskStatusUpdate[];
 };
 
 export type CreateTaskPayload = {
@@ -98,6 +113,8 @@ export type UpdateTaskPayload = Partial<Omit<CreateTaskPayload, 'assigneeId' | '
     assigneeId?: string | null;
     departmentId?: string | null;
     reminderMinutesBefore?: number | null;
+    /** Required by the server whenever `status` differs from what's stored. */
+    statusRemark?: string;
 };
 
 export type VerifyTaskPayload = { action: 'APPROVE' | 'REJECT'; note?: string };
@@ -113,13 +130,27 @@ export type ComplianceReportRow = {
 
 export type ApiResponse<T> = { success: boolean; data: T };
 
+// additionalAssigneeIds is the field that actually crashed the dashboard (spread of an undefined
+// value) — checklists/attachments are the same "typed as always-present" shape and just haven't
+// bitten yet, so they're guarded the same way rather than waiting for their own crash report.
+const taskArrayDefaults = withArrayDefaults({
+    additionalAssigneeIds: arrayField(z.string()),
+    // Nested via taskChecklistDefaults, not a bare arrayField(z.unknown()) — a checklist that's
+    // present but missing its own `items` (or an item missing its `images`) is exactly the shape
+    // that crashed ChecklistBlock's `checklist.items.filter(...)` before this was added.
+    checklists: arrayField(taskChecklistDefaults).optional(),
+    attachments: arrayField(z.unknown()).optional(),
+    statusUpdates: arrayField(z.unknown()).optional(),
+});
+const normalizeTask = (raw: unknown) => normalizeWith<Task>(taskArrayDefaults, raw);
+
 export const taskApi = {
     getAll: (userId?: string, status?: Task['status']) => {
         const params = new URLSearchParams();
         if (userId) params.set('userId', userId);
         if (status) params.set('status', status);
         const qs = params.toString();
-        return apiFetch<ApiResponse<Task[]>>(qs ? `/tasks?${qs}` : '/tasks').then(r => r.data);
+        return apiFetch<ApiResponse<Task[]>>(qs ? `/tasks?${qs}` : '/tasks').then(r => r.data.map(normalizeTask));
     },
 
     parseSmart: (text: string) =>
@@ -134,16 +165,16 @@ export const taskApi = {
         return apiFetch<{ transcript: string }>('/tasks/ai/transcribe', { method: 'POST', body: formData });
     },
 
-    getOne: (id: string) => apiFetch<ApiResponse<Task>>(`/tasks/${id}`).then(r => r.data),
+    getOne: (id: string) => apiFetch<ApiResponse<Task>>(`/tasks/${id}`).then(r => normalizeTask(r.data)),
 
     create: (payload: CreateTaskPayload) =>
-        apiFetch<ApiResponse<Task>>('/tasks', { method: 'POST', body: JSON.stringify(payload) }).then(r => r.data),
+        apiFetch<ApiResponse<Task>>('/tasks', { method: 'POST', body: JSON.stringify(payload) }).then(r => normalizeTask(r.data)),
 
     update: (id: string, payload: UpdateTaskPayload) =>
-        apiFetch<ApiResponse<Task>>(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }).then(r => r.data),
+        apiFetch<ApiResponse<Task>>(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }).then(r => normalizeTask(r.data)),
 
     verify: (id: string, payload: VerifyTaskPayload) =>
-        apiFetch<ApiResponse<Task>>(`/tasks/${id}/verify`, { method: 'PATCH', body: JSON.stringify(payload) }).then(r => r.data),
+        apiFetch<ApiResponse<Task>>(`/tasks/${id}/verify`, { method: 'PATCH', body: JSON.stringify(payload) }).then(r => normalizeTask(r.data)),
 
     delete: (id: string) =>
         apiFetch<ApiResponse<{ deleted: boolean }>>(`/tasks/${id}`, { method: 'DELETE' }),

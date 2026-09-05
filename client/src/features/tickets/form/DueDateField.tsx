@@ -16,14 +16,11 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 const toDateStr = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toTimeStr = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
-// Manual mode asks for an explicit due date/time; Auto mode shows the TAT that will be applied
-// instead (the category's TAT if one is selected, otherwise the 24h default).
+
 export const DueDateField = ({ mode, control, setValue, errors, categoryTatHours }: DueDateFieldProps) => {
   const dueDate = useWatch({ control, name: 'dueDate' });
   const dueTime = useWatch({ control, name: 'dueTime' });
-  // dueDate/dueTime stay as separate 'YYYY-MM-DD'/'HH:mm' strings on the form (see
-  // ticketFormSchema.ts, combined via `${dueDate}T${dueTime}` at submit) — DatePicker just needs
-  // a single Date to work with, built from whichever of the two strings are already set.
+
   const combined = dueDate ? new Date(`${dueDate}T${dueTime || '09:00'}`) : null;
 
   const handleChange = (date: Date | null) => {
@@ -37,8 +34,6 @@ export const DueDateField = ({ mode, control, setValue, errors, categoryTatHours
   };
 
   return (
-    // No mode="wait" — that would force the outgoing section to fully exit before the incoming
-    // one starts entering, adding a sequential delay to what should be an instant mode switch.
     <AnimatePresence>
       {mode === 'MANUAL' ? (
         <motion.div
@@ -47,7 +42,7 @@ export const DueDateField = ({ mode, control, setValue, errors, categoryTatHours
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.15 }}
-          className="flex flex-col gap-1.5"
+          className="flex flex-col gap-1.5 overflow-hidden"
         >
           <label className="text-xs font-medium text-text-secondary">Due date & time</label>
           <DatePicker
@@ -59,7 +54,9 @@ export const DueDateField = ({ mode, control, setValue, errors, categoryTatHours
             className="font-display"
           />
           {(errors.dueDate?.message || errors.dueTime?.message) && (
-            <p className="text-xs text-danger font-display">{errors.dueDate?.message ?? errors.dueTime?.message}</p>
+            <p className="text-xs text-danger font-display" role="alert">
+              {errors.dueDate?.message ?? errors.dueTime?.message}
+            </p>
           )}
         </motion.div>
       ) : (
@@ -69,7 +66,8 @@ export const DueDateField = ({ mode, control, setValue, errors, categoryTatHours
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.15 }}
-          className="p-3 rounded-md bg-primary-500/5 border border-primary-500/20 text-xs text-primary-400 font-display flex items-center gap-2.5"
+          className="p-3 rounded-md bg-primary-500/5 border border-primary-500/20 text-xs text-primary-400 font-display flex items-center gap-2.5 overflow-hidden"
+          role="status"
         >
           <Sparkles className="w-4 h-4 shrink-0 text-primary-400" />
           <span>

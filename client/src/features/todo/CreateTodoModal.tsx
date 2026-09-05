@@ -14,10 +14,14 @@ interface CreateTodoModalProps {
 // form language — built on the app's theme tokens (not raw Tailwind colors) so it stays correct
 // in dark mode instead of freezing to a light-only palette.
 export const TODO_FIELD_WRAPPER_CLASS =
-  'group/field flex flex-col gap-2 p-4 bg-surface border border-border rounded-xl shadow-sm transition-all duration-300 ease-out hover:shadow-md hover:border-border-hover focus-within:border-primary-400 focus-within:ring-4 focus-within:ring-primary-500/10';
+  'group/field flex flex-col gap-2 p-4 bg-surface border border-border rounded-xl transition-all duration-200 ease-in-out hover:border-border-hover focus-within:border-primary-400 focus-within:ring-4 focus-within:ring-primary-500/10';
 
 export const TODO_FIELD_LABEL_CLASS =
-  'text-sm font-semibold text-text-secondary tracking-tight transition-colors group-focus-within/field:text-primary-600';
+  'text-sm font-semibold text-text-secondary tracking-tight transition-colors duration-200 group-focus-within/field:text-primary-600';
+
+// "Due date & time (optional)" — the two parts sit in a flex row with a gap rather than the
+// optional-tag carrying its own `ml-1`, per the no-sibling-margins rule.
+export const TODO_OPTIONAL_LABEL_CLASS = `flex items-center gap-1.5 ${TODO_FIELD_LABEL_CLASS}`;
 
 export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
   const [text, setText] = useState('');
@@ -54,6 +58,8 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
     <Modal
       open
       onClose={closeAndReset}
+      size="xl"
+      bodyClassName="no-scrollbar"
       icon={<ListTodo className="w-6 h-6 text-primary-500" />}
       title={<span className="text-xl font-bold text-text">New todo task</span>}
       description={<span className="text-text-muted">A personal task, not assigned to anyone else.</span>}
@@ -111,8 +117,8 @@ export const CreateTodoModal = ({ open, onClose }: CreateTodoModalProps) => {
           className={`${TODO_FIELD_WRAPPER_CLASS} animate-in fade-in slide-in-from-bottom-4 duration-500`}
           style={{ animationDelay: '75ms', animationFillMode: 'backwards' }}
         >
-          <label className={TODO_FIELD_LABEL_CLASS}>
-            Due date & time <span className="text-text-light font-normal ml-1">(optional)</span>
+          <label className={TODO_OPTIONAL_LABEL_CLASS}>
+            Due date &amp; time <span className="text-text-light font-normal">(optional)</span>
           </label>
           <DatePicker
             value={dueDate}

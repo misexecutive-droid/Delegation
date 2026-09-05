@@ -1,5 +1,5 @@
 import { db } from "../../config/db.js"
-import { tasks, taskAdditionalAssignees, taskAttachments, taskChecklists, taskChecklistItems, taskImages, taskComments, taskReviews, smartTaskConversations } from "../../db/schema/index.js"
+import { tasks, taskAdditionalAssignees, taskAttachments, taskChecklists, taskChecklistItems, taskImages, taskComments, taskReviews, taskStatusUpdates, smartTaskConversations, TASK_STATUSES } from "../../db/schema/index.js"
 import { users } from "../../db/schema/core.js"
 import { eq, and, or, inArray, desc, sql } from "drizzle-orm"
 import { DATE_FORMATS } from "../../utils/dateBucket.js"
@@ -9,6 +9,7 @@ import { assertChecklistsResolved } from "../../utils/checklistGate.js"
 import type { AccessTokenPayload } from "../../middleware/auth/auth.js"
 import type { ConfirmSmartTaskInput, CreateTaskInput, UpdateTaskInput, VerifyTaskInput } from "./task.validation.js"
 import { notificationService } from "../notifications/notification.service.js"
+import { auditService } from "../audit/audit.service.js"
 import { emitTaskEvent } from "../../sockets/taskEvent.js"
 import type { DateBucket } from "../../utils/index.js"
 
@@ -92,6 +93,26 @@ const replaceAdditionalAssignees = async (taskId: string, userIds: string[] | un
     });
 };
 
+/**
+ * A task's status history, newest first — the same ordering convention TicketStatusUpdate uses
+ * (the detail view treats index 0 as the current state).
+ *
+ * Shared by getById and update so both return the same shape. update() has to include it because
+ * the client writes the PATCH response straight into its detail cache; returning the bare task row
+ * there would blank the Activity feed's status entries until the follow-up refetch landed.
+ */
+const loadStatusUpdates = async (taskId: string) => {
+    const rows = await db.select({
+        update: taskStatusUpdates,
+        changedByUser: { id: users.id, email: users.email, firstName: users.firstName, role: users.role },
+    })
+        .from(taskStatusUpdates)
+        .leftJoin(users, eq(taskStatusUpdates.changedBy, users.id))
+        .where(eq(taskStatusUpdates.taskId, taskId))
+        .orderBy(desc(taskStatusUpdates.createdAt));
+    return rows.map((r) => ({ ...r.update, changedByUser: r.changedByUser }));
+};
+
 export const taskService = {
     async list(user: AccessTokenPayload, filterUserId?: string, status?: string, page = 1, limit = 200) {
         let condition;
@@ -161,6 +182,8 @@ export const taskService = {
             departmentId: task!.departmentId ?? null,
         }, task);
 
+        await auditService.record({ entityType: "Task", entityId: task!.id, action: "CREATE", actorId: user.sub, after: task });
+
         return task!;
     },
 
@@ -208,7 +231,7 @@ export const taskService = {
             .where(eq(taskAttachments.taskId, task.id));
         const attachments = attachmentRows.map((r) => ({ ...r.attachment, uploadedByUser: r.uploadedByUser }));
 
-        return { ...task, checklists, attachments };
+        return { ...task, checklists, attachments, statusUpdates: await loadStatusUpdates(task.id) };
     },
 
     async create(input: CreateTaskInput, user: AccessTokenPayload) {
@@ -244,6 +267,8 @@ export const taskService = {
                 additionalAssigneeIds,
             });
         }
+
+        await auditService.record({ entityType: "Task", entityId: task.id, action: "CREATE", actorId: user.sub, after: task });
 
         return task;
     },
@@ -298,7 +323,19 @@ export const taskService = {
             assertChecklistsResolved(checklistsWithItems, "sending this delegation for review")
         }
 
-        const { additionalAssigneeIds, startDate, dueDate, ...rest } = input;
+        const { additionalAssigneeIds, startDate, dueDate, statusRemark, ...rest } = input;
+
+        // Every status move must say why. Tickets have always worked this way; delegations moved
+        // between columns with nothing recorded, so a board that changed under you gave no way to
+        // find out who moved what, when, or on what grounds. Checked here rather than in the Zod
+        // schema because only this layer can see whether `status` actually differs from what's
+        // stored — a PATCH that merely re-sends the current status isn't a status change and
+        // shouldn't demand a remark.
+        const isStatusChange = input.status !== undefined && input.status !== beforeStatus;
+        const remark = statusRemark?.trim();
+        if (isStatusChange && !remark) {
+            throw AppError.badRequest("A remark is required to change a delegation's status.")
+        }
 
         // Moving the deadline (or changing/clearing the reminder lead time) invalidates whatever
         // reminder was already scheduled for the old dueDate — re-arm it so the sweep can send a
@@ -323,10 +360,41 @@ export const taskService = {
         const task = await db.transaction(async (tx) => {
             await tx.update(tasks).set(update).where(and(eq(tasks.id, id), mutationCondition ?? eq(tasks.id, id)));
             await replaceAdditionalAssignees(id, additionalAssigneeIds);
+            // Inside the transaction so the move and its justification land together — a status
+            // change that committed without its audit row would be exactly the silent change this
+            // feature exists to stop.
+            if (isStatusChange) {
+                await tx.insert(taskStatusUpdates).values({
+                    taskId: id,
+                    changedBy: user.sub,
+                    fromStatus: beforeStatus,
+                    toStatus: input.status!,
+                    remark: remark!,
+                });
+            }
             const [updated] = await tx.select().from(tasks).where(eq(tasks.id, id)).limit(1);
             return updated;
         });
         if (!task) throw AppError.notFound("Delegation not found")
+
+        // Only 'task:created' was ever emitted, so every other client's board went stale the
+        // moment someone moved a card or edited a field — the "live" board only actually showed
+        // new delegations appearing. Emitted to the post-update routing, plus the pre-update
+        // routing when an edit reassigned the task, since whoever could see it under the old
+        // assignee/department also needs to hear that it left them.
+        const updatedTarget = {
+            userId: task.userId,
+            assigneeId: task.assigneeId ?? null,
+            departmentId: task.departmentId ?? null,
+        };
+        emitTaskEvent('task:updated', updatedTarget, task);
+        if (existing.assigneeId !== task.assigneeId || existing.departmentId !== task.departmentId) {
+            emitTaskEvent('task:updated', {
+                userId: existing.userId,
+                assigneeId: existing.assigneeId ?? null,
+                departmentId: existing.departmentId ?? null,
+            }, task);
+        }
 
         if (input.status === "pending_verification" && beforeStatus !== "pending_verification") {
             await notificationService.notifyPendingVerification({
@@ -336,7 +404,11 @@ export const taskService = {
             }, 'TASK');
         }
 
-        return task;
+        await auditService.record({ entityType: "Task", entityId: id, action: "UPDATE", actorId: user.sub, before: existing, after: task });
+
+        // Includes the history: the client writes this response straight into its detail cache,
+        // so returning the bare row would momentarily blank the Activity feed's status entries.
+        return { ...task, statusUpdates: await loadStatusUpdates(id) };
     },
 
 
@@ -369,6 +441,18 @@ export const taskService = {
             throw AppError.badRequest("This delegation isn't pending verification.")
         }
 
+        // Approve/reject is a status move too, so it belongs on the same timeline — otherwise the
+        // history would show a delegation reaching "Pending Verification" and then simply being
+        // done, with the actual decision (and the verifier's reason for it) missing. The note is
+        // optional on APPROVE, so fall back to stating the decision plainly.
+        await db.insert(taskStatusUpdates).values({
+            taskId: id,
+            changedBy: user.sub,
+            fromStatus: "pending_verification",
+            toStatus: update.status as typeof TASK_STATUSES[number],
+            remark: input.note?.trim() || (input.action === "APPROVE" ? "Approved." : "Sent back for rework."),
+        });
+
         const [updated] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
         const additionalAssigneeIds = (await db.select({ userId: taskAdditionalAssignees.userId })
             .from(taskAdditionalAssignees)
@@ -382,7 +466,20 @@ export const taskService = {
             additionalAssigneeIds,
         }, input.action, input.note, 'TASK')
 
-        return updated!;
+        // Approve/reject is how a delegation reaches "done", so it moves between board columns
+        // exactly like a drag does and needs the same event.
+        emitTaskEvent('task:updated', {
+            userId: updated!.userId,
+            assigneeId: updated!.assigneeId ?? null,
+            departmentId: updated!.departmentId ?? null,
+        }, updated);
+
+        // Recorded as VERIFY rather than UPDATE — approving or rejecting a delegation is the
+        // decision an audit is most likely to be asked about, and folding it into the generic
+        // UPDATE stream would make it indistinguishable from an ordinary field edit.
+        await auditService.record({ entityType: "Task", entityId: id, action: "VERIFY", actorId: user.sub, after: updated });
+
+        return { ...updated!, statusUpdates: await loadStatusUpdates(id) };
     },
 
 
@@ -409,11 +506,27 @@ export const taskService = {
             }
             await tx.delete(taskAttachments).where(eq(taskAttachments.taskId, id));
             await tx.delete(taskComments).where(eq(taskComments.taskId, id));
+            // TaskStatusUpdate's FK to Task has no ON DELETE CASCADE (matching every other child
+            // table here), so leaving these behind would make deleting any delegation that ever
+            // changed status fail on a constraint violation.
+            await tx.delete(taskStatusUpdates).where(eq(taskStatusUpdates.taskId, id));
             await tx.delete(taskReviews).where(eq(taskReviews.taskId, id));
             await tx.delete(taskAdditionalAssignees).where(eq(taskAdditionalAssignees.taskId, id));
             await tx.update(smartTaskConversations).set({ resultingTaskId: null }).where(eq(smartTaskConversations.resultingTaskId, id));
             await tx.delete(tasks).where(eq(tasks.id, id));
         });
+
+        // Carries only the id — the row is gone, so there's nothing else meaningful to send, and
+        // clients only need to know which card to drop.
+        emitTaskEvent('task:deleted', {
+            userId: task.userId,
+            assigneeId: task.assigneeId ?? null,
+            departmentId: task.departmentId ?? null,
+        }, { id: task.id });
+
+        // `before` is the whole row — after a hard delete this snapshot is the only record that
+        // the delegation ever existed.
+        await auditService.record({ entityType: "Task", entityId: id, action: "DELETE", actorId: user.sub, before: task });
 
         return task;
     },

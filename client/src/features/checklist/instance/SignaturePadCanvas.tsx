@@ -72,7 +72,7 @@ export const SignaturePadCanvas = ({ label, disabled, onChange }: SignaturePadCa
           <button
             type="button"
             onClick={clear}
-            className="flex items-center gap-1 text-[11px] font-display text-text-muted hover:text-amber-500 transition-colors cursor-pointer"
+            className="flex items-center gap-1 text-[11px] font-display text-text-muted hover:text-warning transition-colors cursor-pointer"
           >
             <RotateCcw size={11} /> Clear
           </button>

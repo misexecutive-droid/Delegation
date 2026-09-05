@@ -39,7 +39,7 @@ export const ChecklistInstanceItemRatingCard = ({ item, instanceId, canWork, isL
           <button
             onClick={() => setItemDone.mutate({ itemId: item.id, isDone: false, numericValue: item.numericValue ?? undefined })}
             disabled={setItemDone.isPending}
-            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -69,7 +69,7 @@ export const ChecklistInstanceItemRatingCard = ({ item, instanceId, canWork, isL
             >
               <Star
                 size={22}
-                className={filled ? 'text-amber-400 fill-amber-400' : 'text-border'}
+                className={filled ? 'text-warning fill-warning' : 'text-border'}
                 strokeWidth={1.5}
               />
             </button>

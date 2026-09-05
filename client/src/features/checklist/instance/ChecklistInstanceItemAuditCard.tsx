@@ -109,7 +109,7 @@ const SubmissionRow = ({ item, submission, instanceId, storeName, interactive }:
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className={`flex items-center justify-center size-6 rounded-full shrink-0 text-[10px] font-display font-medium ${
-            submission.isDone ? 'bg-emerald-500/10 text-emerald-600' : 'bg-surface-hover text-text-muted'
+            submission.isDone ? 'bg-success/10 text-success' : 'bg-surface-hover text-text-muted'
           }`}>
             {userLabel.slice(0, 1).toUpperCase()}
           </span>
@@ -122,14 +122,14 @@ const SubmissionRow = ({ item, submission, instanceId, storeName, interactive }:
           <button
             onClick={() => setDone.mutate({ id: submission.id, isDone: false })}
             disabled={setDone.isPending}
-            className="shrink-0 p-1.5 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            className="shrink-0 p-1.5 rounded-md text-text-light hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning/50"
             aria-label="Reopen submission"
             title="Reopen"
           >
             <RotateCcw size={13} />
           </button>
         )}
-        {submission.isDone && !interactive && <span className="text-[10px] font-display text-emerald-600 shrink-0">Submitted</span>}
+        {submission.isDone && !interactive && <span className="text-[10px] font-display text-success shrink-0">Submitted</span>}
       </div>
 
       {item.accessories.length > 0 && (
@@ -139,7 +139,7 @@ const SubmissionRow = ({ item, submission, instanceId, storeName, interactive }:
               key={a.name}
               className={[
                 'flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-display transition-colors',
-                a.checked ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'border-border text-text-secondary',
+                a.checked ? 'border-success/40 bg-success/10 text-success' : 'border-border text-text-secondary',
                 canSubmit ? 'cursor-pointer hover:bg-surface-hover' : 'cursor-not-allowed opacity-80',
               ].join(' ')}
             >
@@ -158,7 +158,7 @@ const SubmissionRow = ({ item, submission, instanceId, storeName, interactive }:
 
       {item.requiredImageCount > 0 && (
         <div className="flex items-center gap-1.5">
-          <span className={`flex items-center justify-center size-4 rounded shrink-0 ${photosSatisfied ? 'bg-emerald-500' : 'bg-amber-500'}`}>
+          <span className={`flex items-center justify-center size-4 rounded shrink-0 ${photosSatisfied ? 'bg-success' : 'bg-warning'}`}>
             <Camera size={10} className="text-white" />
           </span>
           <span className="text-[11px] font-display text-text-muted truncate">
@@ -178,7 +178,7 @@ const SubmissionRow = ({ item, submission, instanceId, storeName, interactive }:
                 className="size-14 object-cover rounded-md border border-border"
               />
               <span className={`absolute -top-1 -left-1 text-[9px] font-display px-1 rounded-full text-white ${
-                img.captureMethod === 'LIVE' ? 'bg-emerald-500' : 'bg-text-light'
+                img.captureMethod === 'LIVE' ? 'bg-success' : 'bg-text-light'
               }`}>
                 {img.captureMethod === 'LIVE' ? 'Live' : 'Gallery'}
               </span>
@@ -259,7 +259,7 @@ const SubmissionRow = ({ item, submission, instanceId, storeName, interactive }:
             <button
               onClick={() => setDone.mutate({ id: submission.id, isDone: true })}
               disabled={setDone.isPending}
-              className="flex items-center gap-1.5 text-[11px] font-display font-medium px-2.5 py-1 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 ml-auto"
+              className="flex items-center gap-1.5 text-[11px] font-display font-medium px-2.5 py-1 rounded-md border border-success/50 text-success hover:bg-success/10 cursor-pointer transition-colors disabled:opacity-50 ml-auto"
             >
               {setDone.isPending && <Loader2 size={11} className="animate-spin" />}
               Submit

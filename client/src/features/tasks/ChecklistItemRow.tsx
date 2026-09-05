@@ -12,6 +12,7 @@ import {
 } from './hook';
 import type { TaskChecklistItem, CaptureMethod } from '../../api/taskChecklist';
 import { UPLOADS_BASE } from '../../lib/uploadsBase';
+import { errorMessage } from '../../lib/queryHelpers';
 
 export const ChecklistItemRow = ({
   item, taskId, isAdmin, canWork,
@@ -47,7 +48,7 @@ export const ChecklistItemRow = ({
       className={`group/card flex flex-col gap-4 p-4 sm:p-5 rounded-xl border transition-all duration-200 ${
         item.isDone
           ? 'bg-surface-hover/40 border-border/60 opacity-80'
-          : 'bg-surface border-border shadow-xs hover:shadow-sm hover:border-border-hover'
+          : 'bg-surface border-border hover:border-border-hover'
       }`}
     >
       {/* Header Row */}
@@ -124,7 +125,7 @@ export const ChecklistItemRow = ({
       {images.length > 0 && (
         <div className="flex flex-wrap gap-3 pl-0 sm:pl-9">
           {images.map(img => (
-            <div key={img.id} className="relative group/img overflow-hidden rounded-lg border border-border shadow-xs bg-surface-hover">
+            <div key={img.id} className="relative group/img overflow-hidden rounded-lg border border-border bg-surface-hover">
               <img
                 src={`${UPLOADS_BASE}${img.url}`}
                 alt={img.originalFilename ?? 'evidence'}
@@ -132,8 +133,8 @@ export const ChecklistItemRow = ({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity" />
 
-              <span className={`absolute top-1 left-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs text-white backdrop-blur-md ${
-                img.captureMethod === 'LIVE' ? 'bg-primary-600/90' : 'bg-black/70'
+              <span className={`absolute top-1 left-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs text-white ${
+                img.captureMethod === 'LIVE' ? 'bg-primary-600' : 'bg-black/85'
               }`}>
                 {img.captureMethod === 'LIVE' ? 'Live' : 'Gallery'}
               </span>
@@ -176,7 +177,9 @@ export const ChecklistItemRow = ({
               <div className="flex items-start gap-2 px-3 py-2 bg-danger/10 rounded-lg border border-danger/20">
                  <AlertCircle size={14} className="mt-0.5 shrink-0 text-danger" />
                  <p className="text-xs text-danger font-medium">
-                  {uploadImages.error?.message || completeItem.error?.message || 'An error occurred while saving.'}
+                  {uploadImages.isError
+                    ? errorMessage(uploadImages.error, 'An error occurred while saving.')
+                    : errorMessage(completeItem.error, 'An error occurred while saving.')}
                 </p>
               </div>
             )}

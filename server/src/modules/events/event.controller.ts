@@ -28,12 +28,12 @@ export const eventController = {
 
     update: asyncHandler(async (req: Request, res: Response) => {
         const input = updateEventSchema.parse(req.body)
-        const event = await eventService.update(req.params.id, input)
+        const event = await eventService.update(req.params.id, input, req.user!.sub)
         res.json({ success: true, data: event })
     }),
 
     remove: asyncHandler(async (req: Request, res: Response) => {
-        await eventService.remove(req.params.id)
+        await eventService.remove(req.params.id, req.user!.sub)
         res.json({ success: true, data: { deleted: true } })
     }),
 }

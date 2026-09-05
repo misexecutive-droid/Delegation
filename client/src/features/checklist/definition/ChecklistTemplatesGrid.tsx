@@ -40,28 +40,30 @@ export const ChecklistTemplatesGrid = ({ className = '' }: ChecklistTemplatesGri
 
         {/* Top Action Buttons */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="secondary"
+            className="gap-1.5 text-xs font-display font-medium"
             onClick={() => setShowExport(true)}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-display font-medium rounded-lg border border-border bg-surface text-text-secondary hover:bg-surface-hover hover:text-text hover:border-border/80 shadow-2xs transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:scale-[0.98]"
           >
             <FileDown size={14} className="text-text-muted" />
             <span>Export</span>
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="secondary"
+            className="gap-1.5 text-xs font-display font-medium"
             onClick={() => setShowBulkImport(true)}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-display font-medium rounded-lg border border-border bg-surface text-text-secondary hover:bg-surface-hover hover:text-text hover:border-border/80 shadow-2xs transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:scale-[0.98]"
           >
             <Upload size={14} className="text-text-muted" />
             <span>Import</span>
-          </button>
+          </Button>
 
           <Button
             size="sm"
             variant="primary"
-            className="gap-1.5 rounded-lg px-4 py-2 text-xs font-display font-medium shadow-xs active:scale-[0.98]"
+            className="gap-1.5 text-xs font-display font-medium"
             onClick={() => navigate('/admin/scheduled-checklists/builder')}
           >
             <Plus size={14} />
@@ -76,10 +78,10 @@ export const ChecklistTemplatesGrid = ({ className = '' }: ChecklistTemplatesGri
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="flex flex-col gap-4 p-5 rounded-2xl border border-border bg-surface shadow-xs"
+              className="flex flex-col gap-4 p-5 rounded-lg border border-border bg-surface"
             >
               <div className="flex items-center justify-between">
-                <Skeleton className="size-10 rounded-xl" />
+                <Skeleton className="size-10 rounded-lg" />
                 <Skeleton className="h-5 w-14 rounded-full" />
               </div>
               <Skeleton className="h-5 w-3/4 rounded-md" />
@@ -106,9 +108,9 @@ export const ChecklistTemplatesGrid = ({ className = '' }: ChecklistTemplatesGri
 
       {/* Empty State */}
       {!isPending && !isError && definitions.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl border-2 border-dashed border-border/80 bg-surface text-center">
-          <span className="flex items-center justify-center size-12 rounded-2xl bg-muted/60 text-text-muted border border-border/60 shadow-2xs mb-4">
-            <ClipboardList className="size-6 text-text-muted" />
+        <div className="flex flex-col items-center justify-center py-16 px-6 border border-dashed border-border/70 rounded-xl bg-surface/30 text-center">
+          <span className="flex items-center justify-center size-12 rounded-lg border border-border/60 bg-muted/60 text-text-muted mb-4">
+            <ClipboardList className="size-6" strokeWidth={2.25} />
           </span>
           <h2 className="text-base sm:text-lg font-display font-bold text-text mb-1.5">
             No checklist templates yet
@@ -118,8 +120,9 @@ export const ChecklistTemplatesGrid = ({ className = '' }: ChecklistTemplatesGri
           </p>
           <Button
             variant="primary"
+            size="sm"
             onClick={() => navigate('/admin/scheduled-checklists/builder')}
-            className="gap-1.5 rounded-lg px-5 py-2.5 text-xs sm:text-sm font-display font-medium shadow-xs"
+            className="gap-1.5 text-xs sm:text-sm font-display font-medium"
           >
             <Plus size={15} />
             <span>Create new checklist</span>

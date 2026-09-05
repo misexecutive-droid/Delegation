@@ -1,34 +1,42 @@
-import { useMemo } from 'react';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, Cell } from 'recharts';
-import { lastActivityBuckets, countInRange, ACTIVITY_BUCKET_COUNT, type ActivityGroupBy } from './dashboardDisplay';
-import type { Task } from '../../api/task';
-import type { Ticket } from '../../api/ticket';
-import type { Todo } from '../../api/todos';
+import { useMemo, useState } from 'react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from 'recharts';
+import { BarChart3 } from 'lucide-react';
+import { useIsMobile } from '../../lib/useMediaQuery';
+import { PinnedBreakdown, BreakdownHint } from './PinnedBreakdown';
+import {
+  lastActivityBuckets,
+  countItemsInRange,
+  ACTIVITY_BUCKET_COUNT,
+  ACTIVITY_CATEGORY_ORDER,
+  ACTIVITY_CATEGORY_LABEL,
+  ACTIVITY_CATEGORY_COLOR,
+  type ActivityGroupBy,
+  type ActivityCategory,
+  type ActivityWorkItem,
+} from './dashboardDisplay';
 
 interface ActivityTrendChartProps {
-  tasks: Task[];
-  tickets: Ticket[];
-  todos: Todo[];
+  items: ActivityWorkItem[];
+  activeCategories: ReadonlySet<ActivityCategory>;
   groupBy: ActivityGroupBy;
 }
 
-interface ActivityDatum {
-  label: string;
-  isCurrent: boolean;
-  delegations: number;
-  tickets: number;
-  todos: number;
-  /** Only nonzero on the current (still-in-progress) bucket — the straight-line pace projection
-   *  for the rest of that bucket, stacked on top as a visually distinct "not real yet" segment. */
-  projected: number;
-}
+type ActivityDatum = { label: string } & Record<ActivityCategory, number>;
 
 interface ChartTooltipProps {
   active?: boolean;
-  payload?: { payload: ActivityDatum }[];
+  payload?: readonly { payload?: ActivityDatum }[];
+  activeCategories: ReadonlySet<ActivityCategory>;
 }
 
-const BAR_WIDTH = 28;
+const BAR_WIDTH = 44;
+
+/**
+ * The chart, both of its empty states, and HomePage's loading skeleton must all be exactly this
+ * tall or the card visibly resizes as data arrives. It was written as a bare `h-[240px]` in four
+ * separate places before, with nothing keeping them equal.
+ */
+export const ACTIVITY_CHART_HEIGHT = 240;
 
 interface NarrowCursorProps {
   x?: number;
@@ -37,150 +45,228 @@ interface NarrowCursorProps {
   height?: number;
 }
 
-// recharts' default BarChart tooltip cursor highlights the whole category band (the full slot a
-// bar sits in, including its share of barCategoryGap) — with bars capped at BAR_WIDTH via
-// maxBarSize, that band is much wider than the bar itself, so the hover highlight looked like a
-// big rectangle sitting well past the thin bar it belongs to. Drawing our own narrow rect
-// centered in that same band keeps the highlight sized to match the actual bar.
+// Upgraded Cursor: Uses a subtle, soft-edged highlight rather than a harsh block
 const NarrowCursor = ({ x = 0, y = 0, width = 0, height = 0 }: NarrowCursorProps) => (
-  <rect x={x + width / 2 - BAR_WIDTH / 2} y={y} width={BAR_WIDTH} height={height} rx={6} fill="var(--color-surface-hover)" />
+  <rect
+    x={x + width / 2 - BAR_WIDTH / 2 - 4}
+    y={y - 10}
+    width={BAR_WIDTH + 8}
+    height={height + 20}
+    rx={8}
+    fill="var(--color-primary-500)"
+    fillOpacity={0.06}
+  />
 );
 
-const LEGEND_ITEMS = [
-  { key: 'delegations', label: 'Delegations', dotClassName: 'bg-primary-600' },
-  { key: 'tickets', label: 'Tickets', dotClassName: 'bg-info' },
-  { key: 'todos', label: 'Todo', dotClassName: 'bg-primary-200' },
-] as const;
-
-const ChartTooltip = ({ active, payload }: ChartTooltipProps) => {
-  if (!active || !payload?.length) return null;
-  const { label, delegations, tickets, todos, projected } = payload[0].payload;
-  return (
-    <div className="rounded-xl border border-border/50 bg-surface/95 backdrop-blur-md px-4 py-3 shadow-lg flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-200">
-      <p className="text-xs font-display font-medium text-text-muted capitalize tracking-wide">{label}</p>
-      <div className="flex items-center gap-2 text-sm">
-        <span className="size-2 rounded-full shrink-0 bg-primary-500" />
-        <span className="text-text-muted">Delegations</span>
-        <span className="font-display font-bold text-text ml-auto">{delegations}</span>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
-        <span className="size-2 rounded-full shrink-0 bg-info" />
-        <span className="text-text-muted">Tickets</span>
-        <span className="font-display font-bold text-text ml-auto">{tickets}</span>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
-        <span className="size-2 rounded-full shrink-0 bg-primary-200" />
-        <span className="text-text-muted">Todo</span>
-        <span className="font-display font-bold text-text ml-auto">{todos}</span>
-      </div>
-      {projected > 0 && (
-        <div className="flex items-center gap-2 text-sm pt-1.5 mt-0.5 border-t border-border/50">
-          <span className="size-2 rounded-full shrink-0 bg-primary-300" />
-          <span className="text-text-muted">Projected (rest of period)</span>
-          <span className="font-display font-bold text-primary-500 ml-auto">+{projected}</span>
+// Shared by the hover tooltip and the tap-to-pin panel below the chart, so mobile (no hover) gets
+// the exact same breakdown a desktop user sees on hover, not a stripped-down version. Only shows
+// rows for categories the filter above the chart currently has active.
+const BreakdownRows = ({ datum, activeCategories }: { datum: ActivityDatum; activeCategories: ReadonlySet<ActivityCategory> }) => (
+  <>
+    <div className="flex flex-col gap-1.5">
+      {ACTIVITY_CATEGORY_ORDER.filter((category) => activeCategories.has(category)).map((category) => (
+        <div key={category} className="flex items-center justify-between gap-4 text-[13px]">
+          <div className="flex items-center gap-1.5 text-text-secondary">
+            <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: ACTIVITY_CATEGORY_COLOR[category] }} />
+            {ACTIVITY_CATEGORY_LABEL[category]}
+          </div>
+          <span className="font-display font-bold text-text tabular-nums">{datum[category]}</span>
         </div>
-      )}
+      ))}
     </div>
+  </>
+);
+
+const ChartTooltip = ({ active, payload, activeCategories }: ChartTooltipProps) => {
+  const datum = payload?.[0]?.payload;
+  if (!active || !datum) return null;
+
+  return (
+    <PinnedBreakdown title={datum.label} variant="tooltip" className="min-w-[160px]">
+      <BreakdownRows datum={datum} activeCategories={activeCategories} />
+    </PinnedBreakdown>
   );
 };
 
-// One combined created-item volume series — delegations, tickets and todo items stacked into a
-// single bar per bucket — re-bucketed by day/month/quarter/year depending on `groupBy`, so this
-// is the one "master" activity chart rather than three separate per-domain charts. The current
-// (still in-progress) bucket also gets a dashed "projected" cap — a plain pace projection, same
-// spirit as Compare Dashboard's, extrapolated from how far into that bucket we already are.
-export const ActivityTrendChart = ({ tasks, tickets, todos, groupBy }: ActivityTrendChartProps) => {
-  const data = useMemo<ActivityDatum[]>(() => {
-    const buckets = lastActivityBuckets(groupBy, ACTIVITY_BUCKET_COUNT[groupBy]);
-    const currentIndex = buckets.length - 1;
-    const now = new Date().getTime();
+/**
+ * Both "nothing to plot" cases — no category selected, and no activity in the window — were two
+ * near-identical blocks differing only in their copy and one decorative glow.
+ */
+const ChartEmptyState = ({ message, tinted }: { message: string; tinted: boolean }) => (
+  <div
+    className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-surface/30 gap-3 animate-in fade-in duration-500"
+    style={{ height: ACTIVITY_CHART_HEIGHT }}
+  >
+    <div className="relative p-3 rounded-full bg-surface border border-border/40">
+      {tinted && <div className="absolute inset-0 bg-primary-500/10 blur-md rounded-full" />}
+      <BarChart3 size={20} className={`relative z-10 ${tinted ? 'text-primary-500/70' : 'text-text-light'}`} />
+    </div>
+    <p className="text-sm font-medium text-text-muted text-center px-4">{message}</p>
+  </div>
+);
 
-    return buckets.map((b, i) => {
-      const delegations = countInRange(tasks.map((t) => t.createdAt), b.start, b.end);
-      const tickets_ = countInRange(tickets.map((t) => t.createdAt), b.start, b.end);
-      const todos_ = countInRange(todos.map((t) => t.createdAt), b.start, b.end);
-      const actual = delegations + tickets_ + todos_;
+export const ActivityTrendChart = ({ items, activeCategories, groupBy }: ActivityTrendChartProps) => {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const isMobile = useIsMobile();
 
-      let projected = 0;
-      if (i === currentIndex) {
-        const elapsedFraction = Math.min(1, Math.max(0.02, (now - b.start.getTime()) / (b.end.getTime() - b.start.getTime())));
-        if (actual > 0 && elapsedFraction < 0.98) {
-          projected = Math.round(actual / elapsedFraction) - actual;
-        }
-      }
-
-      return { label: b.label, isCurrent: i === currentIndex, delegations, tickets: tickets_, todos: todos_, projected };
-    });
-  }, [tasks, tickets, todos, groupBy]);
-
-  const hasData = data.some((d) => d.delegations + d.tickets + d.todos > 0);
-
-  if (!hasData) {
-    return (
-      <div className="flex items-center justify-center h-[220px] text-sm text-text-muted">
-        No activity in this period yet.
-      </div>
-    );
+  // Bucket indices mean something different per granularity (e.g. index 3 of 7 days vs. index 3
+  // of 4 quarters) — clear any pinned selection rather than let it silently point at the wrong
+  // bar. Resetting during render (the React-recommended way to reset state on a prop change)
+  // instead of an effect avoids an extra cascading render.
+  const [prevGroupBy, setPrevGroupBy] = useState(groupBy);
+  if (groupBy !== prevGroupBy) {
+    setPrevGroupBy(groupBy);
+    setSelectedIndex(null);
   }
 
-  const hasProjection = data.some((d) => d.projected > 0);
+  const activeOrder = useMemo(() => ACTIVITY_CATEGORY_ORDER.filter((c) => activeCategories.has(c)), [activeCategories]);
+
+  const data = useMemo<ActivityDatum[]>(() => {
+    const buckets = lastActivityBuckets(groupBy, ACTIVITY_BUCKET_COUNT[groupBy]);
+
+    return buckets.map((b) => {
+      const counts = {} as Record<ActivityCategory, number>;
+      for (const category of ACTIVITY_CATEGORY_ORDER) {
+        counts[category] = activeCategories.has(category) ? countItemsInRange(items, category, b.start, b.end) : 0;
+      }
+      return { label: b.label, ...counts };
+    });
+  }, [items, activeCategories, groupBy]);
+
+  const hasData = data.some((d) => ACTIVITY_CATEGORY_ORDER.some((category) => d[category] > 0));
+
+  if (activeOrder.length === 0) {
+    return <ChartEmptyState tinted={false} message="No categories selected — pick one above to see its trend" />;
+  }
+
+  if (!hasData) {
+    return <ChartEmptyState tinted message="No activity in this period yet" />;
+  }
+
+  const selectedDatum = selectedIndex !== null ? data[selectedIndex] : null;
+  // Bars read at full, real color until the user actually taps one to isolate it — no ambient
+  // dimming of "not today" bars, which used to make legitimate data look washed-out for no reason.
+  const cellOpacity = (i: number) => (selectedIndex === null || i === selectedIndex ? 1 : 0.25);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        {LEGEND_ITEMS.map((item) => (
-          <span key={item.key} className="flex items-center gap-1.5 text-xs font-display font-medium text-text-secondary">
-            <span className={`size-2 rounded-full shrink-0 ${item.dotClassName}`} />
-            {item.label}
-          </span>
-        ))}
-        {hasProjection && (
-          <span className="flex items-center gap-1.5 text-xs font-display font-medium text-text-secondary">
-            <span className="inline-block size-2 rounded-full bg-primary-300" />
-            Projected
-          </span>
-        )}
-      </div>
+    <div className="flex flex-col gap-4 w-full">
+      {/* The inline "Completion" bar that used to live here is gone — that number now has its own
+          proper home in the Compliance card's ring gauge, so it doesn't need a second, redundant
+          restatement squeezed above the chart. */}
 
-      <div className="w-full h-[220px]">
+      {/* Recharts' built-in "accessibility layer" wraps the chart in its own focusable
+          <div tabIndex={0}>, which the browser then outlines by default on click — a stray black
+          box around the whole chart. It's redundant here anyway: the sr-only buttons below
+          already give keyboard users the same tap-to-pin breakdown, so the built-in layer (whose
+          own per-bar keyboard handling we don't use) is turned off at the source instead of
+          fighting its focus outline with CSS. */}
+      <div className="w-full cursor-pointer" style={{ height: ACTIVITY_CHART_HEIGHT }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barCategoryGap="40%">
+          <BarChart
+            data={data}
+            accessibilityLayer={false}
+            // The right/left gutters stay at 0 — the axis below reserves its own width when it's
+            // shown, and an extra `left` offset (this once carried `left: -20`) shifts the plot
+            // area far enough on a narrow mobile card to clip the first bar against the edge.
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            barCategoryGap="40%"
+            onClick={(state) => {
+              const index = state?.activeTooltipIndex;
+              if (typeof index === 'number') setSelectedIndex((prev) => (prev === index ? null : index));
+            }}
+          >
+            {/* Added a subtle grid to anchor the data visually */}
+            <CartesianGrid
+              vertical={false}
+              stroke="var(--color-border)"
+              strokeDasharray="4 4"
+              strokeOpacity={0.4}
+            />
+
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
-              tick={{ fill: 'var(--color-text-muted)', fontSize: 12, fontWeight: 500 }}
-              dy={10}
+              tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontWeight: 600 }}
+              dy={12}
             />
-            <Tooltip cursor={<NarrowCursor />} content={<ChartTooltip />} />
-            <Bar dataKey="delegations" stackId="stack" radius={[0, 0, 0, 0]} maxBarSize={BAR_WIDTH}>
-              {data.map((d) => (
-                <Cell key={d.label} fill="var(--color-primary-600)" fillOpacity={d.isCurrent ? 1 : 0.3} />
-              ))}
-            </Bar>
-            <Bar dataKey="tickets" stackId="stack" radius={[0, 0, 0, 0]} maxBarSize={BAR_WIDTH}>
-              {data.map((d) => (
-                <Cell key={d.label} fill="var(--color-primary-400)" fillOpacity={d.isCurrent ? 1 : 0.3} />
-              ))}
-            </Bar>
-            <Bar dataKey="todos" stackId="stack" radius={[0, 0, 0, 0]} maxBarSize={BAR_WIDTH}>
-              {data.map((d) => (
-                <Cell key={d.label} fill="var(--color-primary-200)" fillOpacity={d.isCurrent ? 1 : 0.3} />
-              ))}
-            </Bar>
-            {/* Lower-opacity cap — visually reads as "projected, not real" against the solid
-                bars beneath it, only ever present on the current in-progress bucket. */}
-            <Bar
-              dataKey="projected"
-              stackId="stack"
-              radius={[6, 6, 0, 0]}
-              maxBarSize={BAR_WIDTH}
-              fill="var(--color-primary-300)"
-              fillOpacity={0.35}
+
+            {/* Until now the chart had no value axis at all, so a bar's actual magnitude was
+                unreadable without hovering or tapping it — the grid lines were decorative rather
+                than measurable. Hidden on mobile, where the axis gutter costs more plot width than
+                the reading is worth (the tap-to-pin panel below covers that case), and integer-only
+                because these are item counts: Recharts would otherwise label a 0-3 range "0, 0.75,
+                1.5…". `width={28}` is just enough for the two-digit counts this chart realistically
+                shows while keeping the bars centred. */}
+            {!isMobile && (
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                width={28}
+                allowDecimals={false}
+                tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontWeight: 600 }}
+              />
+            )}
+
+            <Tooltip
+              cursor={<NarrowCursor />}
+              content={(props) => <ChartTooltip {...props} activeCategories={activeCategories} />}
+              isAnimationActive={false} // Prevents jitter on fast hovering
             />
+
+            {/* Stacked Bars — one per active category, in a fixed order, so the stack doesn't
+                reshuffle as categories are toggled. Opacity reflects the tapped/selected bar once
+                one is picked, so selection reads clearly against the rest of the chart. */}
+            {activeOrder.map((category, idx) => {
+              const isTopOfStack = idx === activeOrder.length - 1;
+              return (
+                <Bar
+                  key={category}
+                  dataKey={category}
+                  stackId="stack"
+                  radius={isTopOfStack ? [6, 6, 0, 0] : [0, 0, 0, 0]}
+                  maxBarSize={BAR_WIDTH}
+                >
+                  {data.map((d, i) => (
+                    <Cell key={d.label} fill={ACTIVITY_CATEGORY_COLOR[category]} fillOpacity={cellOpacity(i)} className="transition-all duration-300" />
+                  ))}
+                </Bar>
+              );
+            })}
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Keyboard-accessible proxy for the same pin interaction the mouse gets via the chart's
+          onClick — Recharts doesn't expose per-bar focus/keyboard handling, so without this a
+          keyboard-only user could pin a breakdown on the gauges and Compare Dashboard chips but
+          not here. Hidden until focused so it doesn't visually duplicate the x-axis labels for
+          mouse/touch users. */}
+      {/* No negative margin pulling this row up into the chart — the parent's `gap-4` owns the
+          spacing, and the row is zero-height until something in it takes focus anyway. */}
+      <div className="flex flex-wrap gap-1">
+        {data.map((d, i) => (
+          <button
+            key={d.label}
+            type="button"
+            onClick={() => setSelectedIndex((prev) => (prev === i ? null : i))}
+            aria-pressed={selectedIndex === i}
+            className="sr-only focus:not-sr-only focus:relative focus:z-10 focus:px-2.5 focus:py-1 focus:rounded-md focus:border focus:border-border focus:bg-surface focus:text-[11px] focus:font-medium focus:text-text focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none"
+          >
+            {d.label}: see breakdown
+          </button>
+        ))}
+      </div>
+
+      {/* Tap-to-pin breakdown — same data the hover tooltip shows, kept visible after the tap so
+          it works on touch devices (no hover) and doesn't disappear the moment a finger lifts. */}
+      {selectedDatum ? (
+        <PinnedBreakdown title={selectedDatum.label} onClose={() => setSelectedIndex(null)}>
+          <BreakdownRows datum={selectedDatum} activeCategories={activeCategories} />
+        </PinnedBreakdown>
+      ) : (
+        <BreakdownHint>Tap a bar to see its full breakdown</BreakdownHint>
+      )}
     </div>
   );
 };

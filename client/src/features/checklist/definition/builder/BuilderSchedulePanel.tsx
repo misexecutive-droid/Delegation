@@ -15,6 +15,10 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 const toDateStr = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const parseDateStr = (v: string) => (v ? new Date(`${v}T00:00:00`) : null);
 
+// Colocated with the component like ui/badge.tsx's own badgeVariants export — only affects Fast
+// Refresh granularity (a full reload instead of a hot-swap when this file changes), not runtime
+// correctness.
+// eslint-disable-next-line react-refresh/only-export-components
 export const RECURRENCE_OPTIONS: {
   value: ChecklistRecurrence;
   label: string;
@@ -70,7 +74,7 @@ export const BuilderSchedulePanel = ({
             <CalendarClock size={15} />
           </span>
           <div>
-            <h3 className="text-xs font-display font-bold uppercase tracking-wider text-text">
+            <h3 className="text-xs font-display font-bold text-text">
               Schedule & Location
             </h3>
             <p className="text-[11px] font-display text-text-muted">

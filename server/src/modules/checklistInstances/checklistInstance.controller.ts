@@ -1,33 +1,58 @@
 import type { Request, Response } from "express"
 import { checklistInstanceService, type InstanceStatusFilter } from "./checklistInstance.service.js"
-import { setChecklistInstanceItemDoneSchema, verifyChecklistInstanceSchema, checklistInstanceComplianceReportQuerySchema } from "./checklistInstance.validation.js"
+import { setChecklistInstanceItemDoneSchema, verifyChecklistInstanceSchema, checklistInstanceComplianceReportQuerySchema, listChecklistInstancesQuerySchema } from "./checklistInstance.validation.js"
 import { asyncHandler } from "../../utils/asyncHandler.js"
 import { resolveReportScope, resolveStoreIdForDepartment } from "../../utils/reportScope.js"
 
 export const checklistInstanceController = {
     // GET /checklist-instances/mine?status=OPEN|COMPLETED
+    // Paginated. Responds `{ success, data, meta }` — `data` is the same array shape as before,
+    // so a caller that ignores `meta` still works, it just gets the first page.
     getMine: asyncHandler(async (req: Request, res: Response) => {
         const status = req.query.status as InstanceStatusFilter | undefined
-        const instances = await checklistInstanceService.getMine(req.user!.sub, status)
-        res.json({ success: true, data: instances })
+        const { page, limit } = listChecklistInstancesQuerySchema.parse(req.query)
+        const result = await checklistInstanceService.getMine(req.user!.sub, status, page, limit)
+        res.json({ success: true, ...result })
     }),
 
     // GET /checklist-instances?definitionId=&storeId=&status=&assigneeId=  (ADMIN only)
     list: asyncHandler(async (req: Request, res: Response) => {
         const { definitionId, storeId, status, assigneeId } = req.query
-        const instances = await checklistInstanceService.listAll({
+        const { page, limit } = listChecklistInstancesQuerySchema.parse(req.query)
+        const result = await checklistInstanceService.listAll({
             definitionId: definitionId as string | undefined,
             storeId: storeId as string | undefined,
             status: status as InstanceStatusFilter | undefined,
             assigneeId: assigneeId as string | undefined,
+            page,
+            limit,
         })
-        res.json({ success: true, data: instances })
+        res.json({ success: true, ...result })
     }),
 
     // GET /checklist-instances/pending-verification (PC own-store / ADMIN all)
     listPendingVerification: asyncHandler(async (req: Request, res: Response) => {
-        const instances = await checklistInstanceService.listPendingVerification(req.user!)
-        res.json({ success: true, data: instances })
+        const { page, limit } = listChecklistInstancesQuerySchema.parse(req.query)
+        const result = await checklistInstanceService.listPendingVerification(req.user!, page, limit)
+        res.json({ success: true, ...result })
+    }),
+
+    // GET /checklist-instances/summary?mine=1|storeId=&assigneeId=&definitionId=
+    // The counts the compliance board and dashboard cards used to compute by downloading every
+    // instance. `mine=1` scopes to the caller, which is what the dashboard cards want.
+    summary: asyncHandler(async (req: Request, res: Response) => {
+        const { definitionId, storeId, assigneeId, mine } = req.query
+        const scopedToSelf = mine === "1" || mine === "true"
+        // Only ADMIN/PC may ask for org-wide numbers; everyone else is pinned to their own, so
+        // this can't be used to read another store's compliance by dropping `mine`.
+        const isOrgWide = req.user!.role === "ADMIN" || req.user!.role === "PC"
+        const data = await checklistInstanceService.summary({
+            definitionId: definitionId as string | undefined,
+            storeId: storeId as string | undefined,
+            assigneeId: assigneeId as string | undefined,
+            userId: scopedToSelf || !isOrgWide ? req.user!.sub : undefined,
+        })
+        res.json({ success: true, data })
     }),
 
     getOne: asyncHandler(async (req: Request, res: Response) => {

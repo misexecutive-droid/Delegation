@@ -31,7 +31,7 @@ export const SignupForm = () => {
 
     return (
         <>
-            <div className="flex min-h-svh" style={{ background: "var(--bg-body)" }}>
+            <div className="flex min-h-svh" style={{ background: "var(--color-background)" }}>
                 {/* Left Sidebar */}
                 <aside
                     className="hidden lg:flex lg:w-1/2 xl:w-2/5 flex-col justify-between p-10 xl:p-14 relative overflow-hidden"

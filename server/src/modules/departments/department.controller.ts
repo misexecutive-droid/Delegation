@@ -24,20 +24,20 @@ export const departmentController = {
     // POST /departments -> ADMIN only(enforced in department.routes.ts).
     create : asyncHandler(async ( req : Request , res : Response) => {
         const input = createDepartmentSchema.parse(req.body)
-        const department = await departmentService.create(input)
+        const department = await departmentService.create(input, req.user!.sub)
         res.status(201).json({ success : true , data : department})
     }),
 
     update : asyncHandler(async (req : Request , res : Response) => {
         const input = updateDepartmentSchema.parse(req.body)
-        const department = await departmentService.update(req.params.id, input)
+        const department = await departmentService.update(req.params.id, input, req.user!.sub)
         res.json({success : true, data : department})
 
     }),
 
     // DELETE /departments/:id  -> ADMIN only.
     remove : asyncHandler(async (req : Request, res : Response) => {
-        await departmentService.remove(req.params.id)
+        await departmentService.remove(req.params.id, req.user!.sub)
         res.json({ success : true, data : { deleted : true}})
     }),
 

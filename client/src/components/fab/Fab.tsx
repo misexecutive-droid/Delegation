@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, type LucideIcon } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -26,8 +25,6 @@ export interface FabProps {
   'aria-label'?: string;
 }
 
-const TRANSITION = { type: 'spring', stiffness: 400, damping: 25 };
-
 export const Fab = ({ actions, icon: Icon = Plus, 'aria-label': ariaLabel }: FabProps) => {
   const [expanded, setExpanded] = useState(false);
 
@@ -44,39 +41,43 @@ export const Fab = ({ actions, icon: Icon = Plus, 'aria-label': ariaLabel }: Fab
 
   return createPortal(
     <>
-      {/* Tap-outside-to-close backdrop */}
-      <AnimatePresence>
-        {!isSingleAction && expanded && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="md:hidden fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm"
-            onClick={() => setExpanded(false)}
-            aria-hidden="true"
-          />
-        )}
-      </AnimatePresence>
+      {/* Tap-outside-to-close backdrop. Stays mounted and fades on opacity — AnimatePresence was
+          only buying the exit fade, and `pointer-events-none` makes a permanently-present
+          full-screen overlay harmless while it's invisible. */}
+      {!isSingleAction && (
+        <div
+          onClick={() => setExpanded(false)}
+          aria-hidden="true"
+          className={`md:hidden fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+            expanded ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+        />
+      )}
 
       <div
         className="md:hidden fixed right-6 z-40 flex flex-col items-end gap-4"
         style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
       >
         {!isSingleAction && (
-          <AnimatePresence>
-            {expanded && (
-              <motion.div className="flex flex-col items-end gap-4">
+          // The speed-dial items stay mounted and are transformed out of view when closed, which
+          // gives the same open *and* close animation AnimatePresence provided. `inert` keeps the
+          // hidden buttons off the tab order. The stagger is a per-item transition-delay, walked
+          // bottom-up so the row nearest the FAB moves first — same order as before.
+          <div
+            inert={!expanded}
+            className={`flex flex-col items-end gap-4 transition-opacity duration-200 ${
+              expanded ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
                 {actions.map((action, i) => (
-                  <motion.div
+                  <div
                     key={action.key}
-                    className="flex items-center gap-3.5"
-                    initial={{ opacity: 0, y: 16, scale: 0.8 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 12, scale: 0.8 }}
-                    transition={{ ...TRANSITION, delay: (actions.length - 1 - i) * 0.04 }}
+                    style={{ transitionDelay: `${(actions.length - 1 - i) * 40}ms` }}
+                    className={`flex items-center gap-3.5 transition-all duration-200 ease-out motion-reduce:transition-none ${
+                      expanded ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-90'
+                    }`}
                   >
-                    <span className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 shadow-sm text-xs font-bold text-slate-700 tracking-wide whitespace-nowrap">
+                    <span className="px-3.5 py-1.5 rounded-xl bg-surface border border-border shadow-sm text-xs font-bold text-text-secondary tracking-wide whitespace-nowrap">
                       {action.label}
                     </span>
                     <button
@@ -85,23 +86,21 @@ export const Fab = ({ actions, icon: Icon = Plus, 'aria-label': ariaLabel }: Fab
                       disabled={action.disabled}
                       aria-label={action.label}
                       className={cn(
-                        "relative flex items-center justify-center size-12 rounded-full bg-white border border-slate-200 text-primary-600 shadow-md transition-all duration-200 cursor-pointer active:scale-90",
+                        "relative flex items-center justify-center size-12 rounded-full bg-surface border border-border text-primary-600 shadow-md transition-all duration-200 cursor-pointer active:scale-90",
                         "hover:bg-primary-50 hover:border-primary-200 hover:text-primary-700",
-                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-slate-200"
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-surface disabled:hover:border-border"
                       )}
                     >
                       <action.icon size={20} strokeWidth={2.5} />
                       {action.badge && (
-                        <span className="absolute -top-2 -right-2 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 shadow-sm">
+                        <span className="absolute -top-2 -right-2 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-surface-hover border border-border text-text-muted shadow-sm">
                           {action.badge}
                         </span>
                       )}
                     </button>
-                  </motion.div>
+                  </div>
                 ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          </div>
         )}
 
         <button
@@ -118,13 +117,13 @@ export const Fab = ({ actions, icon: Icon = Plus, 'aria-label': ariaLabel }: Fab
             (!isSingleAction && expanded) ? "scale-95 bg-primary-700 shadow-md" : "hover:-translate-y-1"
           )}
         >
-          <motion.span
-            animate={{ rotate: !isSingleAction && expanded ? 135 : 0 }}
-            transition={TRANSITION}
-            className="flex"
+          <span
+            className={`flex transition-transform duration-300 ease-out motion-reduce:transition-none ${
+              !isSingleAction && expanded ? 'rotate-[135deg]' : 'rotate-0'
+            }`}
           >
             {singleAction ? <singleAction.icon size={24} strokeWidth={2.5} /> : <Icon size={24} strokeWidth={2.5} />}
-          </motion.span>
+          </span>
         </button>
       </div>
     </>,

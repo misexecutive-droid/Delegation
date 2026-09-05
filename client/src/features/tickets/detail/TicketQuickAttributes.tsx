@@ -1,7 +1,9 @@
 import { Tag, Sparkles, UserCheck, Clock, User, ChevronDown, Lock } from 'lucide-react';
-import { Dropdown, type DropdownAction } from '../../../components';
+import { Dropdown, StatusChip, PriorityChip, type DropdownAction, type StatusChipStatus } from '../../../components';
 import { getTicketStatusLabel } from '../../../lib/ticketStatusLabel';
-import { STATUS_CONFIG, PRIORITY_CONFIG, STATUS_OPTIONS } from './detailConstants';
+import { TicketAttributeCard } from './TicketAttributeCard';
+import { PRIORITY_CONFIG } from '../ticketDisplay';
+import { STATUS_OPTIONS } from './detailConstants';
 import type { Ticket } from '../../../api/ticket';
 import type { Role } from '../../../api/auth';
 
@@ -20,58 +22,28 @@ export const TicketQuickAttributes = ({
   assigneeActions,
   isOverdue,
 }: TicketQuickAttributesProps) => {
-  const statusStyle = STATUS_CONFIG[ticket.status];
-  const priorityStyle = PRIORITY_CONFIG[ticket.priority];
+  const statusChipStatus = ticket.status.toLowerCase() as StatusChipStatus;
+  const priorityInfo = PRIORITY_CONFIG[ticket.priority];
   const statusLabel = getTicketStatusLabel(
     ticket.status,
     currentUserRole,
     STATUS_OPTIONS.find(s => s.value === ticket.status)?.label ?? ticket.status,
   );
 
-  // Same "tinted fill + colored border" feedback as a selected card in a picker grid — applied on
-  // hover/focus-within instead of a fixed selected state, since these are always-live info panels,
-  // not options being chosen. Built from the app's own primary token, not a literal reference-image
-  // sky blue, so it stays on-brand and correct in both themes automatically.
-  const cardClass =
-    'flex flex-col gap-1 p-2 rounded-lg bg-surface/60 border border-border/40 transition-colors duration-200 ' +
-    'hover:bg-primary-500/5 hover:border-primary-500/30 focus-within:bg-primary-500/5 focus-within:border-primary-500/40';
-
-  // Bumped from font-medium/text-text-muted — at 10px, the lighter weight and flatter gray read as
-  // dull/hard to scan; semibold + the slightly darker text-secondary token (still not full-strength
-  // text) keeps it a label, not a value, but with enough presence to actually notice.
-  const attributeLabelClass = 'text-[10px] capitalize text-text-secondary font-semibold flex items-center gap-1';
-
   return (
-    <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-surface-muted/40 border border-border/50">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-surface border border-border shadow-sm font-sans">
+      
+      <TicketAttributeCard icon={Tag} label="Status">
+        <StatusChip status={statusChipStatus} label={statusLabel}>
+          <Lock size={12} className="opacity-60" strokeWidth={2.5} />
+        </StatusChip>
+      </TicketAttributeCard>
 
-      {/* Status — read-only here. Changing it is a deliberate action (requires a comment first),
-          not a stray click on a quick-glance info card, so the only way to change it is the
-          dedicated control in the footer. */}
-      <div className={cardClass}>
-        <label className={attributeLabelClass}>
-          <Tag size={11} className="text-primary-500" /> Status
-        </label>
-        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md border w-fit ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-          {statusLabel}
-          <Lock size={10} className="opacity-50" />
-        </span>
-      </div>
+      <TicketAttributeCard icon={Sparkles} label="Priority">
+        <PriorityChip meta={priorityInfo} className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg w-fit uppercase tracking-wider" />
+      </TicketAttributeCard>
 
-      {/* Priority Badge */}
-      <div className={cardClass}>
-        <label className={attributeLabelClass}>
-          <Sparkles size={11} className="text-primary-500" /> Priority
-        </label>
-        <span className={`text-xs font-medium px-2 py-1 rounded-md border w-fit ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}>
-          {ticket.priority}
-        </span>
-      </div>
-
-      {/* Assignee Selection */}
-      <div className={cardClass}>
-        <label className={attributeLabelClass}>
-          <UserCheck size={11} className="text-primary-500" /> Assignee
-        </label>
+      <TicketAttributeCard icon={UserCheck} label="Assignee">
         {canAssign ? (
           <Dropdown
             align="start"
@@ -79,54 +51,50 @@ export const TicketQuickAttributes = ({
             trigger={
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 text-xs px-1.5 py-1 rounded-md border border-border bg-surface text-text cursor-pointer focus:outline-none w-fit"
+                className="inline-flex items-center gap-2.5 text-xs font-bold px-2.5 py-1.5 rounded-xl border border-border bg-surface-hover text-text hover:bg-surface-active transition-all shadow-sm cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 w-fit"
               >
                 {ticket.assignee ? (
-                  <span className="flex items-center justify-center size-4.5 rounded-full bg-primary-600 text-white text-[9px] font-display font-medium shrink-0">
+                  <span className="flex items-center justify-center h-5 w-5 rounded-full bg-primary-600 text-white text-[9px] font-black shrink-0 shadow-sm ring-1 ring-primary-700/50">
                     {ticket.assignee.firstName.slice(0, 2).toUpperCase()}
                   </span>
                 ) : (
-                  <User size={12} className="text-text-muted" />
+                  <div className="flex items-center justify-center h-5 w-5 rounded-full bg-surface-active shrink-0 ring-1 ring-border-hover">
+                    <User size={12} className="text-text-secondary" strokeWidth={2.5} />
+                  </div>
                 )}
-                {ticket.assignee ? ticket.assignee.firstName : 'Unassigned'}
-                <ChevronDown size={12} />
+                <span>{ticket.assignee ? ticket.assignee.firstName : 'Unassigned'}</span>
+                <ChevronDown size={14} className="text-text-light" strokeWidth={2.5} />
               </button>
             }
           />
         ) : (
-          <span className="text-xs text-text-secondary flex items-center gap-1.5 py-0.5">
+          <span className="text-sm text-text-secondary flex items-center gap-2.5 py-1 font-semibold">
             {ticket.assignee ? (
-              <span className="flex items-center justify-center size-4.5 rounded-full bg-primary-600 text-white text-[9px] font-display font-medium shrink-0">
+              <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary-600 text-white text-[10px] font-black shrink-0 shadow-sm ring-1 ring-primary-700/50">
                 {ticket.assignee.firstName.slice(0, 2).toUpperCase()}
               </span>
             ) : (
-              <User size={12} />
+              <div className="flex items-center justify-center h-6 w-6 rounded-full bg-surface-hover shrink-0 ring-1 ring-border">
+                <User size={14} className="text-text-muted" strokeWidth={2.5} />
+              </div>
             )}
             {ticket.assignee ? ticket.assignee.firstName : 'Unassigned'}
           </span>
         )}
-      </div>
+      </TicketAttributeCard>
 
-      {/* SLA / Due Date Info */}
-      <div className={cardClass}>
-        <label className={attributeLabelClass}>
-          <Clock size={11} className="text-primary-500" /> SLA Deadline
-        </label>
+      <TicketAttributeCard icon={Clock} label="SLA Deadline">
         {ticket.tatDueAt ? (
-          <div className="flex items-center gap-1.5 py-0.5">
-            <span className={`text-xs font-medium ${isOverdue ? 'text-danger font-bold' : 'text-text-secondary'}`}>
-              {new Date(ticket.tatDueAt).toLocaleDateString()}
+          <div className="flex items-center gap-2.5 py-1">
+            <span className={`text-sm font-bold tracking-tight ${isOverdue ? 'text-danger' : 'text-text-secondary'}`}>
+              {new Date(ticket.tatDueAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
-            {isOverdue && (
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-danger/10 text-danger border border-danger/20 animate-pulse">
-                Overdue
-              </span>
-            )}
+            {isOverdue && <StatusChip status="overdue" />}
           </div>
         ) : (
-          <span className="text-xs text-text-muted py-1">No SLA set</span>
+          <span className="text-sm font-medium text-text-light py-1 italic">No SLA set</span>
         )}
-      </div>
+      </TicketAttributeCard>
 
     </div>
   );

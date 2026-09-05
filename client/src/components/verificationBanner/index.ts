@@ -1,0 +1,1 @@
+export { VerificationNoteBanner } from './VerificationNoteBanner';

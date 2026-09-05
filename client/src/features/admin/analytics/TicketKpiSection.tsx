@@ -37,17 +37,23 @@ export const TicketKpiSection = ({ groupBy, from, to }: TicketKpiSectionProps) =
         },
         {
           icon: Timer,
-          iconTint: 'text-indigo-600 dark:text-indigo-400',
+          iconTint: 'text-coral-600 dark:text-coral-400',
           label: 'Avg TAT',
           value: avgTat.value != null ? `${avgTat.value}h` : '—',
           trend: avgTat.trend,
+          // A rising turnaround time means tickets are taking longer — the arrow follows the
+          // number, but green belongs on the downward move here.
+          lowerIsBetter: true,
         },
         {
           icon: AlertTriangle,
-          iconTint: 'text-amber-600 dark:text-amber-400',
+          iconTint: 'text-warning',
+          // Passed as a raw number, not a template string — StatCard formats numbers (thousands
+          // separators); pre-stringifying it here opted this card out of that for no reason.
           label: 'Overdue',
-          value: overdue.value != null ? `${overdue.value}` : '—',
+          value: overdue.value ?? '—',
           trend: overdue.trend,
+          lowerIsBetter: true,
         },
       ]}
       chart={

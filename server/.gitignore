@@ -12,6 +12,9 @@ node_modules/
 dist/
 build/
 
+# Local DB backups (backup:data script) — real row data, never commit
+backups/
+
 # Logs
 logs/
 *.log

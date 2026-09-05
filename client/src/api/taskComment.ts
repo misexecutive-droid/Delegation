@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { apiFetch } from './http';
+import { arrayField, withArrayDefaults, normalizeWith } from './normalize';
 
 export type TaskCommentAttachment = {
     url:              string;
@@ -41,9 +43,15 @@ export type CreateTaskCommentPayload = {
 
 export type ApiResponse<T> = { success: boolean; data: T };
 
+// attachments is typed as always-present — TaskActivitySection's `c.attachments.length`/`.map`
+// has no guard of its own, the same shape of bug that already crashed on ticket.comments/
+// task.additionalAssigneeIds/ticket.checklists.
+const taskCommentArrayDefaults = withArrayDefaults({ attachments: arrayField(z.unknown()) });
+const normalizeComment = (raw: unknown) => normalizeWith<TaskComment>(taskCommentArrayDefaults, raw);
+
 export const taskCommentApi = {
     list: (taskId: string) =>
-        apiFetch<ApiResponse<TaskComment[]>>(`/tasks/${taskId}/comments`).then(r => r.data),
+        apiFetch<ApiResponse<TaskComment[]>>(`/tasks/${taskId}/comments`).then(r => r.data.map(normalizeComment)),
 
     create: (taskId: string, payload: CreateTaskCommentPayload) => {
         const formData = new FormData();
@@ -53,6 +61,6 @@ export const taskCommentApi = {
         return apiFetch<ApiResponse<TaskComment>>(`/tasks/${taskId}/comments`, {
             method: 'POST',
             body:   formData,
-        }).then(r => r.data);
+        }).then(r => normalizeComment(r.data));
     },
 };

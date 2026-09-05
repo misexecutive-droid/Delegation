@@ -50,3 +50,11 @@ export type SetChecklistInstanceItemDoneInput = z.infer<typeof setChecklistInsta
 export type UploadChecklistInstanceImageInput = z.infer<typeof uploadChecklistInstanceImageSchema>
 export type VerifyChecklistInstanceInput = z.infer<typeof verifyChecklistInstanceSchema>
 export type ChecklistInstanceComplianceReportQuery = z.infer<typeof checklistInstanceComplianceReportQuerySchema>
+
+// Same page/limit convention as listDepartmentsQuerySchema — the list endpoints here were
+// unbounded, hydrating every matching instance (items, images, submissions, accessories) on every
+// call. `max(200)` mirrors the service-side cap so a caller can't reintroduce that by hand.
+export const listChecklistInstancesQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(200).optional(),
+})

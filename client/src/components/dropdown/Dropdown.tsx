@@ -38,7 +38,7 @@ export const Dropdown = ({ trigger, items, align = 'end' }: DropdownProps) => (
     
     <DropdownMenuContent 
       align={align} 
-      className="w-56 p-1.5 rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 animate-in fade-in-80 zoom-in-95 duration-200"
+      className="w-56 p-1.5 rounded-xl border border-border bg-surface shadow-xl animate-in fade-in-80 zoom-in-95 duration-200"
     >
       {items.map((item, index) => {
         const Icon = item.icon;
@@ -47,20 +47,20 @@ export const Dropdown = ({ trigger, items, align = 'end' }: DropdownProps) => (
         // Base classes applied to the item row for consistent hover/focus states
         const itemClasses = cn(
           "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer outline-none active:scale-[0.98]",
-          isDestructive 
-            ? "text-red-600 focus:bg-red-50 focus:text-red-700" 
-            : "text-slate-700 focus:bg-slate-100 focus:text-slate-900"
+          isDestructive
+            ? "text-danger focus:bg-danger/10 focus:text-danger"
+            : "text-text-secondary focus:bg-surface-hover focus:text-text"
         );
 
         const iconClasses = cn(
-          "shrink-0 transition-colors", 
-          isDestructive ? "text-red-500" : "text-slate-400 group-focus:text-slate-500"
+          "shrink-0 transition-colors",
+          isDestructive ? "text-danger" : "text-text-light group-focus:text-text-muted"
         );
 
         return (
           <Fragment key={`${item.label}-${index}`}>
             {item.separatorBefore && (
-              <DropdownMenuSeparator className="my-1.5 bg-slate-100" />
+              <DropdownMenuSeparator className="my-1.5 bg-border" />
             )}
             
             {item.to ? (

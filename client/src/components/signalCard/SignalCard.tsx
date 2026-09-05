@@ -28,7 +28,7 @@ export const SignalCard = ({
   <div
     className={cn(
       "group relative flex flex-col w-80 max-w-full p-6 sm:p-7 rounded-[1.5rem] overflow-hidden",
-      "bg-slate-950 border border-primary-800/60 shadow-xl",
+      "bg-primary-900 border border-primary-800/60 shadow-xl",
       "transition-all duration-400 ease-out hover:shadow-2xl hover:shadow-primary-900/40 hover:-translate-y-1 hover:border-primary-700/80",
       className
     )}
@@ -74,7 +74,7 @@ export const SignalCard = ({
       </button>
 
       {meta && (
-        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+        <span className="text-[11px] font-bold uppercase tracking-widest text-text-muted">
           {meta}
         </span>
       )}

@@ -52,7 +52,7 @@ const QueueRow = ({ icon, title, subtitle, onApprove, onReject, isPending }: Que
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5 border-rose-500/30 text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/50 hover:text-rose-600 transition-colors"
+              className="gap-1.5 border-danger/30 text-danger hover:bg-danger/10 hover:border-danger/50 hover:text-danger transition-colors"
               disabled={isPending}
               onClick={() => setRejecting(true)}
             >
@@ -62,7 +62,7 @@ const QueueRow = ({ icon, title, subtitle, onApprove, onReject, isPending }: Que
             <Button
               size="sm"
               variant="primary"
-              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-900/20"
+              className="gap-1.5 bg-success hover:bg-success/90 shadow-sm shadow-success/20"
               disabled={isPending}
               onClick={() => onApprove()}
             >
@@ -82,7 +82,7 @@ const QueueRow = ({ icon, title, subtitle, onApprove, onReject, isPending }: Que
             onChange={e => setNote(e.target.value)}
             placeholder="Please detail what needs to be fixed before approval..."
             rows={2}
-            className="w-full px-3.5 py-2.5 text-sm bg-surface/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500/50 resize-none transition-all placeholder:text-text-muted/50"
+            className="w-full px-3.5 py-2.5 text-sm bg-surface/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-danger/20 focus:border-danger/50 resize-none transition-all placeholder:text-text-muted/50"
           />
           <div className="flex items-center justify-end gap-2">
             <Button 
@@ -97,7 +97,7 @@ const QueueRow = ({ icon, title, subtitle, onApprove, onReject, isPending }: Que
             <Button
               size="sm"
               variant="primary"
-              className="bg-rose-600 hover:bg-rose-700 shadow-sm shadow-rose-900/20"
+              className="bg-danger hover:bg-danger/90 shadow-sm shadow-danger/20"
               disabled={isPending || !note.trim()}
               onClick={() => onReject(note.trim())}
             >
@@ -168,7 +168,7 @@ const SkeletonRow = () => (
 
 const EmptyState = ({ label }: { label: string }) => (
   <div className="flex flex-col items-center justify-center py-8 px-4 rounded-xl border border-dashed border-border/70 bg-surface/30 text-center">
-    <div className="flex items-center justify-center mb-3 text-emerald-500">
+    <div className="flex items-center justify-center mb-3 text-success">
       <CheckCircle2 size={20} />
     </div>
     <p className="text-sm font-medium text-text">All caught up</p>
@@ -179,7 +179,11 @@ const EmptyState = ({ label }: { label: string }) => (
 export const VerificationQueue = () => {
   const { data: tickets = [], isPending: ticketsPending } = useTicketsByStatusQuery('IN_REVIEW');
   const { data: tasks = [], isPending: tasksPending } = useTasksByStatusQuery('pending_verification');
-  const { data: checklists = [], isPending: checklistsPending } = usePendingVerificationChecklistInstancesQuery();
+  // Asks for the server's maximum rather than the default page. This is a queue meant to be
+  // drained, and it mixes with tickets and tasks in one scroll, so a pager for this section alone
+  // would read oddly — 200 pending checklists is already a signal something has gone unattended,
+  // not a paging problem.
+  const { data: checklists = [], isPending: checklistsPending } = usePendingVerificationChecklistInstancesQuery({ limit: 200 });
 
   const totalItems = tickets.length + tasks.length + checklists.length;
 
@@ -202,7 +206,7 @@ export const VerificationQueue = () => {
         {/* Tickets Section */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xs font-medium text-text-muted uppercase tracking-widest">Tickets</h2>
+            <h2 className="text-xs font-bold text-text-muted tracking-wide">Tickets</h2>
             {!ticketsPending && tickets.length > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-border/50 text-[10px] font-medium text-text-muted">
                 {tickets.length}
@@ -225,7 +229,7 @@ export const VerificationQueue = () => {
         {/* Delegations Section */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xs font-medium text-text-muted uppercase tracking-widest">Delegations</h2>
+            <h2 className="text-xs font-bold text-text-muted tracking-wide">Delegations</h2>
             {!tasksPending && tasks.length > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-border/50 text-[10px] font-medium text-text-muted">
                 {tasks.length}
@@ -248,7 +252,7 @@ export const VerificationQueue = () => {
         {/* Checklists Section */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xs font-medium text-text-muted uppercase tracking-widest">Checklists</h2>
+            <h2 className="text-xs font-bold text-text-muted tracking-wide">Checklists</h2>
             {!checklistsPending && checklists.length > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-border/50 text-[10px] font-medium text-text-muted">
                 {checklists.length}

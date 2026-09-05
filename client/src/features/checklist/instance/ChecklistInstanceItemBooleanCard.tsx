@@ -100,7 +100,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
           <button
             onClick={() => { setPendingAnswer(null); setItemDone.mutate({ itemId: item.id, isDone: false, booleanAnswer: item.booleanAnswer ?? undefined }); }}
             disabled={setItemDone.isPending}
-            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -129,7 +129,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
           onClick={() => pickAnswer('YES')}
           className={`flex-1 px-3 py-1.5 rounded-md border text-xs font-display font-medium transition-colors ${
             (pendingAnswer ?? item.booleanAnswer) === 'YES'
-              ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              ? 'border-success/60 bg-success/10 text-success'
               : 'border-border text-text-secondary hover:bg-surface-hover'
           } ${!interactive || item.isDone ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
         >
@@ -141,7 +141,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
           onClick={() => pickAnswer('NO')}
           className={`flex-1 px-3 py-1.5 rounded-md border text-xs font-display font-medium transition-colors ${
             (pendingAnswer ?? item.booleanAnswer) === 'NO'
-              ? 'border-rose-500/60 bg-rose-500/10 text-rose-600 dark:text-rose-400'
+              ? 'border-danger/60 bg-danger/10 text-danger'
               : 'border-border text-text-secondary hover:bg-surface-hover'
           } ${!interactive || item.isDone ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
         >
@@ -228,7 +228,7 @@ export const ChecklistInstanceItemBooleanCard = ({ item, instanceId, canWork, is
                 type="button"
                 onClick={confirmPendingAnswer}
                 disabled={!canConfirm || setItemDone.isPending}
-                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-success/50 text-success hover:bg-success/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {setItemDone.isPending && <Loader2 size={12} className="animate-spin" />}
                 Confirm answer

@@ -27,6 +27,7 @@ import {
   taskChecklistItems,
   taskImages,
   taskComments,
+  taskStatusUpdates,
   taskCommentAttachments,
   taskReviews,
   todos,
@@ -122,6 +123,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   uploadedTicketAttachments: many(ticketAttachments),
   ticketComments: many(ticketComments),
   changedTicketStatusUpdates: many(ticketStatusUpdates),
+  changedTaskStatusUpdates: many(taskStatusUpdates),
   assignedChecklistItems: many(checklistItems),
   uploadedChecklistImages: many(checklistImages),
   createdChecklistTemplates: many(checklistTemplates),
@@ -207,6 +209,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   attachments: many(taskAttachments),
   checklists: many(taskChecklists),
   comments: many(taskComments),
+  statusUpdates: many(taskStatusUpdates),
   reviews: many(taskReviews),
   notifications: many(notifications),
   smartTaskConversations: many(smartTaskConversations),
@@ -257,6 +260,11 @@ export const taskImagesRelations = relations(taskImages, ({ one }) => ({
     references: [taskChecklistItems.id],
   }),
   uploadedByUser: one(users, { fields: [taskImages.uploadedBy], references: [users.id] }),
+}));
+
+export const taskStatusUpdatesRelations = relations(taskStatusUpdates, ({ one }) => ({
+  task: one(tasks, { fields: [taskStatusUpdates.taskId], references: [tasks.id] }),
+  changedByUser: one(users, { fields: [taskStatusUpdates.changedBy], references: [users.id] }),
 }));
 
 export const taskCommentsRelations = relations(taskComments, ({ one, many }) => ({

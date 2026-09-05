@@ -79,7 +79,7 @@ export const ChecklistInstanceItemGpsCard = ({ item, instanceId, canWork, isLock
               gpsLat: item.gpsLat ?? undefined, gpsLng: item.gpsLng ?? undefined, gpsAccuracy: item.gpsAccuracy ?? undefined,
             })}
             disabled={setItemDone.isPending}
-            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -103,7 +103,7 @@ export const ChecklistInstanceItemGpsCard = ({ item, instanceId, canWork, isLock
             <div className="flex flex-col gap-1 px-2.5 py-2 rounded-md bg-background border border-border/60 text-xs font-display text-text-secondary">
               <span className="flex items-center gap-1.5"><MapPin size={12} className="text-primary-500" /> {captured.lat.toFixed(6)}, {captured.lng.toFixed(6)} (±{Math.round(captured.accuracy)}m)</span>
               {hasTarget && distance != null && (
-                <span className={withinRadius === false ? 'text-danger' : 'text-emerald-600 dark:text-emerald-400'}>
+                <span className={withinRadius === false ? 'text-danger' : 'text-success'}>
                   {Math.round(distance)}m from required location{item.gpsRadiusMeters ? ` (max ${item.gpsRadiusMeters}m)` : ''}
                 </span>
               )}
@@ -125,7 +125,7 @@ export const ChecklistInstanceItemGpsCard = ({ item, instanceId, canWork, isLock
               <button
                 onClick={() => setItemDone.mutate({ itemId: item.id, isDone: true, gpsLat: captured.lat, gpsLng: captured.lng, gpsAccuracy: captured.accuracy })}
                 disabled={setItemDone.isPending}
-                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-success/50 text-success hover:bg-success/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {setItemDone.isPending && <Loader2 size={12} className="animate-spin" />}
                 Save

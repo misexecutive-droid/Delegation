@@ -37,14 +37,14 @@ export const ChecklistInstanceKpiSection = ({ groupBy, from, to }: ChecklistInst
         },
         {
           icon: Camera,
-          iconTint: 'text-emerald-600 dark:text-emerald-400',
+          iconTint: 'text-success',
           label: 'Photo quality rate',
           value: quality.value != null ? `${quality.value}%` : '—',
           trend: quality.trend,
         },
         {
           icon: ShieldCheck,
-          iconTint: 'text-violet-600 dark:text-violet-400',
+          iconTint: 'text-coral-600 dark:text-coral-400',
           // "First attempt" — an instance the PC ever rejected no longer counts here, even once
           // it's later fixed and approved (see checklistInstance.service.ts#complianceReport).
           label: 'PC approval rate (first attempt)',
@@ -58,7 +58,7 @@ export const ChecklistInstanceKpiSection = ({ groupBy, from, to }: ChecklistInst
           series={[
             { key: 'completionRate', label: 'Completion %', color: 'var(--color-primary-500)' },
             { key: 'qualityRate', label: 'Quality %', color: 'var(--color-success)' },
-            { key: 'approvalRate', label: 'PC approval %', color: 'var(--color-violet-500, #8b5cf6)' },
+            { key: 'approvalRate', label: 'PC approval %', color: 'var(--color-coral-500)' },
           ]}
           valueSuffix="%"
           yDomain={[0, 100]}

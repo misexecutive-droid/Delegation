@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Camera, Video, MapPin, QrCode, Info, Hash, Star } from 'lucide-react';
+import { Camera, Video, MapPin, QrCode, Info, Star } from 'lucide-react';
 import { UserMultiSelect, AccessoriesListEditor } from '../../../../components';
 import { ConditionalLogicPanel } from './ConditionalLogicPanel';
 import type { ChecklistItemType } from '../../../../api/checklistDefinitions';
@@ -298,6 +298,10 @@ export const ItemTypeConfigFields = (props: ItemTypeFieldsProps) => {
   return <>{Renderer(props)}</>;
 };
 
+// Colocated with the component like ui/badge.tsx's own badgeVariants export — only affects Fast
+// Refresh granularity (a full reload instead of a hot-swap when this file changes), not runtime
+// correctness.
+// eslint-disable-next-line react-refresh/only-export-components
 export const isItemDraftComplete = (draft: ItemDraft): boolean => {
   if (draft.itemType === 'AUDIT' && draft.auditUserIds.length === 0) return false;
   if ((draft.itemType === 'MULTIPLE_CHOICE' || draft.itemType === 'DROPDOWN') && draft.options.length < 2) return false;

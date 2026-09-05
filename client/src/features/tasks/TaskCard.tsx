@@ -1,28 +1,32 @@
 import {
   Loader2,
   Trash2,
+  MoveRight,
   User,
   UserCog,
   CheckCircle2,
   ShieldQuestion,
-  Clock,
   CalendarPlus,
   History,
 } from "lucide-react";
 import { useDeleteTaskMutation } from "./hook";
 import { TaskVerifyActions } from "./TaskVerifyActions";
 import { PRIORITY_MAP } from "./taskDisplay";
+import { isOverdueTask } from "./taskFilters";
 import { TaskScoreBadge } from "./TaskScoreBadge";
-import { departmentTagClass } from "./departmentTagColors";
 import { TaskSourceBadge } from "./TaskSourceBadge";
 import { coverPhotoFor } from "./taskAttachmentDisplay";
 import { UPLOADS_BASE } from "../../lib/uploadsBase";
-import { avatarColorClass } from "./avatarColors";
+import { avatarColorClass } from "../../lib/avatarColors";
+import { StatusChip } from "../../components/statusChip";
+import { PriorityChip } from "../../components/priorityChip";
+import { DepartmentChip } from "../../components/departmentChip";
 import { getInitials } from "../../lib/getInitials";
 import { getChecklistProgress } from "../../lib/checklistProgress";
 import { ChecklistProgressBar, DueProgressBar } from "../../components/progress";
-import { PriorityChip } from "./PriorityChip";
 import { CATEGORY_CONFIG, formatShortDateTime, type CardFieldVisibility } from "./cardFields";
+import { STATUS_LABEL, STATUS_ICON } from "./taskDisplay";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import type { Task } from "../../api/task";
 
 interface TaskCardProps {
@@ -37,9 +41,21 @@ interface TaskCardProps {
   /** True when this task has an unread "you were just assigned this" notification — shows a small
    *  callout naming who raised it, until the card is opened. */
   isNewlyAssigned?: boolean;
+  /**
+   * Moves this delegation to another status. Supplied by the board, which routes it through the
+   * same remark dialog a drag goes through.
+   *
+   * Drag is mouse-only (see TaskBoard's DraggableCard), so without this a keyboard or touch user
+   * had no way to move a card from the board at all — and once the board can group by department
+   * or assignee, drag stops being a status control even for mouse users. Omitted on the drag
+   * overlay and anywhere the move isn't available.
+   */
+  onMove?: (task: Task, toStatus: Task['status']) => void;
 }
 
 const MAX_VISIBLE_AVATARS = 3;
+
+const MOVABLE_STATUSES: Task['status'][] = ['todo', 'in_progress', 'pending_verification', 'done'];
 
 const daysLeftLabel = (dueDate: string) => {
   const diffMs = new Date(dueDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0);
@@ -49,17 +65,34 @@ const daysLeftLabel = (dueDate: string) => {
   return `${days} day${days === 1 ? '' : 's'} left`;
 };
 
-export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentName, isVerifier, onOpen, fields, isNewlyAssigned }: TaskCardProps) => {
+export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentName, isVerifier, onOpen, fields, isNewlyAssigned, onMove }: TaskCardProps) => {
   const deleteMutation = useDeleteTaskMutation();
   const priority = PRIORITY_MAP[task.priority];
   const coverPhoto = coverPhotoFor(task.attachments);
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
+  const isOverdue = isOverdueTask(task);
   const { doneItems, totalItems, progress } = getChecklistProgress(task.checklists ?? []);
 
   const showDoneBadge = fields.status && task.status === 'done';
   const showReviewBadge = fields.status && task.status === 'pending_verification' && !isVerifier;
   const showVerifyActions = task.status === 'pending_verification' && isVerifier;
-  const showDuePill = fields.dueDate && task.dueDate && task.status !== 'done' && task.status !== 'pending_verification';
+
+  // The card has two places that can report the deadline, and they were both firing at once:
+  // DueProgressBar (mid-card) renders a red "Overdue" pill once the date has passed, while the
+  // footer StatusChip renders "Nd overdue" — so an overdue delegation showed the word twice, in
+  // two different red pills. Not only when overdue, either: on a healthy task the bar's own label
+  // said "3d left" while the footer chip said "3 days left".
+  //
+  // They're now mutually exclusive. The bar is the richer of the two (it shows how much of the
+  // created→due window has burned down), so it wins the slot whenever it renders; the footer chip
+  // is the fallback for the case where a checklist has taken that slot instead and the bar isn't
+  // on the card at all.
+  const showChecklistBar = fields.subtasks && progress !== null;
+  const showDueBar = !showChecklistBar && fields.dueDate && !!task.dueDate && task.status !== 'done';
+  // The footer shows Done / In review / verify actions for these states, so the score pill would
+  // just be a second reading of the same status.
+  const showScoreBadge = fields.status && task.status !== 'done' && task.status !== 'pending_verification';
+  const showDuePill =
+    !showDueBar && fields.dueDate && !!task.dueDate && task.status !== 'done' && task.status !== 'pending_verification';
 
   return (
     <div
@@ -72,24 +105,72 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
       }}
       role="button"
       tabIndex={0}
-      className="group relative flex flex-col gap-2.5 p-4 pl-4 rounded-lg border border-border bg-surface hover:border-primary-500/40 transition-colors duration-200 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 overflow-hidden"
+      className="group relative flex flex-col gap-2 p-3.5 rounded-lg border border-border bg-surface hover:border-primary-500/40 transition-colors duration-200 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 overflow-hidden"
     >
       {isNewlyAssigned && raisedByName && (
-        <div className="flex items-center gap-1.5 -mt-1 -mx-1 px-2.5 py-1.5 rounded-lg bg-info/10 text-[11px] font-medium text-info">
+        <div className="flex items-center gap-1.5 -mt-1 -mx-1 px-2.5 py-1.5 rounded-lg bg-info/10 text-[11px] font-semibold text-info">
           <UserCog size={12} strokeWidth={2.5} className="shrink-0" />
           <span className="truncate">New delegation from {raisedByName} — kindly review</span>
         </div>
       )}
 
       <div className="flex items-start justify-between gap-2">
-        <h4 className="text-sm font-medium text-text truncate leading-snug">
+        <h4 className="text-sm font-bold text-text-secondary tracking-tight leading-tight line-clamp-2 break-words">
           {task.title}
         </h4>
         <div className="flex items-center gap-1 shrink-0">
           <TaskSourceBadge aiMeta={task.aiMeta} />
+
+          {onMove && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  // Same reason as the delete button below: this sits inside dnd-kit's drag
+                  // listeners, so its press must not pick the card up instead.
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Move to another status"
+                  title="Move to another status"
+                  className="flex items-center justify-center size-9 rounded-md text-text-light hover:text-primary-600 hover:bg-primary-500/10 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+                >
+                  <MoveRight size={15} strokeWidth={2.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-52 rounded-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DropdownMenuLabel className="text-xs text-text-muted font-medium">Move to</DropdownMenuLabel>
+                {MOVABLE_STATUSES.map((status) => {
+                  // "Done" is reached through the verification flow (Approve), never a raw status
+                  // change — same rule TaskBoard enforces on a drop and task.service.ts on the
+                  // server. Showing it disabled says the option exists but isn't yours to take.
+                  const blocked = status === 'done' && !isVerifier;
+                  return (
+                    <DropdownMenuItem
+                      key={status}
+                      disabled={status === task.status || blocked}
+                      onClick={() => onMove(task, status)}
+                      className="gap-2.5 py-2 cursor-pointer"
+                    >
+                      {STATUS_ICON[status]}
+                      <span className="font-medium text-sm">{STATUS_LABEL[status]}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           {isVerifier && (
             <button
               type="button"
+              // On the board this card sits inside dnd-kit's drag listeners. Without stopping the
+              // pointerdown here, pressing Delete and moving a few pixels picks the whole card up
+              // instead of pressing the button — the click never lands.
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 deleteMutation.mutate(task.id);
@@ -110,15 +191,18 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
       </div>
 
       {coverPhoto && (
+        // aspect-video gave a ~250px-wide column a ~140px image — the single heaviest thing on the
+        // card and the least informative. 5:2 keeps it recognisable at roughly two-thirds the height.
         <img
           src={`${UPLOADS_BASE}${coverPhoto.url}`}
           alt=""
-          className="w-full aspect-video rounded-lg object-cover"
+          loading="lazy"
+          className="w-full aspect-[5/2] rounded-md object-cover"
         />
       )}
 
       {task.description && (
-        <p className="text-xs text-text-muted leading-relaxed line-clamp-2">
+        <p className="text-xs text-text-secondary leading-tight line-clamp-2">
           {task.description}
         </p>
       )}
@@ -127,32 +211,20 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
           "Subtasks" field toggle), otherwise how much of the created-to-due-date window has
           elapsed (governed by "Due date" instead, since there's no checklist to speak of). Same
           shared component Tickets use, so the two card types read identically. */}
-      {fields.subtasks && progress !== null ? (
+      {showChecklistBar ? (
         <ChecklistProgressBar done={doneItems} total={totalItems} />
       ) : (
-        fields.dueDate && task.dueDate && task.status !== 'done' && (
-          <DueProgressBar createdAt={task.createdAt} dueDate={task.dueDate} />
-        )
+        showDueBar && <DueProgressBar createdAt={task.createdAt} dueDate={task.dueDate!} />
       )}
 
-      {fields.raisedBy && raisedByName && (
-        <div className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
-          <UserCog size={12} strokeWidth={2.5} className="text-text-light shrink-0" />
-          <span className="truncate">
-            Raised by <span className="font-medium text-text-secondary">{raisedByName}</span>
-          </span>
-        </div>
-      )}
-
-      {(fields.department || fields.priority || fields.category) && (
+      {/* One pill row. The score badge is suppressed whenever the footer already carries a status
+          badge for the same fact — otherwise a finished delegation showed "Mark 100%" here and
+          "Done" three lines below it. */}
+      {(fields.department || fields.priority || fields.category || showScoreBadge) && (
         <div className="flex flex-wrap items-center gap-1.5">
-          {fields.department && departmentName && (
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${departmentTagClass(departmentName)}`}>
-              {departmentName}
-            </span>
-          )}
+          {fields.department && departmentName && <DepartmentChip name={departmentName} />}
 
-          {fields.priority && priority && <PriorityChip priority={task.priority} />}
+          {fields.priority && priority && <PriorityChip meta={priority} />}
 
           {fields.category && (() => {
             const cat = CATEGORY_CONFIG[task.category];
@@ -164,12 +236,22 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
             );
           })()}
 
-          {fields.status && <TaskScoreBadge status={task.status} variant="sm" />}
+          {showScoreBadge && <TaskScoreBadge status={task.status} variant="sm" />}
         </div>
       )}
 
-      {(fields.created || fields.updated) && (
-        <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-text-light">
+      {/* Raised-by and the timestamps were three separate bands. They're all the same kind of thing
+          — quiet text metadata — so they share one wrapping row, which keeps pills and plain text
+          from alternating down the card. */}
+      {((fields.raisedBy && raisedByName) || fields.created || fields.updated) && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-text-light tabular-nums">
+          {fields.raisedBy && raisedByName && (
+            <span className="flex items-center gap-1 min-w-0">
+              <UserCog size={12} strokeWidth={2.5} className="shrink-0" />
+              <span className="truncate text-text-muted">{raisedByName}</span>
+            </span>
+          )}
+
           {fields.created && (
             <span className="flex items-center gap-1" title={`Created ${formatShortDateTime(task.createdAt)}`}>
               <CalendarPlus size={12} strokeWidth={2.5} />
@@ -209,7 +291,7 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
                   </div>
                 )}
               </div>
-              <span className="text-[11px] font-medium text-text-secondary truncate">
+              <span className="text-[11px] font-semibold text-text-secondary truncate">
                 {assigneeNames[0]}
                 {assigneeNames.length > 1 ? ` +${assigneeNames.length - 1}` : ''}
               </span>
@@ -222,35 +304,35 @@ export const TaskCard = ({ task, assigneeNames = [], raisedByName, departmentNam
               >
                 <User size={13} strokeWidth={2.5} />
               </div>
-              <span className="text-[11px] font-medium text-text-light truncate">Unassigned</span>
+              <span className="text-[11px] font-semibold text-text-light truncate">Unassigned</span>
             </div>
           )
         ) : (
           <span />
         )}
 
-        <div className="shrink-0">
+        {/* Same reason as the delete button above: Approve/Reject are real controls sitting inside
+            the card's drag surface, so their presses must not start a drag or bubble up to the
+            card's own "open detail" click. */}
+        <div
+          className="shrink-0"
+          onPointerDown={(e) => { if (showVerifyActions) e.stopPropagation(); }}
+          onClick={(e) => { if (showVerifyActions) e.stopPropagation(); }}
+        >
           {showVerifyActions ? (
             <TaskVerifyActions task={task} compact />
           ) : showDoneBadge ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-success/10 text-success">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-success/10 text-success">
               <CheckCircle2 size={15} strokeWidth={2.5} />
               Done
             </span>
           ) : showReviewBadge ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-warning/10 text-warning">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-warning/10 text-warning">
               <ShieldQuestion size={15} strokeWidth={2.5} />
               In review
             </span>
           ) : showDuePill ? (
-            <span
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium ${
-                isOverdue ? 'bg-danger/10 text-danger' : 'bg-surface-hover text-text-secondary'
-              }`}
-            >
-              <Clock size={15} strokeWidth={2.5} />
-              {daysLeftLabel(task.dueDate!)}
-            </span>
+            <StatusChip status={isOverdue ? 'overdue' : 'due'} label={daysLeftLabel(task.dueDate!)} />
           ) : null}
         </div>
       </div>

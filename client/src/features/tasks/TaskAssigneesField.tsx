@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { avatarColorClass } from './avatarColors';
+import { avatarColorClass } from '../../lib/avatarColors';
 import { getInitials } from '../../lib/getInitials';
 import { FIELD_LABEL_CLASS, FIELD_CARD_CLASS } from './taskFormFieldStyles';
 import { useAuth } from '../../context/AuthContext';

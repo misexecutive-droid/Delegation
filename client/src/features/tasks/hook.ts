@@ -14,7 +14,7 @@ import type {
     UpdateTaskChecklistItemPayload,
     CaptureMethod,
 } from "../../api/taskChecklist";
-import { handleQueryRetry, useEntityMutation } from "../../lib/queryHelpers";
+import { handleQueryRetry, useEntityMutation, patchEntityInCache } from "../../lib/queryHelpers";
 import type { ConfirmSmartTaskPayload } from "../../api/task";
 
 const TASK_KEYS = {
@@ -114,6 +114,12 @@ export const useUpdateTaskMutation = (options?: { silent?: boolean }) =>
             taskApi.update(id, payload),
         setDetailData: (updatedTask) => ({ key: TASK_KEYS.detail(updatedTask.id), data: updatedTask }),
         invalidateKeys: [['tasks']],
+        // Completing/updating a task (board quick-actions, detail autosave) should reflect
+        // immediately rather than waiting on the server round-trip.
+        optimisticUpdate: {
+            keyPrefixes: [['tasks']],
+            apply: ({ id, payload }) => (old) => patchEntityInCache<Task>(old, id, payload),
+        },
         successMessage: options?.silent ? null : 'Task updated',
         errorFallback: 'Failed to update task',
     });

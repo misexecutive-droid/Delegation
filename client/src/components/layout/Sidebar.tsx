@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useIsMobile } from '../../lib/useMediaQuery';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -19,6 +19,7 @@ import {
   Building2,
   BarChart3,
   ListTodo,
+  Plus,
   X,
 } from 'lucide-react';
 
@@ -34,22 +35,10 @@ interface NavItem {
   label: string;
   children?: NavChild[];
   soon?: boolean;
+  quickCreateTo?: string;
 }
 
-const CHECKLIST_CHILDREN: NavChild[] = [
-  { to: '/checklists', label: "Today's runs" },
-];
-
-const CHECKLIST_ADMIN_CHILDREN: NavChild[] = [
-  // "New checklist" on the Recurring Checklists grid already reaches the Builder — no separate
-  // nav entry for it, so there's exactly one path in, not two.
-  { to: '/admin/scheduled-checklists', label: 'Recurring Checklists' },
-  { to: '/admin/checklist-compliance', label: 'Checklist Compliance' },
-  { to: '/admin/checklist-templates', label: 'Task Templates' },
-];
-
 const TASK_CHILDREN: NavChild[] = [
-  { to: '/tasks?mine=1', label: 'My Delegations' },
   { to: '/tasks/draft', label: 'Draft Delegations', soon: true },
   { to: '/tasks/archived', label: 'Archived', soon: true },
 ];
@@ -66,7 +55,7 @@ const NAV: NavItem[] = [
   { to: '/tickets', icon: TicketCheck, label: 'Tickets' },
   { to: '/todo', icon: ListTodo, label: 'To-Do' },
   { to: '/events', icon: CalendarClock, label: 'Events' },
-  { to: '/checklists', icon: ClipboardCheck, label: 'Checklists', children: CHECKLIST_CHILDREN },
+  { to: '/checklists', icon: ClipboardCheck, label: 'Checklists' },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
 ];
@@ -88,6 +77,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: SidebarProps) => {
   const location = useLocation();
+  const isMobile = useIsMobile();
   const isAdmin = user?.role === 'ADMIN';
   const isPC = user?.role === 'PC';
   const isManager = user?.role === 'MANAGER';
@@ -115,17 +105,15 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
 
   const navItems: NavItem[] = NAV.map((item) => {
     if (item.label === 'Checklists' && (isAdmin || isPC)) {
-      return { ...item, children: [...CHECKLIST_CHILDREN, ...CHECKLIST_ADMIN_CHILDREN] };
+      return { ...item, quickCreateTo: '/admin/scheduled-checklists/builder' };
     }
     if (item.label === 'Delegation') {
-      const [myDelegations, ...restTaskChildren] = TASK_CHILDREN;
       return {
         ...item,
         children: [
-          myDelegations,
           ...(seesSmartDelegations ? [SMART_DELEGATIONS_CHILD] : []),
           ...(isPC ? [PENDING_APPROVALS_CHILD] : []),
-          ...restTaskChildren,
+          ...TASK_CHILDREN,
           ...(isPC ? TASK_ADMIN_CHILDREN : []),
         ],
       };
@@ -143,12 +131,12 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
   ];
 
   const handleNavClick = () => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (isMobile) {
       onNavigate?.();
     }
   };
 
-  const renderNavItem = ({ to, icon: Icon, label, children, soon }: NavItem, isDrawer: boolean) => {
+  const renderNavItem = ({ to, icon: Icon, label, children, soon, quickCreateTo }: NavItem, isDrawer: boolean) => {
     const hasActiveChild = children?.some((child) => !child.soon && isChildActive(child, location)) ?? false;
     const hasChildren = !!children?.length;
     const isExpanded = expandedKeys.has(to);
@@ -184,7 +172,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
             </span>
           </span>
           {showLabel && (
-            <span className="shrink-0 ml-2 text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-slate-300 text-text-muted">
+            <span className="shrink-0 ml-2 text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-border text-text-muted">
               Soon
             </span>
           )}
@@ -216,13 +204,14 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                 {/* Gentle tint + left-accent bar (not a solid fill) — the accent bar lives inside
                     this same layoutId'd span so it slides together with the tint between items. */}
                 {(isActive || hasActiveChild) && (
-                  <motion.span
-                    layoutId={`sidebar-active-pill-${isDrawer ? 'drawer' : 'desktop'}`}
-                    className="absolute inset-0 rounded-xl bg-primary-500/10 dark:bg-primary-400/10"
-                    transition={{ type: 'spring', stiffness: 500, damping: 40, mass: 0.5 }}
-                  >
+                  // Was a framer-motion `layoutId` span that physically slid from the previously
+                  // active item to this one. CSS can't move an element between two separate DOM
+                  // nodes, so the tint now appears in place and fades up instead of travelling.
+                  // That shared-element slide is the one thing lost in dropping framer-motion from
+                  // the shell; everything else here is a like-for-like CSS transition.
+                  <span className="absolute inset-0 rounded-xl bg-primary-500/10 dark:bg-primary-400/10 animate-in fade-in duration-200 motion-reduce:animate-none">
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 h-[60%] w-[3px] rounded-r-full bg-primary-600 dark:bg-primary-400" />
-                  </motion.span>
+                  </span>
                 )}
                 <span
                   className={[
@@ -266,18 +255,33 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
               />
             </button>
           )}
+
+          {quickCreateTo && showLabel && (
+            <NavLink
+              to={quickCreateTo}
+              onClick={handleNavClick}
+              title={`New ${label}`}
+              aria-label={`New ${label}`}
+              className="shrink-0 p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+            </NavLink>
+          )}
         </div>
 
-        <AnimatePresence initial={false}>
-          {hasChildren && showLabel && isExpanded && (
-            <motion.div
-              key="submenu"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden"
-            >
+        {hasChildren && showLabel && (
+          // `height: auto` is not animatable in CSS, but `grid-template-rows: 0fr -> 1fr` is, and
+          // it measures the content the same way framer-motion's height:auto did. The submenu
+          // stays mounted so it can animate both ways; `inert` keeps its links out of the tab
+          // order and the accessibility tree while it's closed.
+          <div
+            inert={!isExpanded}
+            aria-hidden={!isExpanded}
+            className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${
+              isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+            }`}
+          >
+            <div className="min-h-0">
               <div className="flex flex-col gap-1 mt-1 mb-2 ml-4 pl-4 ">
                 {children!.map((child) => {
                   if (child.soon) {
@@ -287,7 +291,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                         className={`flex items-center justify-between gap-2 rounded-lg px-3 text-[12px] font-medium text-text-muted/70 cursor-not-allowed select-none ${isDrawer ? 'py-2.5' : 'py-1.5'}`}
                       >
                         {child.label}
-                        <span className="text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-slate-300 text-text-muted">
+                        <span className="text-[10px] font-bold capitalize tracking-wide px-2 py-0.5 rounded-full bg-surface-hover/80 border border-border text-text-muted">
                           Soon
                         </span>
                       </span>
@@ -317,9 +321,9 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
                   );
                 })}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -359,7 +363,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
             <>
               <div
                 className={[
-                  'border-t border-slate-300 transition-all duration-300 ease-in-out',
+                  'border-t border-border transition-all duration-300 ease-in-out',
                   (isDrawer || isOpen) ? 'mt-4 mb-3 mx-1' : 'mt-3 mb-2 mx-2',
                 ].join(' ')}
                 aria-hidden="true"
@@ -379,7 +383,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
         </nav>
       </div>
 
-      <div className="shrink-0 pt-3 border-t border-slate-300">
+      <div className="shrink-0 pt-3 border-t border-border">
         <p
           className={[
             'text-[11px] font-bold text-text-muted capitalize tracking-wide px-3 mb-1',
@@ -396,11 +400,11 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
         <div
           className={[
             'flex items-center p-2 rounded-xl border border-transparent transition-all duration-300',
-            (isDrawer || isOpen) ? 'bg-surface-hover/50 border-slate-300' : 'md:justify-center hover:bg-surface-hover/50',
+            (isDrawer || isOpen) ? 'bg-surface-hover/50 border-border' : 'md:justify-center hover:bg-surface-hover/50',
           ].join(' ')}
         >
           <div
-            className="size-9 rounded-full bg-primary-600 border border-slate-300 flex items-center justify-center text-white text-xs font-bold shrink-0"
+            className="size-9 rounded-full bg-primary-600 border border-border flex items-center justify-center text-white text-xs font-bold shrink-0"
             title={user?.name}
           >
             {initials}
@@ -438,44 +442,37 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
 
   return (
     <>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-            onClick={onNavigate}
-            aria-hidden="true"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          />
-        )}
-      </AnimatePresence>
+      {/* Scrim stays mounted and fades via opacity; `pointer-events-none` when closed is what
+          makes an always-present full-screen overlay harmless. AnimatePresence was only ever
+          buying the exit fade, which a CSS transition on a mounted node gives for free. */}
+      <div
+        onClick={onNavigate}
+        aria-hidden="true"
+        className={`md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      />
 
-      <motion.aside
-        className="md:hidden fixed top-0 left-0 z-50 w-[280px] max-w-[85vw] h-dvh flex flex-col px-4 pt-8 pb-5"
-        style={{  pointerEvents: isOpen ? 'auto' : 'none' }}
-        initial={false}
-        animate={{ x: isOpen ? 0 : '-100%' }}
-        transition={{ type: 'spring', stiffness: 380, damping: 38, mass: 0.9 }}
+      <aside
+        inert={!isOpen}
+        className={`md:hidden fixed top-0 left-0 z-50 w-[280px] max-w-[85vw] h-dvh flex flex-col px-4 pt-8 pb-5 transition-transform duration-300 ease-out motion-reduce:transition-none ${
+          isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+        }`}
       >
         {renderContent(true)}
-      </motion.aside>
+      </aside>
 
       <div className="hidden md:block relative shrink-0 h-full z-20">
-        <motion.aside
-          className="flex flex-col h-full border-r border-slate-200 overflow-hidden py-5"
-          style={{ background: 'var(--color-surface)' }}
-          initial={false}
-          animate={{
-            width: isOpen ? 260 : 72,
-            paddingLeft: isOpen ? 16 : 12,
-            paddingRight: isOpen ? 16 : 12,
-          }}
-          transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.9 }}
+        {/* Width comes straight from the --sidebar-width-* tokens. It used to be a pair of JS
+            pixel constants that a comment asked you to keep "numerically in sync" with those
+            tokens; that file is gone. One source of truth, and the rail transitions in CSS. */}
+        <aside
+          className={`flex flex-col h-full border-r border-border overflow-hidden py-5 bg-surface transition-[width,padding] duration-300 ease-out motion-reduce:transition-none ${
+            isOpen ? 'w-(--sidebar-width-expanded) px-4' : 'w-(--sidebar-width-collapsed) px-3'
+          }`}
         >
           {renderContent(false)}
-        </motion.aside>
+        </aside>
 
         {onToggleCollapse && (
           <button
@@ -483,7 +480,7 @@ export const Sidebar = ({ isOpen, user, logout, onNavigate, onToggleCollapse }: 
             onClick={onToggleCollapse}
             aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
             title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-            className="absolute top-1/2 -right-3 -translate-y-1/2 z-30 flex size-6 items-center justify-center rounded-full border border-slate-300 bg-surface text-text-muted transition-all duration-200 cursor-pointer hover:text-primary-600 hover:border-primary-300 active:scale-90"
+            className="absolute top-1/2 -right-3 -translate-y-1/2 z-30 flex size-6 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-all duration-200 cursor-pointer hover:text-primary-600 hover:border-primary-300 active:scale-90"
           >
             {isOpen ? <ChevronLeft size={13} strokeWidth={2.5} /> : <ChevronRight size={13} strokeWidth={2.5} />}
           </button>

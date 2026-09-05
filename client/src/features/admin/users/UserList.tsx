@@ -147,7 +147,7 @@ export const UserList = () => {
 
       {activeModal && (
         <Suspense fallback={
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in">
             <Loader size="xl" variant="primary" />
           </div>
         }>

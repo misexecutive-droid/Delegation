@@ -43,7 +43,7 @@ export const ComplianceGaugeRail = ({ groupBy, from, to }: ComplianceGaugeRailPr
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-5">
-      <h3 className="text-sm font-display font-bold uppercase tracking-wider text-text mb-4">Compliance</h3>
+      <h3 className="text-sm font-display font-bold tracking-wide text-text mb-4">Compliance</h3>
       <div className="flex items-center justify-center gap-4">
         <Gauge icon={ClipboardCheck} label="Checklist" percent={checklistCompletion} />
         <Gauge icon={ShieldCheck} label="On-time" percent={slaMet} />

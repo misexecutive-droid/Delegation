@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { apiFetch } from './http';
+import { arrayField, withArrayDefaults, normalizeWith } from './normalize';
 
 export type Priority       = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type AssignmentMode = 'AUTO' | 'MANUAL';
@@ -19,7 +21,8 @@ export type CaptureMethod = 'LIVE' | 'GALLERY';
 
 // The restricted set of statuses a non-verifier (assignee/creator/manager) can move a ticket to
 // via the status-update flow — see ticket.validation.ts on the server for the matching schema.
-export type RestrictedStatus = 'IN_PROGRESS' | 'ON_HOLD' | 'IN_REVIEW';
+export const RESTRICTED_STATUSES = ['IN_PROGRESS', 'ON_HOLD', 'IN_REVIEW'] as const;
+export type RestrictedStatus = typeof RESTRICTED_STATUSES[number];
 
 export type ChecklistImage = {
   id:               string;
@@ -167,23 +170,34 @@ export type UpdateChecklistItemPayload = {
   isDone?:             false;
 };
 
+// comments/attachments/checklists/statusUpdates are the exact fields that crashed TicketDetail
+// (unguarded `.length`/`.map` on values the type claims are always arrays) — guarded here, once,
+// at the boundary every ticketApi caller goes through, instead of every consumer defending itself.
+const ticketArrayDefaults = withArrayDefaults({
+  comments: arrayField(z.unknown()),
+  attachments: arrayField(z.unknown()),
+  checklists: arrayField(z.unknown()),
+  statusUpdates: arrayField(z.unknown()),
+});
+const normalizeTicket = (raw: unknown) => normalizeWith<Ticket>(ticketArrayDefaults, raw);
+
 export const ticketApi = {
   getAll: (page = 1, limit = 20, status?: TicketStatus, assigneeId?: string) =>
     apiFetch<PaginatedResponse<Ticket>>(
       `/tickets?page=${page}&limit=${limit}${status ? `&status=${status}` : ''}${assigneeId ? `&assigneeId=${assigneeId}` : ''}`,
-    ),
+    ).then(r => ({ ...r, data: r.data.map(normalizeTicket) })),
 
   getOne: (id: string) =>
-    apiFetch<ApiResponse<Ticket>>(`/tickets/${id}`),
+    apiFetch<ApiResponse<Ticket>>(`/tickets/${id}`).then(r => ({ ...r, data: normalizeTicket(r.data) })),
 
   create: (payload: CreateTicketPayload) =>
-    apiFetch<ApiResponse<Ticket>>('/tickets', { method: 'POST', body: JSON.stringify(payload) }),
+    apiFetch<ApiResponse<Ticket>>('/tickets', { method: 'POST', body: JSON.stringify(payload) }).then(r => ({ ...r, data: normalizeTicket(r.data) })),
 
   update: (id: string, payload: UpdateTicketPayload) =>
-    apiFetch<ApiResponse<Ticket>>(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+    apiFetch<ApiResponse<Ticket>>(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }).then(r => ({ ...r, data: normalizeTicket(r.data) })),
 
   verify: (id: string, payload: VerifyTicketPayload) =>
-    apiFetch<ApiResponse<Ticket>>(`/tickets/${id}/verify`, { method: 'PATCH', body: JSON.stringify(payload) }),
+    apiFetch<ApiResponse<Ticket>>(`/tickets/${id}/verify`, { method: 'PATCH', body: JSON.stringify(payload) }).then(r => ({ ...r, data: normalizeTicket(r.data) })),
 
   addStatusUpdate: (id: string, payload: { status: RestrictedStatus; remark: string; captureMethod?: CaptureMethod; files?: File[] }) => {
     const formData = new FormData();
@@ -191,7 +205,8 @@ export const ticketApi = {
     formData.append('remark', payload.remark);
     if (payload.captureMethod) formData.append('captureMethod', payload.captureMethod);
     (payload.files ?? []).forEach(f => formData.append('images', f));
-    return apiFetch<ApiResponse<Ticket>>(`/tickets/${id}/status-updates`, { method: 'POST', body: formData });
+    return apiFetch<ApiResponse<Ticket>>(`/tickets/${id}/status-updates`, { method: 'POST', body: formData })
+      .then(r => ({ ...r, data: normalizeTicket(r.data) }));
   },
 
   delete: (id: string) =>

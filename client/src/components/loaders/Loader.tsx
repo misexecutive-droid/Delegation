@@ -26,10 +26,11 @@ const variantClasses = {
   primary: 'border-primary-600/20 border-t-primary-600',
   // Crisp white for overlaying on dark gradients or primary buttons
   white: 'border-white/20 border-t-white',
-  // Premium slate tones for neutral loading states (like the StatusPill)
-  slate: 'border-slate-200 border-t-slate-500',
+  // Premium slate tones for neutral loading states (like the StatusPill) — theme tokens,
+  // not raw slate, so this actually adapts in dark mode instead of staying near-invisible.
+  slate: 'border-border border-t-text-muted',
   // Maps to the deep red used in your danger/delete actions
-  rose: 'border-red-500/20 border-t-red-600',
+  rose: 'border-danger/20 border-t-danger',
 };
 
 export const Loader = React.forwardRef<HTMLDivElement, LoaderProps>(

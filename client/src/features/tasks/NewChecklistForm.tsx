@@ -54,7 +54,7 @@ export const NewChecklistForm = ({ taskId, onDone }: NewChecklistFormProps) => {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-5 sm:p-8 border border-border rounded-2xl bg-surface shadow-lg w-full max-w-4xl mx-auto">
+    <div className="flex flex-col gap-6 p-5 sm:p-8 border border-border rounded-2xl bg-surface w-full max-w-4xl mx-auto">
 
       {/* Header Section */}
       <div className="flex items-center gap-3 pb-4 border-b border-border/60">
@@ -137,7 +137,7 @@ export const NewChecklistForm = ({ taskId, onDone }: NewChecklistFormProps) => {
         {/* Task List Section */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-text uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-text">
               Tasks <span className="text-text-muted font-medium ml-1">({itemDrafts.length})</span>
             </h3>
           </div>

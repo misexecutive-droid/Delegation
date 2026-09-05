@@ -1,16 +1,46 @@
 import {
-  DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
-  type DragStartEvent, type DragEndEvent,
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  pointerWithin,
+  rectIntersection,
+  defaultDropAnimationSideEffects,
+  type CollisionDetection,
+  type DragStartEvent,
+  type DragOverEvent,
+  type DragEndEvent,
+  type DropAnimation,
 } from '@dnd-kit/core';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles } from 'lucide-react';
 import { TicketCard } from './TicketCard';
-import { useUpdateTicketMutation, useVerifyTicketMutation } from './hook';
-import { STATUS_CONFIG } from './ticketDisplay';
+import { useTicketStatusMove } from './useTicketStatusMove';
+import { useVerifyTicketMutation } from './hook';
 import type { Ticket } from '../../api/ticket';
+import { TicketBoardColumnsRow } from './board/TicketBoardColumnsRow';
+import { DRAG_SLOP_PX } from '../../lib/dragSlop';
 
-const COLUMNS: Ticket['status'][] = ['OPEN', 'IN_PROGRESS', 'IN_REVIEW', 'ON_HOLD', 'CLOSED'];
+/**
+ * The drop is decided by the pointer, not by the card's outline.
+ *
+ * dnd-kit defaults to `rectIntersection`, which awards the drop to whichever column shares the
+ * most *area* with the dragged card. A ticket card is nearly as wide as its column, so mid-drag it
+ * always straddles two, and the winner was whichever way the card's body leaned rather than the
+ * column under the cursor — tickets landed one column over from where they were aimed.
+ *
+ * `rectIntersection` stays as the fallback for a cursor in the gutter between columns: the card
+ * still overlaps one, so the drop is forgiving. With the cursor over nothing and the card
+ * overlapping nothing, both return empty and the drag cancels — what dragging off the board should
+ * do.
+ */
+const collisionDetection: CollisionDetection = (args) => {
+  const withinPointer = pointerWithin(args);
+  return withinPointer.length > 0 ? withinPointer : rectIntersection(args);
+};
 
 interface TicketBoardProps {
   tickets: Ticket[];
@@ -19,96 +49,56 @@ interface TicketBoardProps {
   onOpen: (ticket: Ticket) => void;
 }
 
-interface CardProps {
-  ticket: Ticket;
-  onOpen: (ticket: Ticket) => void;
-  departmentName?: string;
-}
-
-
-const DraggableCard = ({ ticket, onOpen, departmentName }: CardProps) => {
-  const { listeners, setNodeRef, isDragging } = useDraggable({ id: ticket.id });
-
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      className={isDragging ? 'opacity-40 cursor-grabbing touch-none' : 'cursor-grab touch-none'}
-    >
-      <TicketCard ticket={ticket} onClick={onOpen} departmentName={departmentName} />
-    </div>
-  );
-};
-
-interface ColumnProps {
-  status: Ticket['status'];
-  tickets: Ticket[];
-  draggable: boolean;
-  onOpen: (ticket: Ticket) => void;
-  departmentNames?: Map<string, string>;
-}
-
-const Column = ({ status, tickets, draggable, onOpen, departmentNames }: ColumnProps) => {
-  const { setNodeRef, isOver } = useDroppable({ id: status, disabled: !draggable });
-  const config = STATUS_CONFIG[status];
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex flex-col gap-2 rounded-lg border min-w-0 p-2 transition-colors duration-150 ${
-        isOver ? 'border-primary-400 bg-primary-50/40' : 'border-border bg-surface-hover/40'
-      }`}
-    >
-      {/* Column Header */}
-      <div className="flex items-center justify-between px-2 py-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`size-2 rounded-full shrink-0 ${config.dot}`} aria-hidden="true" />
-          <h3 className="text-xs font-bold text-text-secondary truncate">
-            {config.label}
-          </h3>
-          <span className={`flex items-center justify-center min-w-[1.5rem] h-5 px-2 text-xs font-bold rounded-full border border-border/60 ${config.className}`}>
-            {tickets.length}
-          </span>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2.5 min-h-[150px]">
-        {tickets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-24 px-3 text-center border border-dashed border-border rounded-lg bg-surface/40 text-text-light">
-            <Sparkles size={14} className="mb-1.5 text-text-light" />
-            <span className="text-[11px] font-medium text-text-light">No tickets</span>
-          </div>
-        ) : draggable ? (
-          tickets.map((ticket) => (
-            <DraggableCard
-              key={ticket.id}
-              ticket={ticket}
-              onOpen={onOpen}
-              departmentName={ticket.departmentId ? departmentNames?.get(ticket.departmentId) : undefined}
-            />
-          ))
-        ) : (
-          tickets.map((ticket) => (
-            <TicketCard
-              key={ticket.id}
-              ticket={ticket}
-              onClick={onOpen}
-              departmentName={ticket.departmentId ? departmentNames?.get(ticket.departmentId) : undefined}
-            />
-          ))
-        )}
-      </div>
-    </div>
-  );
+// Configures a smooth "snap-back" or "drop" animation
+const dropAnimationConfig: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: '0.4',
+      },
+    },
+  }),
 };
 
 export const TicketBoard = ({ tickets, departmentNames, isVerifier = false, onOpen }: TicketBoardProps) => {
-  const updateMutation = useUpdateTicketMutation();
   const verifyMutation = useVerifyTicketMutation();
+  const { requestMove, statusRemarkDialog } = useTicketStatusMove();
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  // Mouse, touch and keyboard are three different gestures and need three different activation
+  // rules. One PointerSensor treated a finger exactly like a mouse, so a 5px swipe starting on a
+  // card began a drag instead of scrolling — and this board's columns live in a horizontal
+  // snap-scroll container, so that swipe is the primary way to move around it. A finger now has
+  // to press and hold to pick a card up.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: DRAG_SLOP_PX } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  // Screen reader announcements for accessibility compliance
+  const announcements = {
+    onDragStart(_event: DragStartEvent) {
+      return `Picked up ticket.`;
+    },
+    onDragOver({ over }: DragOverEvent) {
+      if (over) return `Ticket moved over column ${over.id}.`;
+      return `Ticket is no longer over a column.`;
+    },
+    onDragEnd({ over }: DragEndEvent) {
+      if (over) return `Ticket dropped into column ${over.id}.`;
+      return `Ticket drop cancelled.`;
+    },
+    onDragCancel() {
+      return `Dragging was cancelled.`;
+    },
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
+    // Add a slight haptic feedback pattern for mobile users if supported
+    if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
     setActiveTicket(tickets.find(t => t.id === event.active.id) ?? null);
   };
 
@@ -121,58 +111,44 @@ export const TicketBoard = ({ tickets, departmentNames, isVerifier = false, onOp
     const ticket = tickets.find(t => t.id === event.active.id);
     if (!ticket || ticket.status === newStatus) return;
 
+    // Validation rule
     if (newStatus === 'CLOSED') {
       if (ticket.status !== 'IN_REVIEW') {
-        toast.error('Move to In Review before closing a ticket.');
-        return;
+        toast.error('Move to In Review before closing a ticket.', {
+          description: 'Only fully reviewed tickets can be closed.',
+        });
+        return; // The dropAnimationConfig will smoothly snap it back to its original column
       }
       verifyMutation.mutate({ id: ticket.id, payload: { action: 'APPROVE' } });
       return;
     }
 
-    updateMutation.mutate({ id: ticket.id, payload: { status: newStatus } });
+    // Everything else goes through the remark gate. This used to be a bare
+    // `updateMutation.mutate({ status })`, which changed the status but wrote no
+    // TicketStatusUpdate row and asked for no remark — so the ticket's history was missing every
+    // move made from the board, while the identical move from the detail sheet recorded both.
+    requestMove(ticket, newStatus);
   };
 
   if (!isVerifier) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-start">
-        {COLUMNS.map(status => (
-          <Column
-            key={status}
-            status={status}
-            tickets={tickets.filter(t => t.status === status)}
-            draggable={false}
-            onOpen={onOpen}
-            departmentNames={departmentNames}
-          />
-        ))}
-      </div>
-    );
+    return <TicketBoardColumnsRow tickets={tickets} draggable={false} onOpen={onOpen} departmentNames={departmentNames} />;
   }
 
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={collisionDetection}
+      accessibility={{ announcements }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveTicket(null)}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-start">
-        {COLUMNS.map(status => (
-          <Column
-            key={status}
-            status={status}
-            tickets={tickets.filter(t => t.status === status)}
-            draggable
-            onOpen={onOpen}
-            departmentNames={departmentNames}
-          />
-        ))}
-      </div>
+      <TicketBoardColumnsRow tickets={tickets} draggable onOpen={onOpen} departmentNames={departmentNames} />
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={dropAnimationConfig}>
         {activeTicket && (
-          <div className="w-60 rotate-1 shadow-xl cursor-grabbing">
+         
+          <div className="w-[280px] sm:w-[320px] xl:w-[240px] rotate-2 scale-[1.02] shadow-2xl shadow-black/10 dark:shadow-black/40 cursor-grabbing opacity-100 rounded-xl overflow-hidden ring-1 ring-border/50 bg-surface transform-gpu transition-transform will-change-transform z-50">
             <TicketCard
               ticket={activeTicket}
               onClick={onOpen}
@@ -181,6 +157,8 @@ export const TicketBoard = ({ tickets, departmentNames, isVerifier = false, onOp
           </div>
         )}
       </DragOverlay>
+
+      {statusRemarkDialog}
     </DndContext>
   );
 };

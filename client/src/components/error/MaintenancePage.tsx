@@ -20,7 +20,7 @@ export const MaintenancePage = ({
 }: MaintenancePageProps) => (
   <div
     className="flex min-h-svh items-center justify-center p-4 relative overflow-hidden"
-    style={{ background: 'var(--bg-body)' }}
+    style={{ background: 'var(--color-background)' }}
   >
     <span className="absolute -top-24 -left-24 size-72 rounded-full bg-primary-400/10 blur-3xl pointer-events-none" />
     <span className="absolute -bottom-24 -right-24 size-72 rounded-full bg-coral-400/20 blur-3xl pointer-events-none" />

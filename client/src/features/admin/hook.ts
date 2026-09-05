@@ -158,14 +158,11 @@ const DEPARTMENT_KEY = {
     all: ["departments"] as const,
 };
 
-export const useDepartmentsQuery = () => {
-    const { token } = useAuth();
-    return useQuery({
-        queryKey: DEPARTMENT_KEY.all,
-        queryFn: () => departmentApi.getAll().then(r => r.data),
-        enabled: !!token,
-    })
-};
+// The real definition lives in tickets/hook.ts (used by far more callers, and the one with
+// `retry: handleQueryRetry` wired up) — this used to be its own independent copy of the exact
+// same query, which meant retry behavior and any future change could quietly drift between the
+// two. Re-exported instead so every existing `from '../hook'` import site keeps working unchanged.
+export { useDepartmentsQuery } from '../tickets/hook';
 
 // Paginated variant for the admin directory's Departments list — useDepartmentsQuery above (the
 // full list) stays untouched for every other caller (dropdowns, org structure, etc.).

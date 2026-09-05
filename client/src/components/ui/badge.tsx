@@ -1,37 +1,53 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-
 import { cn } from "@/lib/utils"
 
+
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider w-fit whitespace-nowrap shrink-0 gap-1.5 [&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:pointer-events-none transition-all duration-200 overflow-hidden shadow-sm focus-visible:outline-none focus-visible:ring-4",
+  // Base Properties: Crisp flex alignment, typography, smooth transitions, and advanced focus rings
+  "inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-[11px] font-display font-bold uppercase tracking-wider w-fit whitespace-nowrap shrink-0 gap-1.5 transition-all duration-300 overflow-hidden bg-transparent [&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
   {
     variants: {
       variant: {
+        // Matches your Navy Primary brand color
         default:
-          "border-primary-200 bg-primary-50 text-primary-700 [a&]:hover:bg-primary-100 focus-visible:ring-primary-50/50",
+          "border-primary-500/40 text-primary-700 dark:text-primary-300 hover:bg-primary-500/10 focus-visible:ring-primary-500/50",
+        
+        // Subtle surface blending for secondary information
         secondary:
-          "border-slate-200 bg-slate-100 text-slate-700 [a&]:hover:bg-slate-200 focus-visible:ring-slate-100/50",
+          "border-border text-text-secondary hover:bg-surface-hover hover:border-border-hover focus-visible:ring-border/50",
+        
+        // Uses your --color-danger variable (Error/Delete)
         destructive:
-          "border-red-200 bg-red-50 text-red-700 [a&]:hover:bg-red-100 focus-visible:ring-red-50/50",
+          "border-danger/40 text-danger hover:bg-danger/10 focus-visible:ring-danger/50",
+        
+        // Uses your --color-success variable (Complete/Positive)
         success:
-          "border-emerald-200 bg-emerald-50 text-emerald-700 [a&]:hover:bg-emerald-100 focus-visible:ring-emerald-50/50",
+          "border-success/40 text-success hover:bg-success/10 focus-visible:ring-success/50",
+        
+        // Uses your --color-warning variable (Alerts/Pending)
         warning:
-          "border-amber-200 bg-amber-50 text-amber-700 [a&]:hover:bg-amber-100 focus-visible:ring-amber-50/50",
+          "border-warning/40 text-warning hover:bg-warning/10 focus-visible:ring-warning/50",
+        
+        // Uses your --color-info variable (Highlights/Notes)
         info:
-          "border-blue-200 bg-blue-50 text-blue-700 [a&]:hover:bg-blue-100 focus-visible:ring-blue-50/50",
+          "border-info/40 text-info hover:bg-info/10 focus-visible:ring-info/50",
+        
+        // Extremely muted for background metadata (e.g., timestamps)
         neutral:
-          "border-slate-200 bg-slate-50 text-slate-500 [a&]:hover:bg-slate-100 focus-visible:ring-slate-50/50",
+          "border-border/60 text-text-muted hover:text-text hover:border-border focus-visible:ring-text-muted/50",
+        
+        // High-contrast, pure structural outline
         outline:
-          "border-slate-200 bg-white text-slate-600 [a&]:hover:bg-slate-50 focus-visible:ring-slate-100/50",
+          "border-text/20 text-text hover:border-text/40 hover:bg-text/5 focus-visible:ring-text/50",
       },
     },
     defaultVariants: {
       variant: "default",
     },
-  },
-)
+  }
+);
 
 function Badge({
   className,

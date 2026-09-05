@@ -27,7 +27,7 @@ export const ChecklistBlock = ({
   };
 
   return (
-    <div className={`rounded-xl border transition-colors duration-200 shadow-xs overflow-hidden ${
+    <div className={`rounded-xl border transition-colors duration-200 overflow-hidden ${
       isComplete ? 'bg-surface-hover/40 border-border/60' : 'bg-surface border-border'
     }`}>
       <div

@@ -71,7 +71,10 @@ export const Modal = ({
   >
     <DialogContent
       showCloseButton={false}
-      className={cn('w-full sm:w-[95vw]', SIZE_CLASS[size], 'p-0 flex flex-col overflow-hidden rounded-t-2xl rounded-b-none sm:rounded max-h-[90vh]', contentClassName)}
+      // max-h in dvh: on mobile, `vh` is measured against the viewport with browser chrome
+      // retracted, so a 90vh dialog could stand taller than the screen actually shows and hide its
+      // own footer. dvh tracks the visible viewport.
+      className={cn('w-full sm:w-[95vw]', SIZE_CLASS[size], 'p-0 flex flex-col overflow-hidden rounded-t-2xl rounded-b-none sm:rounded max-h-[90dvh]', contentClassName)}
     >
       <div className={cn('flex items-start justify-between gap-3 shrink-0 px-5 py-3.5 border-b border-border/40', headerClassName)}>
         
@@ -90,10 +93,10 @@ export const Modal = ({
 
         {showCloseButton && (
           <DialogClose
-            className="shrink-0 p-1.5 rounded-full text-text-light hover:text-text hover:bg-surface-hover transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 cursor-pointer"
+            className="shrink-0 flex items-center justify-center size-9 -m-1 rounded-full text-text-muted hover:text-text hover:bg-surface-hover transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 cursor-pointer active:scale-90"
             aria-label="Close modal"
           >
-            <X size={16} />
+            <X size={17} />
           </DialogClose>
         )}
       </div>

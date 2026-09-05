@@ -55,7 +55,7 @@ export const ChecklistInstanceItemCashTallyCard = ({ item, instanceId, canWork, 
           <button
             onClick={() => setItemDone.mutate({ itemId: item.id, isDone: false, numericValue: parsed ?? undefined })}
             disabled={setItemDone.isPending}
-            className="shrink-0 p-2 rounded-md text-text-light hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            className="shrink-0 p-2 rounded-md text-text-light hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning/50"
             aria-label="Reopen item"
             title="Reopen"
           >
@@ -87,7 +87,7 @@ export const ChecklistInstanceItemCashTallyCard = ({ item, instanceId, canWork, 
               <button
                 onClick={() => parsed != null && setItemDone.mutate({ itemId: item.id, isDone: true, numericValue: parsed })}
                 disabled={!canSubmit || setItemDone.isPending}
-                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                className="flex items-center gap-1.5 text-xs font-display font-medium px-2.5 py-1.5 rounded-md border border-success/50 text-success hover:bg-success/10 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
               >
                 {setItemDone.isPending && <Loader2 size={12} className="animate-spin" />}
                 Save count
@@ -96,12 +96,12 @@ export const ChecklistInstanceItemCashTallyCard = ({ item, instanceId, canWork, 
           </div>
 
           {variance != null && variance !== 0 && (
-            <p className={`text-xs font-display ${variance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-danger'}`}>
+            <p className={`text-xs font-display ${variance > 0 ? 'text-success' : 'text-danger'}`}>
               {variance > 0 ? '+' : ''}{variance} {item.numberEntryUnit ?? ''} vs expected
             </p>
           )}
           {outOfRange && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">Value is outside the allowed range{rangeHint ? ` (${rangeHint})` : ''}.</p>
+            <p className="text-xs text-warning">Value is outside the allowed range{rangeHint ? ` (${rangeHint})` : ''}.</p>
           )}
         </div>
       )}

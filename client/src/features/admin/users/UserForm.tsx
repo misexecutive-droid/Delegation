@@ -400,7 +400,7 @@ export const UserForm = ({ onClose, user, onCreated, prefill }: UserFormProps) =
             />
 
             {roleWarning && (
-              <div className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-display mt-1">
+              <div className="flex items-start gap-1.5 text-xs text-warning font-display mt-1">
                 <AlertCircle size={14} className="shrink-0 mt-0.5" />
                 <span>{roleWarning}</span>
               </div>

@@ -7,7 +7,7 @@ import {
   type UpdateChecklistDefinitionPayload,
   type ListChecklistDefinitionsParams,
 } from '../../api/checklistDefinitions';
-import { checklistInstanceApi, type ChecklistInstanceStatus, type VerifyChecklistInstancePayload } from '../../api/checklistInstances';
+import { checklistInstanceApi, type ChecklistInstance, type ChecklistInstanceStatus, type VerifyChecklistInstancePayload } from '../../api/checklistInstances';
 import { checklistInstanceItemSubmissionApi } from '../../api/checklistInstanceItemSubmissions';
 import type { ChecklistInstanceItemSubmissionAccessory } from '../../api/checklistInstances';
 import type { CaptureMethod } from '../../api/ticket';
@@ -118,11 +118,33 @@ export const useChecklistBulkImportPublishMutation = () => {
   });
 };
 
-export const useMyChecklistInstancesQuery = (status?: ChecklistInstanceStatus) => {
+/**
+ * Counts straight from the database, instead of `useMyChecklistInstancesQuery().length`.
+ *
+ * The dashboard cards and the compliance board used to download every instance — items, images,
+ * submissions and all — purely to count them. That is why those list endpoints had to stay
+ * unbounded; this is what lets them paginate.
+ */
+export const useChecklistInstanceSummaryQuery = (
+  filter: { mine?: boolean; storeId?: string; assigneeId?: string; definitionId?: string } = {},
+) => {
   const { token } = useAuth();
   return useQuery({
-    queryKey: KEYS.myInstances(status),
-    queryFn: () => checklistInstanceApi.getMine(status).then(r => r.data),
+    queryKey: ['checklist-instances', 'summary', filter],
+    queryFn: () => checklistInstanceApi.getSummary(filter).then(r => r.data),
+    enabled: !!token,
+    retry: handleQueryRetry,
+  });
+};
+
+export const useMyChecklistInstancesQuery = (
+  status?: ChecklistInstanceStatus,
+  paging: { page?: number; limit?: number } = {},
+) => {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: [...KEYS.myInstances(status), paging],
+    queryFn: () => checklistInstanceApi.getMine(status, paging).then(r => r.data),
     enabled: !!token,
     retry: handleQueryRetry,
   });
@@ -138,11 +160,11 @@ export const useChecklistInstanceQuery = (id: string) => {
   });
 };
 
-export const useInstancesForDefinitionQuery = (definitionId: string) => {
+export const useInstancesForDefinitionQuery = (definitionId: string, paging: { page?: number; limit?: number } = {}) => {
   const { token } = useAuth();
   return useQuery({
     queryKey: KEYS.instancesForDefinition(definitionId),
-    queryFn: () => checklistInstanceApi.getForDefinition(definitionId).then(r => r.data),
+    queryFn: () => checklistInstanceApi.getForDefinition(definitionId, paging).then(r => r.data),
     enabled: !!token && !!definitionId,
     retry: handleQueryRetry,
   });
@@ -151,45 +173,73 @@ export const useInstancesForDefinitionQuery = (definitionId: string) => {
 // Powers the admin Compliance Board — every generated instance matching whichever store/person/
 // status filters are picked, across every checklist definition (not scoped to one, unlike
 // useInstancesForDefinitionQuery above).
-export const useChecklistInstancesBoardQuery = (filter: { storeId?: string; assigneeId?: string; status?: ChecklistInstanceStatus } = {}) => {
+/** Returns the whole `{ data, meta }` page — the board needs `meta.totalPages` for its pager. */
+export const useChecklistInstancesBoardQuery = (
+  filter: { storeId?: string; assigneeId?: string; status?: ChecklistInstanceStatus; page?: number; limit?: number } = {},
+) => {
   const { token } = useAuth();
   return useQuery({
     queryKey: KEYS.instancesBoard(filter),
-    queryFn: () => checklistInstanceApi.list(filter).then(r => r.data),
+    queryFn: () => checklistInstanceApi.list(filter),
     enabled: !!token,
     retry: handleQueryRetry,
   });
 };
 
+type SetChecklistInstanceItemDoneVars = {
+  itemId: string;
+  isDone: boolean;
+  numericValue?: number;
+  booleanAnswer?: 'YES' | 'NO';
+  textValue?: string;
+  dateValue?: string;
+  gpsLat?: number;
+  gpsLng?: number;
+  gpsAccuracy?: number;
+  signatureValue?: string;
+  secondSignatureValue?: string;
+  conditionalReasonValue?: string;
+  remarks?: string;
+};
+
 export const useSetChecklistInstanceItemDoneMutation = (instanceId: string) => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ itemId, isDone, numericValue, booleanAnswer, textValue, dateValue, gpsLat, gpsLng, gpsAccuracy, signatureValue, secondSignatureValue, conditionalReasonValue, remarks }: {
-      itemId: string;
-      isDone: boolean;
-      numericValue?: number;
-      booleanAnswer?: 'YES' | 'NO';
-      textValue?: string;
-      dateValue?: string;
-      gpsLat?: number;
-      gpsLng?: number;
-      gpsAccuracy?: number;
-      signatureValue?: string;
-      secondSignatureValue?: string;
-      conditionalReasonValue?: string;
-      remarks?: string;
-    }) =>
+  const instanceKey = KEYS.instanceDetail(instanceId);
+
+  return useMutation<unknown, unknown, SetChecklistInstanceItemDoneVars, { previous?: ChecklistInstance }>({
+    mutationFn: ({ itemId, isDone, numericValue, booleanAnswer, textValue, dateValue, gpsLat, gpsLng, gpsAccuracy, signatureValue, secondSignatureValue, conditionalReasonValue, remarks }) =>
       checklistInstanceApi.setItemDone(itemId, isDone, {
         numericValue, booleanAnswer, textValue, dateValue, gpsLat, gpsLng, gpsAccuracy, signatureValue, secondSignatureValue, conditionalReasonValue, remarks,
       }).then(r => r.data),
+    // Checking an item off (or filling in its answer) should reflect on the card immediately —
+    // waiting on the round-trip made every tap feel laggy. Patch the cached instance's item now,
+    // roll back in onError if the server rejects it.
+    onMutate: async ({ itemId, ...patch }) => {
+      await queryClient.cancelQueries({ queryKey: instanceKey });
+      const previous = queryClient.getQueryData<ChecklistInstance>(instanceKey);
+      if (previous) {
+        queryClient.setQueryData<ChecklistInstance>(instanceKey, {
+          ...previous,
+          items: previous.items.map((item) =>
+            item.id === itemId
+              ? { ...item, ...patch, completedAt: patch.isDone ? new Date().toISOString() : null }
+              : item,
+          ),
+        });
+      }
+      return { previous };
+    },
     onSuccess: () => {
       // No success toast here — keeps checkbox-toggling snappy, matching
       // useUpdateChecklistItemMutation in tickets/hook.ts.
-      queryClient.invalidateQueries({ queryKey: KEYS.instanceDetail(instanceId) });
+      queryClient.invalidateQueries({ queryKey: instanceKey });
       queryClient.invalidateQueries({ queryKey: ['checklist-instances', 'mine'] });
       queryClient.invalidateQueries({ queryKey: ['checklist-instances', 'by-definition'] });
     },
-    onError: (err) => toast.error(errorMessage(err, 'Failed to update item')),
+    onError: (err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(instanceKey, context.previous);
+      toast.error(errorMessage(err, 'Failed to update item'));
+    },
   });
 };
 
@@ -258,11 +308,11 @@ export const useDeleteChecklistInstanceItemSubmissionImageMutation = (instanceId
 
 // Powers the PC/Admin verification queue's Checklists section — instances with every item done,
 // awaiting review. Scoped server-side (PC gets their own department, ADMIN gets every department).
-export const usePendingVerificationChecklistInstancesQuery = () => {
+export const usePendingVerificationChecklistInstancesQuery = (paging: { page?: number; limit?: number } = {}) => {
   const { token } = useAuth();
   return useQuery({
-    queryKey: ['checklist-instances', 'pending-verification'],
-    queryFn: () => checklistInstanceApi.getPendingVerification().then(r => r.data),
+    queryKey: ['checklist-instances', 'pending-verification', paging],
+    queryFn: () => checklistInstanceApi.getPendingVerification(paging).then(r => r.data),
     enabled: !!token,
     retry: handleQueryRetry,
   });

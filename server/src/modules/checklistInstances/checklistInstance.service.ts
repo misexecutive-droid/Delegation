@@ -13,13 +13,19 @@ import { eq, and, inArray, desc, asc, sql } from "drizzle-orm"
 import { AppError } from "../../utils/AppError.js"
 import { notificationService } from "../notifications/notification.service.js"
 import { ticketService } from "../tickets/ticket.service.js"
+import { auditService } from "../audit/audit.service.js"
+import { cached, cacheKey } from "../../config/queryCache.js"
 import type { AccessTokenPayload } from "../../middleware/auth/auth.js"
 import type { VerifyChecklistInstanceInput } from "./checklistInstance.validation.js"
 import type { Role } from "../../db/schema/core.js"
 import { DATE_FORMATS } from "../../utils/dateBucket.js"
 import type { DateBucket } from "../../utils/index.js"
 
-export type InstanceStatusFilter = "OPEN" | "COMPLETED"
+// OVERDUE is a subset of OPEN (unfinished *and* past its period end), not a third
+// independent state — the compliance board and MyChecklists both offer it as a filter, and
+// it was being applied client-side over the full list, which is one of the two reasons those
+// lists could not paginate.
+export type InstanceStatusFilter = "OPEN" | "COMPLETED" | "OVERDUE"
 
 // Not using Drizzle's relational query API (`db.query...with:{...}`) here — that API compiles
 // every relation into a `LEFT JOIN LATERAL (...)` subquery, and the actual database this app
@@ -120,14 +126,55 @@ const getPopulatedInstanceById = async (id: string) => {
     return hydrated
 }
 
-const isCompleted = (instance: any) => {
-    const items = instance.items ?? []
-    return items.length > 0 && items.every((item: any) => item.isDone)
+/**
+ * "Complete" means: has at least one item, and none of them is unfinished.
+ *
+ * This used to be a JS predicate (`isCompleted`) run over already-hydrated instances, with a
+ * `filterByStatus` helper applying it after the fact. That forced every matching row to be
+ * fetched and fully hydrated before the OPEN/COMPLETED filter could be applied — a page of 50
+ * could not be selected without first loading all of them. Expressed in SQL it becomes part of
+ * the WHERE clause, so only the page is ever hydrated.
+ */
+const completionCondition = (status: InstanceStatusFilter) => {
+    const anyItem = sql`EXISTS (SELECT 1 FROM ${checklistInstanceItems} i WHERE i.instanceId = ${checklistInstances.id})`
+    const anyUnfinished = sql`EXISTS (SELECT 1 FROM ${checklistInstanceItems} i WHERE i.instanceId = ${checklistInstances.id} AND i.isDone = 0)`
+    const complete = sql`${anyItem} AND NOT ${anyUnfinished}`
+    const incomplete = sql`NOT ${anyItem} OR ${anyUnfinished}`
+
+    if (status === "COMPLETED") return complete
+    // Same rule the summary's `overdue` count uses, and the client's isInstanceOverdue before it.
+    if (status === "OVERDUE") return sql`(${incomplete}) AND ${checklistInstances.periodEnd} < NOW()`
+    return incomplete
 }
 
-const filterByStatus = (instances: any[], status?: InstanceStatusFilter) => {
-    if (!status) return instances
-    return instances.filter(instance => (status === "COMPLETED" ? isCompleted(instance) : !isCompleted(instance)))
+/**
+ * Always paginated now.
+ *
+ * It briefly wasn't: every caller of these endpoints derived its counts with `.length` over the
+ * whole array, so defaulting to a page would have made stat tiles silently report the page size
+ * instead of the real total — worse than the slow query it fixed. `summary()` below took those
+ * counts over, and `OVERDUE` became a real status filter, so nothing needs the full list any more.
+ */
+const paginate = (page?: number, limit?: number) => {
+    const safePage = Math.max(1, Math.trunc(page ?? 1) || 1)
+    // Capped so a caller can't ask for 100k rows and reintroduce the unbounded query by hand.
+    const safeLimit = Math.min(200, Math.max(1, Math.trunc(limit ?? DEFAULT_PAGE_SIZE) || DEFAULT_PAGE_SIZE))
+    return { page: safePage, limit: safeLimit, offset: (safePage - 1) * safeLimit }
+}
+
+const DEFAULT_PAGE_SIZE = 50
+
+const buildMeta = (p: { page: number; limit: number }, total: number) => ({
+    page: p.page,
+    limit: p.limit,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / p.limit)),
+    hasNext: p.page * p.limit < total,
+})
+
+const countInstances = async (where: any) => {
+    const [row] = await db.select({ value: sql<number>`COUNT(*)` }).from(checklistInstances).where(where)
+    return Number(row?.value ?? 0)
 }
 
 // assigneeIds is now the flattened junction-table result (see mapInstance/getPopulatedInstanceById
@@ -414,38 +461,137 @@ const assertCanVerify = (instance: any, user: AccessTokenPayload) => {
     if (!canVerify) throw AppError.forbidden()
 }
 
+export type InstanceListFilter = {
+    definitionId?: string
+    storeId?: string
+    status?: InstanceStatusFilter
+    assigneeId?: string
+    /** Restrict to instances assigned to this user — how the "mine" scope is expressed. */
+    userId?: string
+}
+
+/**
+ * Sentinel for "this filter cannot match anything", distinct from "no filter" (undefined).
+ *
+ * The assignee/user filters resolve through the junction table first, and an empty result there
+ * means no rows can match. Returning `undefined` for that would mean "no WHERE clause" — i.e.
+ * every row — which is the opposite answer.
+ */
+const NO_MATCHES = Symbol("no-matches")
+
+const instanceConditions = async (filter: InstanceListFilter) => {
+    const conditions = []
+    if (filter.definitionId) conditions.push(eq(checklistInstances.definitionId, filter.definitionId))
+    if (filter.storeId) conditions.push(eq(checklistInstances.storeId, filter.storeId))
+    if (filter.status) conditions.push(completionCondition(filter.status))
+
+    // assigneeIds lives in the checklistInstanceAssignees junction table, not on the instance, so
+    // both people filters resolve to a set of instance ids first — same convention as
+    // checklistDefinition.service.ts's list() storeId filter.
+    const assigneeFilter = filter.assigneeId ?? filter.userId
+    if (assigneeFilter) {
+        const links = await db.select({ instanceId: checklistInstanceAssignees.instanceId })
+            .from(checklistInstanceAssignees)
+            .where(eq(checklistInstanceAssignees.userId, assigneeFilter))
+        if (!links.length) return NO_MATCHES
+        conditions.push(inArray(checklistInstances.id, links.map((l) => l.instanceId)))
+    }
+
+    return conditions.length ? and(...conditions) : undefined
+}
+
 export const checklistInstanceService = {
-    async getMine(userId: string, status?: InstanceStatusFilter) {
+    /**
+     * Paginated. This used to select every instance the user had ever been assigned and hydrate
+     * all of them — items, images, submissions, accessories — on every call, then filter by status
+     * in JS. On a store a few months old that is the app's most expensive request by a wide
+     * margin, and it grew forever. Status is now a SQL condition so only the page is hydrated.
+     */
+    async getMine(userId: string, status?: InstanceStatusFilter, page?: number, limit?: number) {
         // assigneeIds is now the checklistInstanceAssignees junction table rather than a real
         // embedded array field — look up the matching instance ids first, same convention as
         // checklistDefinition.service.ts's list() storeId filter.
         const links = await db.select({ instanceId: checklistInstanceAssignees.instanceId }).from(checklistInstanceAssignees).where(eq(checklistInstanceAssignees.userId, userId))
-        if (!links.length) return []
+        const p = paginate(page, limit)
+        if (!links.length) return { data: [], meta: buildMeta(p, 0) }
 
+        const conditions = [inArray(checklistInstances.id, links.map(l => l.instanceId))]
+        if (status) conditions.push(completionCondition(status))
+        const where = and(...conditions)
+
+        const total = await countInstances(where)
         const instanceRows = await db.select().from(checklistInstances)
-            .where(inArray(checklistInstances.id, links.map(l => l.instanceId)))
+            .where(where)
             .orderBy(desc(checklistInstances.periodStart))
-        return filterByStatus(await hydrateInstances(instanceRows), status)
+            .limit(p.limit).offset(p.offset)
+
+        return { data: await hydrateInstances(instanceRows), meta: buildMeta(p, total) }
     },
 
-    async listAll(filter: { definitionId?: string; storeId?: string; status?: InstanceStatusFilter; assigneeId?: string }) {
-        const conditions = []
-        if (filter.definitionId) conditions.push(eq(checklistInstances.definitionId, filter.definitionId))
-        if (filter.storeId) conditions.push(eq(checklistInstances.storeId, filter.storeId))
-        if (filter.assigneeId) {
-            // Same two-step pattern as getMine — assigneeIds lives in the junction table, not on
-            // ChecklistInstance itself, so resolve matching instance ids first.
-            const links = await db.select({ instanceId: checklistInstanceAssignees.instanceId })
-                .from(checklistInstanceAssignees)
-                .where(eq(checklistInstanceAssignees.userId, filter.assigneeId))
-            if (!links.length) return []
-            conditions.push(inArray(checklistInstances.id, links.map((l) => l.instanceId)))
-        }
+    /** Paginated, for the same reason as getMine — this one is org-wide, so it was worse. */
+    async listAll(filter: InstanceListFilter & { page?: number; limit?: number }) {
+        const p = paginate(filter.page, filter.limit)
+        const built = await instanceConditions(filter)
+        if (built === NO_MATCHES) return { data: [], meta: buildMeta(p, 0) }
 
+        const where = built
+        const total = await countInstances(where)
         const instanceRows = await db.select().from(checklistInstances)
-            .where(conditions.length ? and(...conditions) : undefined)
+            .where(where)
             .orderBy(desc(checklistInstances.periodStart))
-        return filterByStatus(await hydrateInstances(instanceRows), filter.status)
+            .limit(p.limit).offset(p.offset)
+
+        return { data: await hydrateInstances(instanceRows), meta: buildMeta(p, total) }
+    },
+
+    /**
+     * The counts four screens used to derive by fetching every instance and reducing in JS —
+     * the compliance board's stat tiles, the dashboard KPI strip's Due/Completed split,
+     * CompareDashboard's completion ratio. Each of those was the reason the list endpoints had to
+     * stay unbounded; with the numbers coming from the database, the lists can finally paginate.
+     *
+     * Two round-trips, not six: one conditional aggregate over instances, one over their items.
+     */
+    async summary(filter: InstanceListFilter) {
+        const built = await instanceConditions(filter)
+        const empty = { total: 0, completed: 0, pending: 0, overdue: 0, totalItems: 0, doneItems: 0 }
+        if (built === NO_MATCHES) return empty
+
+        // 30s, and no explicit invalidation: these counts move whenever anyone ticks a checklist
+        // item anywhere, so there is no single "this just changed" moment to hook — and a tile
+        // being up to half a minute stale is a fair trade for two aggregate scans per dashboard
+        // load rather than per viewer. Deliberately short for the same reason.
+        return cached(
+            cacheKey("checklist-summary", filter.userId, filter.storeId, filter.assigneeId, filter.definitionId, filter.status),
+            30,
+            async () => {
+                const isComplete = completionCondition("COMPLETED")
+                const [counts] = await db.select({
+                    total: sql<number>`COUNT(*)`,
+                    completed: sql<number>`SUM(CASE WHEN ${isComplete} THEN 1 ELSE 0 END)`,
+                    overdue: sql<number>`SUM(CASE WHEN ${completionCondition("OVERDUE")} THEN 1 ELSE 0 END)`,
+                }).from(checklistInstances).where(built)
+
+                const [items] = await db.select({
+                    totalItems: sql<number>`COUNT(*)`,
+                    doneItems: sql<number>`SUM(CASE WHEN ${checklistInstanceItems.isDone} THEN 1 ELSE 0 END)`,
+                })
+                    .from(checklistInstanceItems)
+                    .innerJoin(checklistInstances, eq(checklistInstances.id, checklistInstanceItems.instanceId))
+                    .where(built)
+
+                const total = Number(counts?.total ?? 0)
+                const completed = Number(counts?.completed ?? 0)
+                return {
+                    total,
+                    completed,
+                    pending: total - completed,
+                    overdue: Number(counts?.overdue ?? 0),
+                    totalItems: Number(items?.totalItems ?? 0),
+                    doneItems: Number(items?.doneItems ?? 0),
+                }
+            },
+        )
     },
 
     async getById(id: string, user: AccessTokenPayload) {
@@ -525,11 +671,15 @@ export const checklistInstanceService = {
     },
 
     // GET /checklist-instances/pending-verification — PC sees every store's queue, same as ADMIN.
-    async listPendingVerification(_user: AccessTokenPayload) {
+    async listPendingVerification(_user: AccessTokenPayload, page?: number, limit?: number) {
+        const p = paginate(page, limit)
+        const where = eq(checklistInstances.verificationStatus, "PENDING")
+        const total = await countInstances(where)
         const instanceRows = await db.select().from(checklistInstances)
-            .where(eq(checklistInstances.verificationStatus, "PENDING"))
+            .where(where)
             .orderBy(desc(checklistInstances.periodStart))
-        return hydrateInstances(instanceRows)
+            .limit(p.limit).offset(p.offset)
+        return { data: await hydrateInstances(instanceRows), meta: buildMeta(p, total) }
     },
 
     async verify(id: string, input: VerifyChecklistInstanceInput, user: AccessTokenPayload) {
@@ -575,6 +725,19 @@ export const checklistInstanceService = {
         notificationService
             .notifyChecklistVerificationResult({ _id: instance.id, title: instance.title, assigneeIds: assigneeLinks.map(l => l.userId) }, input.action, input.note)
             .catch((err) => console.error("Failed to notify checklist verification result:", err))
+
+        // The compliance decision itself — who approved or rejected a store's checklist, when,
+        // and with what note. `before` is the pre-decision row so a reject's item reset is visible
+        // as a change rather than just a status label flipping.
+        const [afterRow] = await db.select().from(checklistInstances).where(eq(checklistInstances.id, id)).limit(1)
+        await auditService.record({
+            entityType: "ChecklistInstance",
+            entityId: id,
+            action: input.action === "APPROVE" ? "APPROVE" : "REJECT",
+            actorId: user.sub,
+            before: instance,
+            after: afterRow,
+        })
 
         const result = await getPopulatedInstanceById(id)
         return result!

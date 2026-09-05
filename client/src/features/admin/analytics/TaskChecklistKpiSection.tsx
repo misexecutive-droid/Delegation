@@ -36,7 +36,7 @@ export const TaskChecklistKpiSection = ({ groupBy, from, to }: TaskChecklistKpiS
         },
         {
           icon: Camera,
-          iconTint: 'text-emerald-600 dark:text-emerald-400',
+          iconTint: 'text-success',
           label: 'Photo quality rate',
           value: quality.value != null ? `${quality.value}%` : '—',
           trend: quality.trend,

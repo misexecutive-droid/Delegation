@@ -48,7 +48,7 @@ export const TemplateBlock = ({ template, departmentName }: TemplateBlockProps) 
               <span className={`text-[11px] font-display font-medium px-2 py-0.5 rounded-md flex items-center gap-1 ${
                 template.appliesTo === 'TASK'
                   ? 'bg-primary-500/10 text-primary-600 dark:text-primary-300 ring-1 ring-primary-500/20'
-                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20'
+                  : 'bg-warning/10 text-warning ring-1 ring-warning/20'
               }`}>
                 <Layers size={11} />
                 {template.appliesTo === 'TASK' ? 'Tasks' : 'Tickets'}

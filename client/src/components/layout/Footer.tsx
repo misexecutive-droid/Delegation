@@ -20,13 +20,13 @@ export const Footer = () => {
         WebkitBackdropFilter: 'var(--glass-blur)',
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex flex-col md:flex-row items-center justify-between gap-x-6 gap-y-2">
+      <div className="max-w-(--container-width) mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex flex-col md:flex-row items-center justify-between gap-x-6 gap-y-2">
         
         <NavLink
           to="/"
           className="flex items-center gap-2 shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 rounded-lg p-0.5"
         >
-          <span className="size-6 rounded-lg bg-gradient-to-tr from-primary-600 to-primary-500 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+          <span className="size-6 rounded-lg bg-gradient-to-tr from-primary-600 to-primary-500 flex items-center justify-center shrink-0 border border-border/60 group-hover:scale-105 transition-transform">
             <CheckSquare size={13} className="text-white" />
           </span>
           <span className="font-mono font-bold text-text tracking-tight text-xs group-hover:text-primary-600 transition-colors">

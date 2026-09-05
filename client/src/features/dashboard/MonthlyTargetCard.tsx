@@ -1,19 +1,22 @@
-import { ArrowDown, ArrowUp, Target } from 'lucide-react';
+import { ArrowDown, ArrowUp, Minus, Target } from 'lucide-react';
 import { RadialGauge } from '../../components/radialGauge';
-import type { CompliancePeriod, Trend } from './dashboardDisplay';
+import { useIsMobile } from '../../lib/useMediaQuery';
+import { PeriodTabControl } from './PeriodTabControl';
+import { PERIOD_LABEL, COMPLIANCE_PERIOD_OPTIONS, PERIOD_TAB_LABEL, type CompliancePeriod, type Trend } from './dashboardDisplay';
 
 export interface FooterStat {
   label: string;
   value: string;
-  direction: 'up' | 'down';
+  /**
+   * Which way the number itself actually moved against the previous period. This used to double as
+   * the sentiment, which broke on "Pending": fewer pending items is good, so it was passed
+   * `direction: 'up'` when the count had gone *down* — a green upward arrow beside a number that
+   * had visibly dropped.
+   */
+  direction: 'up' | 'down' | 'flat';
+  /** Whether that movement is good news for this particular metric. Drives colour only. */
+  sentiment: 'good' | 'bad' | 'neutral';
 }
-
-const PERIOD_OPTIONS: { key: CompliancePeriod; label: string }[] = [
-  { key: 'day', label: 'Day' },
-  { key: 'week', label: 'Week' },
-  { key: 'month', label: 'Month' },
-  { key: 'year', label: 'Year' },
-];
 
 interface MonthlyTargetCardProps {
   percent: number;
@@ -24,18 +27,38 @@ interface MonthlyTargetCardProps {
   onPeriodChange: (period: CompliancePeriod) => void;
 }
 
+const STAT_SENTIMENT: Record<FooterStat['sentiment'], string> = {
+  good: 'text-success',
+  bad: 'text-danger',
+  neutral: 'text-text-muted',
+};
+
 export const MonthlyTargetCard = ({ percent, change, description, stats, period, onPeriodChange }: MonthlyTargetCardProps) => {
-  const ChangeIcon = change.direction === 'up' ? ArrowUp : ArrowDown;
-  const changeClassName = change.direction === 'up'
-    ? 'bg-success/10 text-success border-success/20'
-    : 'bg-danger/10 text-danger border-danger/20';
+  // 220px was hardcoded, which is a lot of gauge for a card that sits in a half-width column.
+  // Scales down on phones the way the Compliance gauges already do.
+  const isMobile = useIsMobile();
+  const gaugeSize = isMobile ? 180 : 220;
+
+  // pointDelta always signs its label ("+0.0%"), so an unchanged score has to be detected
+  // numerically — it was previously rendering as a green upward arrow, i.e. claiming an
+  // improvement that hadn't happened. Same fix already applied to the Compliance gauges.
+  const isFlatChange = Number.parseFloat(change.label) === 0;
+  const ChangeIcon = isFlatChange ? Minus : change.direction === 'up' ? ArrowUp : ArrowDown;
+  const changeClassName = isFlatChange
+    ? 'bg-surface-hover text-text-muted border-border/60'
+    : change.direction === 'up'
+      ? 'bg-success/10 text-success border-success/20'
+      : 'bg-danger/10 text-danger border-danger/20';
 
   return (
     // `@container` + `@lg:`/`@sm:` below size this card's internal layout off its own rendered
     // width, not the viewport — it now shares a row with CompareDashboard in a 2-column grid, so a
     // viewport breakpoint would flip to the wide side-by-side layout on any laptop-width screen
     // even though the actual column is only half that wide.
-    <div className="@container relative group rounded-2xl border border-border/60 bg-surface p-5 sm:p-6 lg:p-7 flex flex-col gap-2 hover:border-border hover:shadow-md transition-all duration-300 overflow-hidden">
+    // `hover:border-primary-500/40` matches every other card on the page — `primary-300` was a
+    // one-off with no dark-mode variant, so in dark mode this card's hover barely registered.
+    // `gap-6` replaces the body block's own `mt-6`, so the card owns its spacing in one place.
+    <section aria-labelledby="delegation-score-heading" className="@container relative group rounded-2xl border border-border/60 dark:border-white/[0.06] bg-surface p-4 sm:p-6 lg:p-7 flex flex-col gap-6 hover:border-primary-500/40 transition-all duration-300 overflow-hidden">
 
       {/* Decorative Background Glow - Adjusted for Light/Dark modes */}
       <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-500/15 dark:bg-primary-500/10 rounded-full blur-[60px] pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-60" />
@@ -47,39 +70,36 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
             <Target size={20} strokeWidth={2.5} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-text tracking-tight leading-tight">Target</h3>
-            <p className="text-xs font-medium text-text-muted mt-0.5 capitalize tracking-wide">Checklist completion</p>
+            {/* Was "Target" / "Checklist completion" — but `percent` here is a weighted delegation
+                score (see HomePage's weightedScorePercent), not checklist data at all. Naming it
+                accurately also keeps it from reading as the same number as the Compliance gauges
+                or Compare Dashboard's own "Completion", which are scoped differently. */}
+            <h2 id="delegation-score-heading" className="text-base sm:text-lg font-display font-bold text-text tracking-tight leading-tight">Delegation Score</h2>
+            <p className="text-xs font-medium text-text-muted mt-0.5 tracking-wide">Weighted completion, {PERIOD_LABEL[period]}</p>
           </div>
         </div>
 
-        {/* Period selector — Flex-1 ensures perfect scaling on tiny mobile screens */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-hover/80 border border-border/40 w-full sm:w-auto">
-          {PERIOD_OPTIONS.map(opt => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => onPeriodChange(opt.key)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
-                period === opt.key
-                  ? 'bg-surface text-text shadow-sm ring-1 ring-border/50'
-                  : 'text-text-muted hover:text-text hover:bg-surface-active/50'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <PeriodTabControl
+          value={period}
+          options={COMPLIANCE_PERIOD_OPTIONS}
+          labels={PERIOD_TAB_LABEL}
+          onChange={onPeriodChange}
+          className="w-full sm:w-auto"
+        />
       </div>
 
       {/* Body Layout Split */}
-      <div className="relative z-10 flex flex-col @lg:flex-row items-center gap-6 @lg:gap-10 mt-6">
+      <div className="relative z-10 flex flex-col @lg:flex-row items-center gap-6 @lg:gap-10">
 
         {/* Gauge */}
-        <RadialGauge percent={percent} size={220}>
-          <span className="text-5xl font-bold bg-gradient-to-br from-text to-text-muted bg-clip-text text-transparent tracking-tight">
+        <RadialGauge percent={percent} size={gaugeSize}>
+          {/* Solid `text-text`, not the gradient-to-`text-muted` clip this had — a decorative fade
+              on the card's headline number dropped its lower half to muted contrast, which is the
+              one figure here that has to be legible at a glance. */}
+          <span className="text-5xl font-display font-bold text-text tracking-tight tabular-nums">
             {percent}<span className="text-3xl">%</span>
           </span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold border shadow-sm ${changeClassName}`}>
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold border ${changeClassName}`}>
             <ChangeIcon size={12} strokeWidth={3} />
             {change.label}
           </span>
@@ -93,8 +113,10 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
 
           <div className="grid grid-cols-1 @sm:grid-cols-3 gap-3">
             {stats.map(stat => {
-              const TrendIcon = stat.direction === 'up' ? ArrowUp : ArrowDown;
-              const trendClassName = stat.direction === 'up' ? 'text-success' : 'text-danger';
+              // Arrow = which way the number moved; colour = whether that's good. Separating the
+              // two is what lets "Pending: 3 ↓" be green.
+              const TrendIcon = stat.direction === 'flat' ? Minus : stat.direction === 'up' ? ArrowUp : ArrowDown;
+              const trendClassName = STAT_SENTIMENT[stat.sentiment];
 
               return (
                 <div
@@ -112,6 +134,6 @@ export const MonthlyTargetCard = ({ percent, change, description, stats, period,
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };

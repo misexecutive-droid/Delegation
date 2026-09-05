@@ -3,10 +3,14 @@ import type { Ticket } from '../../api/ticket';
 import { getChecklistProgress } from '../../lib/checklistProgress';
 import { getTicketStatusLabel } from '../../lib/ticketStatusLabel';
 import { getInitials } from '../../lib/getInitials';
-import { avatarColorClass } from '../tasks/avatarColors';
+import { avatarColorClass } from '../../lib/avatarColors';
 import { useAuth } from '../../context/AuthContext';
-import { STATUS_CONFIG, PRIORITY_CONFIG } from './ticketDisplay';
+import { PRIORITY_CONFIG } from './ticketDisplay';
 import { ChecklistProgressBar, DueProgressBar } from '../../components/progress';
+import { StatusChip, getStatusChipLabel, type StatusChipStatus } from '../../components/statusChip';
+import { PriorityChip } from '../../components/priorityChip';
+import { DepartmentChip } from '../../components/departmentChip';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -21,9 +25,15 @@ export const TicketCard = ({ ticket, onClick, departmentName, index = 0 }: Ticke
 
   const isOverdue = ticket.isOverdue && ticket.status !== 'CLOSED';
   const priorityInfo = PRIORITY_CONFIG[ticket.priority];
-  const statusInfo = STATUS_CONFIG[ticket.status];
-  const statusLabel = getTicketStatusLabel(ticket.status, user?.role, statusInfo.label);
+  const statusChipStatus = ticket.status.toLowerCase() as StatusChipStatus;
+  const statusLabel = getTicketStatusLabel(ticket.status, user?.role, getStatusChipLabel(statusChipStatus));
   const assigneeName = ticket.assignee ? ticket.assignee.firstName : null;
+  // statusUpdates is newest-first (see TicketStatusHistory's own `index === 0` convention) — the
+  // first ON_HOLD entry found is therefore the most recent one, i.e. the reason this ticket is
+  // *currently* on hold, not some earlier hold-and-resume cycle.
+  const onHoldRemark = ticket.status === 'ON_HOLD'
+    ? (ticket.statusUpdates ?? []).find(su => su.toStatus === 'ON_HOLD')?.remark ?? null
+    : null;
 
   return (
     <button
@@ -32,56 +42,76 @@ export const TicketCard = ({ ticket, onClick, departmentName, index = 0 }: Ticke
       className="group relative w-full text-left flex flex-col gap-2.5 p-4 rounded-lg border border-border bg-surface hover:border-primary-500/40 transition-colors duration-200 cursor-pointer animate-step-in outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 overflow-hidden"
       style={{ animationDelay: `${Math.min(index, 10) * 35}ms` }}
     >
-      {/* Priority stripe — same glanceable triage cue used on delegation cards. */}
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${priorityInfo.stripe}`} />
-      {/* Title + Department */}
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="flex-1 min-w-0 text-sm font-medium text-text truncate leading-snug">
+
+      <div className="flex flex-col justify-between gap-1">
+        <h3 className="w-full min-w-0 text-sm font-bold text-text-secondary truncate leading-tight">
           {ticket.title}
         </h3>
-        <span className="shrink-0 max-w-[140px] truncate text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400">
-          {departmentName ?? 'Ticket'}
-        </span>
+        {ticket.description && (
+          <p className="w-full min-w-0 text-xs text-text-secondary leading-tight line-clamp-1">
+            {ticket.description}
+          </p>
+        )}
       </div>
 
-      {/* Clamped Description */}
-      {ticket.description && (
-        <p className="text-xs text-text-muted leading-relaxed line-clamp-2">
-          {ticket.description}
-        </p>
-      )}
 
-      {/* Progress — checklist completion when there's a checklist to track, otherwise how much of
-          the created-to-TAT-deadline window has elapsed. */}
-      {progress !== null ? (
-        <ChecklistProgressBar done={doneItems} total={totalItems} />
-      ) : (
-        ticket.tatDueAt && ticket.status !== 'CLOSED' && (
-          <DueProgressBar createdAt={ticket.createdAt} dueDate={ticket.tatDueAt} />
-        )
-      )}
-
-      {/* Footer: Status/Priority/Due Chips + Assignee */}
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
+      <div className="flex items-center justify-between gap-2 pt-2">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${statusInfo.className}`}>
-            {statusLabel}
-          </span>
+          {onHoldRemark ? (
+            // StatusChip has a fixed prop signature (doesn't spread/forward arbitrary props), so
+            // it can't be the direct child of an `asChild` Tooltip trigger — Radix's cloned
+            // hover/focus handlers would just be dropped. A plain <span> wrapper gives Radix a
+            // real DOM element to attach them to instead.
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex cursor-help">
+                  <StatusChip status={statusChipStatus} label={statusLabel} icon={false} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[220px] text-left whitespace-normal">
+                {onHoldRemark}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <StatusChip status={statusChipStatus} label={statusLabel} icon={false} />
+          )}
 
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${priorityInfo.className}`}>
-            {priorityInfo.label}
-          </span>
+
+          <PriorityChip meta={priorityInfo} />
+
+          <DepartmentChip name={departmentName ?? 'Ticket'} className="inline-flex items-center shrink-0 max-w-[140px] truncate text-[10px] font-medium px-1.5 py-0.5 rounded" />
+
+          {progress !== null ? (
+            <ChecklistProgressBar done={doneItems} total={totalItems} />
+          ) : (
+            // `!isOverdue`: past the deadline DueProgressBar renders its own red "Overdue" pill,
+            // which sat immediately beside the red due pill below — two alert pills, same icon,
+            // same colour, one of them carrying no information the other didn't. The bar is for
+            // time *remaining*; once there is none, the pill below says so on its own.
+            ticket.tatDueAt && ticket.status !== 'CLOSED' && !isOverdue && (
+              <DueProgressBar createdAt={ticket.createdAt} dueDate={ticket.tatDueAt} overdue={false} />
+            )
+          )}
 
           {ticket.tatDueAt && (
             <span
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                isOverdue ? 'bg-danger/10 text-danger' : 'bg-surface-hover text-text-muted'
-              }`}
+              title={isOverdue ? "This ticket is past its target resolution time" : "Target resolution date"}
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all duration-300 border ${isOverdue
+                  ? 'bg-danger/10 text-danger border-danger/20'
+                  : 'bg-surface border-border/50 text-text-secondary hover:text-text hover:bg-surface-hover'
+                }`}
             >
-              {isOverdue ? <AlertCircle size={11} className="shrink-0" /> : <Clock size={11} className="shrink-0" />}
+              {isOverdue ? (
+                <AlertCircle size={12} strokeWidth={2.5} className="shrink-0 animate-pulse" />
+              ) : (
+                <Clock size={12} strokeWidth={2} className="shrink-0 opacity-70" />
+              )}
+              {isOverdue && 'Overdue · '}
               {new Date(ticket.tatDueAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
           )}
+
+
         </div>
 
         {assigneeName ? (
@@ -96,6 +126,9 @@ export const TicketCard = ({ ticket, onClick, departmentName, index = 0 }: Ticke
             <User size={12} />
           </div>
         )}
+
+
+
       </div>
     </button>
   );

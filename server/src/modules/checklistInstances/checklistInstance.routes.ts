@@ -5,13 +5,14 @@ import { authenticate, requireRole } from "../../middleware/auth/auth.js"
 import { checklistInstanceImageUpload } from "../../config/upload.js"
 
 // Mounted at /checklist-instances in app.ts. Instances are cron-generated only — no create/delete
-// endpoints here. "/mine" and "/pending-verification" must be registered before "/:id" so Express
-// doesn't treat either as an id.
+// endpoints here. "/mine", "/pending-verification" and "/summary" must be registered before
+// "/:id" so Express doesn't treat any of them as an id.
 export const checklistInstanceRouter = Router()
 checklistInstanceRouter.use(authenticate)
 checklistInstanceRouter.get("/mine", checklistInstanceController.getMine)
 checklistInstanceRouter.get("/pending-verification", requireRole("PC", "ADMIN"), checklistInstanceController.listPendingVerification)
 checklistInstanceRouter.get("/", requireRole("ADMIN", "PC"), checklistInstanceController.list)
+checklistInstanceRouter.get("/summary", checklistInstanceController.summary)
 checklistInstanceRouter.get("/reports/compliance", requireRole("ADMIN", "PC", "MANAGER", "SENIOR"), checklistInstanceController.complianceReport)
 checklistInstanceRouter.get("/:id", checklistInstanceController.getOne)
 checklistInstanceRouter.patch("/:id/verify", requireRole("PC", "ADMIN"), checklistInstanceController.verify)

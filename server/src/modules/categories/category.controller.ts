@@ -16,18 +16,18 @@ export const categoryController = {
 
     create : asyncHandler(async(req : Request, res : Response) => {
         const input = createCategorySchema.parse(req.body)
-        const category = await categoryService.create(input)
+        const category = await categoryService.create(input, req.user!.sub)
         res.status(201).json({ success : true , data : category})
     }),
 
     update : asyncHandler(async (req : Request , res : Response) => {
         const input = updateCategorySchema.parse(req.body)
-        const category = await categoryService.update(req.params.id, input)
+        const category = await categoryService.update(req.params.id, input, req.user!.sub)
         res.json({ success : true , data : category})
     }),
 
     remove : asyncHandler(async (req : Request , res : Response) => {
-        await categoryService.remove(req.params.id)
+        await categoryService.remove(req.params.id, req.user!.sub)
         res.json({ success : true, data : { deleted : true}})
     })
 

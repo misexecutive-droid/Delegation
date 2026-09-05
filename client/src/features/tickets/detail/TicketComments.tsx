@@ -12,7 +12,6 @@ interface TicketCommentsProps {
   submitErrorMessage: string | null;
 }
 
-// One shared thread, visible to anyone who can already view this ticket.
 export const TicketComments = ({
   comments,
   commentText,
@@ -32,7 +31,7 @@ export const TicketComments = ({
         <p className="text-xs text-text-muted font-display">No comments yet.</p>
       )}
       {comments.map(c => (
-        <div key={c.id} className="flex flex-col gap-1 p-3 rounded-lg border border-border/60 bg-surface">
+        <div key={c.id} className="flex flex-col gap-1 p-3 rounded border border-border/60 bg-surface">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center size-5 rounded-full bg-primary-600 text-white text-[10px] font-display font-medium shrink-0">
               {(c.author?.firstName ?? '?').charAt(0).toUpperCase()}

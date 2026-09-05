@@ -3,3 +3,4 @@ export { default as ErrorFallback } from './ErrorFallback';
 export { default as NotFoundPage } from './NotFoundPage';
 export { ErrorScreen } from './ErrorScreen';
 export { MaintenancePage } from './MaintenancePage';
+export { PageMaintenance } from './PageMaintenance';

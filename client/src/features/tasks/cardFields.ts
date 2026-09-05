@@ -12,7 +12,6 @@ import {
   Building2,
   CalendarPlus,
   History,
-  CheckCircle,
   type LucideIcon,
 } from 'lucide-react';
 import type { Task } from '../../api/task';
@@ -82,9 +81,7 @@ export const useCardFieldVisibility = () => {
   return { visibility, toggle };
 };
 
-// Added the missing 'task' (Direct Task) category that was referenced in your filters
 export const CATEGORY_CONFIG: Record<Task['category'], { label: string; icon: LucideIcon; className: string }> = {
-  task: { label: 'Direct Task', icon: CheckCircle, className: 'bg-primary-500/10 text-primary-600 dark:text-primary-400' },
   issue: { label: 'Issue', icon: Bug, className: 'bg-danger/10 text-danger' },
   delegation: { label: 'Delegation', icon: UserCheck, className: 'bg-info/10 text-info' },
 };

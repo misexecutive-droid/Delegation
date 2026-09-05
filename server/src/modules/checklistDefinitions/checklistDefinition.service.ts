@@ -13,6 +13,7 @@ import { AppError } from "../../utils/AppError.js"
 import type { AccessTokenPayload } from "../../middleware/auth/auth.js"
 import type { CreateChecklistDefinitionInput, UpdateChecklistDefinitionInput, SetChecklistDefinitionActiveInput } from "./checklistDefinition.validation.js"
 import { generateInstanceForDefinition, loadDefinitionForGeneration } from "../../jobs/checklistInstanceGenerator.job.js"
+import { auditService } from "../audit/audit.service.js";
 
 export type ChecklistRecurrence = (typeof CHECKLIST_RECURRENCES)[number]
 
@@ -205,10 +206,12 @@ export const checklistDefinitionService = {
         const definitionForGeneration = await loadDefinitionForGeneration(definitionId)
         if (definitionForGeneration) await generateInstanceForDefinition(definitionForGeneration, new Date())
 
-        return this.getById(definitionId)
+        const created = await this.getById(definitionId)
+        await auditService.record({ entityType: "ChecklistDefinition", entityId: definitionId, action: "CREATE", actorId: user.sub, after: created })
+        return created
     },
 
-    async update(id: string, input: UpdateChecklistDefinitionInput) {
+    async update(id: string, input: UpdateChecklistDefinitionInput, actorId: string) {
     
         let wasActive = false
 
@@ -292,14 +295,20 @@ export const checklistDefinitionService = {
             if (definitionForGeneration) await generateInstanceForDefinition(definitionForGeneration, new Date())
         }
 
-        return this.getById(id)
+        const updated = await this.getById(id)
+        await auditService.record({ entityType: "ChecklistDefinition", entityId: id, action: "UPDATE", actorId, after: updated })
+        return updated
     },
 
-    async setActive(id: string, input: SetChecklistDefinitionActiveInput) {
+    async setActive(id: string, input: SetChecklistDefinitionActiveInput, actorId: string) {
         const [existing] = await db.select({ id: checklistDefinitions.id }).from(checklistDefinitions).where(eq(checklistDefinitions.id, id)).limit(1)
         if (!existing) throw AppError.notFound("Checklist not found")
         await db.update(checklistDefinitions).set({ isActive: input.isActive, updatedAt: new Date() }).where(eq(checklistDefinitions.id, id))
-        return this.getById(id)
+        const updated = await this.getById(id)
+        // Its own action: deactivating a checklist silently stops instances being generated, which
+        // is the kind of change people later swear nobody made.
+        await auditService.record({ entityType: "ChecklistDefinition", entityId: id, action: input.isActive ? "ACTIVATE" : "DEACTIVATE", actorId, after: updated })
+        return updated
     },
 
     // Replaces the original 5-step manual cascading delete fan-out (definition -> items ->
@@ -316,10 +325,13 @@ export const checklistDefinitionService = {
     // (see checklistDefinition.ts/checklistInstance.ts FK definitions) — a single delete on the
     // root row is enough; MySQL's cascading FKs handle every descendant table.
     
-    async remove(id: string) {
-        const [existing] = await db.select({ id: checklistDefinitions.id }).from(checklistDefinitions).where(eq(checklistDefinitions.id, id)).limit(1)
+    async remove(id: string, actorId: string) {
+        // The whole definition, not just its id — a delete cascades through items, assignees and
+        // every generated instance, so this snapshot is all that survives it.
+        const existing = await this.getById(id).catch(() => null)
         if (!existing) throw AppError.notFound("Checklist not found")
         await db.delete(checklistDefinitions).where(eq(checklistDefinitions.id, id))
+        await auditService.record({ entityType: "ChecklistDefinition", entityId: id, action: "DELETE", actorId, before: existing })
         return existing
     },
 }

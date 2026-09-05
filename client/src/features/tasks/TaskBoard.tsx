@@ -1,13 +1,15 @@
 import {
-  DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
-  defaultDropAnimationSideEffects, type DropAnimation, type DragStartEvent, type DragEndEvent,
+  DndContext, DragOverlay, useDraggable, useDroppable, MouseSensor, TouchSensor, useSensor, useSensors,
+  pointerWithin, rectIntersection, defaultDropAnimationSideEffects,
+  type CollisionDetection, type DropAnimation, type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core';
-import { useState } from 'react';
-import { toast } from 'sonner';
-import { Sparkles, Plus } from "lucide-react";
+import { memo, useMemo, useRef, useState } from 'react';
+import { Sparkles, Plus, AlertTriangle, ChevronDown } from "lucide-react";
 import { TaskCard } from "./TaskCard";
-import { useUpdateTaskMutation } from "./hook";
-import { STATUS_LABEL } from "./taskDisplay";
+import { useTaskStatusMove } from "./useTaskStatusMove";
+import { DRAG_SLOP_PX } from "../../lib/dragSlop";
+import { isOverdueTask } from "./taskFilters";
+import { buildBoardColumns, type BoardGroupBy } from "./taskBoardGroups";
 import { taskAssigneeIds, type CardFieldVisibility } from "./cardFields";
 import type { Task } from "../../api/task";
 
@@ -19,11 +21,38 @@ const resolveAssigneeNames = (task: Task, assigneeNames: Map<string, string>) =>
 const resolveRaisedByName = (task: Task, assigneeNames: Map<string, string>) =>
   assigneeNames.get(task.userId);
 
-const COLUMNS: Task['status'][] = ['todo', 'in_progress', 'pending_verification', 'done'];
+/**
+ * Where the card lands is decided by the pointer, not by the card's outline.
+ *
+ * dnd-kit's default is `rectIntersection`, which picks whichever droppable shares the most *area*
+ * with the dragged card's rectangle. A delegation card is nearly as wide as a column, so while
+ * dragging it always straddles two of them, and the winner was whichever side the card's body
+ * happened to lean into — not the column under your cursor. Dropping "on" a column regularly moved
+ * the task to its neighbour.
+ *
+ * `pointerWithin` asks the direct question instead: which column is the cursor inside? The
+ * `rectIntersection` fallback covers the cursor being in the gutter between two columns — the card
+ * still overlaps one, so the drop is forgiving rather than silently doing nothing. When the cursor
+ * is over neither and the card overlaps nothing, both return empty and the drag cancels, which is
+ * what dragging off the board should do.
+ */
+const collisionDetection: CollisionDetection = (args) => {
+  const withinPointer = pointerWithin(args);
+  return withinPointer.length > 0 ? withinPointer : rectIntersection(args);
+};
 
 // A slower, smoother ease-out (dnd-kit's default is a flat 250ms ease) so the card visibly
 // settles into its new spot instead of just snapping there, plus a gentle fade so the overlay
 // doesn't hard-cut away the instant the drop lands.
+// Spelled out rather than interpolated: Tailwind scans source text, so `xl:grid-cols-${n}` would
+// emit no CSS at all.
+const XL_GRID_COLS: Record<number, string> = {
+  1: 'xl:grid-cols-1',
+  2: 'xl:grid-cols-2',
+  3: 'xl:grid-cols-3',
+  4: 'xl:grid-cols-4',
+};
+
 const DROP_ANIMATION: DropAnimation = {
   duration: 250,
   easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
@@ -43,6 +72,11 @@ interface TaskBoardProps {
   /** Ids of tasks with an unread "you were just assigned this" notification — surfaces the same
    *  "New delegation from X" callout TaskRow shows in list view, so the cue isn't list-view-only. */
   newlyAssignedTaskIds?: Set<string>;
+  /** True when a filter is narrowing the board — an empty column then means "none match", not
+   *  "nothing here", and those call for different next moves. */
+  isFiltered?: boolean;
+  /** What the columns represent. Only 'status' columns accept a drop — see taskBoardGroups. */
+  groupBy?: BoardGroupBy;
 }
 
 interface CardProps {
@@ -54,26 +88,49 @@ interface CardProps {
   departmentName?: string;
   fields: CardFieldVisibility;
   isNewlyAssigned?: boolean;
+  onMove?: (task: Task, toStatus: Task['status']) => void;
 }
 
-// Wraps TaskCard so the whole card can be picked up and dropped on another column. dnd-kit only
-// treats the gesture as a drag once the pointer has moved past the sensor's activation distance
-// (see PointerSensor config below) — anything shorter still reaches TaskCard's own onClick to
-// open the detail sheet, so drag and click coexist without extra handling here.
+// Wraps TaskCard so the whole card can be picked up and dropped on another column.
 //
 // Deliberately spreads only `listeners` (the pointer handlers), not dnd-kit's `attributes` —
 // those add their own `role="button" tabIndex={0}`, and since there's no KeyboardSensor wired
 // up, that would just stack a second, non-functional keyboard stop on top of TaskCard's own
 // role="button". The floating drag visual comes from DragOverlay below, so this node itself
 // only needs to fade out while its content is "lifted".
+//
+// `touch-manipulation`, NOT `touch-none`: `touch-action: none` tells the browser to handle no
+// gestures at all on this element, and since cards fill the columns, a finger landing anywhere on
+// a card couldn't scroll the board. This board renders from 768px up (TaskMobileList covers
+// narrower screens), so that hit touch tablets and touchscreen laptops — exactly the devices most
+// likely to drag a card in the first place. `manipulation` keeps scrolling and drops the legacy
+// 300ms tap delay; the TouchSensor's press-and-hold constraint is what separates "drag this card"
+// from "scroll the board".
 const DraggableCard = ({ task, ...cardProps }: CardProps) => {
   const { listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
 
   return (
     <div
       ref={setNodeRef}
       {...listeners}
-      className={`transition-opacity duration-200 ease-out ${isDragging ? 'opacity-40 cursor-grabbing touch-none' : 'cursor-grab touch-none'}`}
+      onPointerDownCapture={(e) => { pressOrigin.current = { x: e.clientX, y: e.clientY }; }}
+      // A drag that ends over another column still emits a click on release, which would land on
+      // TaskCard's onClick and pop the detail modal open every time you moved a card. Comparing
+      // release position against press position tells the two gestures apart without depending on
+      // dnd-kit's internal state having settled before the browser dispatches the click.
+      onClickCapture={(e) => {
+        const origin = pressOrigin.current;
+        pressOrigin.current = null;
+        if (!origin) return;
+        if (Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > DRAG_SLOP_PX) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      className={`touch-manipulation transition-opacity duration-200 ease-out ${
+        isDragging ? 'opacity-40 cursor-grabbing' : 'cursor-grab'
+      }`}
     >
       <TaskCard task={task} {...cardProps} />
     </div>
@@ -81,8 +138,15 @@ const DraggableCard = ({ task, ...cardProps }: CardProps) => {
 };
 
 interface ColumnProps {
-  status: Task['status'];
+  /** Droppable id — a status value when grouping by status, otherwise an inert group key. */
+  columnKey: string;
+  label: string;
   tasks: Task[];
+  /** Only a status column can accept a drop; see taskBoardGroups' BoardGroupBy doc. */
+  isDropTarget: boolean;
+  /** True when the whole set fits one screen at xl and becomes a grid; false keeps the floor
+   *  width so eleven assignee columns stay scrollable instead of shrinking to slivers. */
+  fillsRow: boolean;
   assigneeNames: Map<string, string>;
   departmentNames?: Map<string, string>;
   isVerifier: boolean;
@@ -90,38 +154,76 @@ interface ColumnProps {
   onAddTask?: () => void;
   fields: CardFieldVisibility;
   newlyAssignedTaskIds?: Set<string>;
+  onMove?: (task: Task, toStatus: Task['status']) => void;
+  /** Show at most this many cards, with a "show the rest" toggle below. Omit for no cap. */
+  maxVisible?: number;
+  /** True when a filter is narrowing the board — changes what an empty column means. */
+  isFiltered?: boolean;
 }
 
-const Column = ({ status, tasks, assigneeNames, departmentNames, isVerifier, onOpen, onAddTask, fields, newlyAssignedTaskIds }: ColumnProps) => {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+const Column = ({ columnKey, label, tasks, isDropTarget, fillsRow, assigneeNames, departmentNames, isVerifier, onOpen, onAddTask, fields, newlyAssignedTaskIds, onMove, maxVisible, isFiltered }: ColumnProps) => {
+  const { setNodeRef, isOver } = useDroppable({ id: columnKey, disabled: !isDropTarget });
+  const [expanded, setExpanded] = useState(false);
+
+  const isCapped = maxVisible !== undefined && !expanded && tasks.length > maxVisible;
+  const visible = isCapped ? tasks.slice(0, maxVisible) : tasks;
+  const hiddenCount = tasks.length - visible.length;
+  const canToggle = maxVisible !== undefined && tasks.length > maxVisible;
+
+  // What's actually at risk in this column. A count alone says how much work sits here; this says
+  // whether any of it has already slipped, which is the number that decides where to look first.
+  const overdueCount = tasks.filter(isOverdueTask).length;
 
   return (
-    <div
+    <section
       ref={setNodeRef}
-      className={`flex flex-col gap-2 rounded-lg border min-w-0 p-2 transition-colors duration-150 ${
-        isOver ? 'border-primary-400 bg-primary-50/40' : 'border-border bg-surface-hover/40'
-      }`}
+      aria-label={`${label} — ${tasks.length} delegation${tasks.length === 1 ? '' : 's'}${overdueCount ? `, ${overdueCount} overdue` : ''}`}
+      // h-full pairs with the grid dropping `items-start`: every column now stretches to the
+      // height of the tallest, so the whole vertical band under a column accepts a drop.
+      // Below xl the board is a horizontal scroller, so each column also needs a floor width and a
+      // snap point; from xl it's a real grid again and those are handed back to the grid.
+      className={`flex flex-col gap-2 h-full rounded-lg border p-2 transition-colors duration-200 ease-in-out flex-1 min-w-[280px] sm:min-w-[320px] snap-start ${
+        fillsRow ? 'xl:min-w-0' : ''
+      } ${isOver ? 'border-primary-400 bg-primary-500/8' : 'border-border bg-surface'}`}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between px-2 py-2">
+      <div className="flex items-center justify-between gap-2 px-2 py-2">
         <div className="flex items-center gap-2 min-w-0">
           <h3 className="text-xs font-bold text-text-secondary truncate">
-            {STATUS_LABEL[status]}
+            {label}
           </h3>
-          <span className="flex items-center justify-center min-w-[1.5rem] h-5 px-2 text-xs font-bold rounded-full border bg-primary-500/10 text-primary-600 border-primary-500/20">
+          <span className="flex items-center justify-center min-w-6 h-5 px-2 text-xs font-bold rounded-full border bg-primary-500/10 text-primary-600 border-primary-500/20 tabular-nums">
             {tasks.length}
           </span>
         </div>
+
+        {overdueCount > 0 && (
+          <span
+            title={`${overdueCount} of these ${overdueCount === 1 ? 'is' : 'are'} past its due date`}
+            className="flex items-center gap-1 h-5 px-2 text-[11px] font-bold rounded-full border bg-danger/10 text-danger border-danger/20 tabular-nums shrink-0"
+          >
+            <AlertTriangle size={11} strokeWidth={2.5} />
+            {overdueCount}
+          </span>
+        )}
       </div>
 
-      <div className="flex flex-col gap-2.5 min-h-[150px]">
+      {/* flex-1 so the leftover space in a short column belongs to the card area rather than
+          collapsing — that empty space is the easiest part of a column to aim at. */}
+      <div className="flex flex-col gap-2.5 flex-1 min-h-36">
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-24 px-3 text-center border border-dashed border-border rounded-lg bg-surface/40 text-text-light">
-            <Sparkles size={14} className="mb-1.5 text-text-light" />
-            <span className="text-[11px] font-medium text-text-light">No delegations</span>
+          // Vertical padding rather than a fixed h-24, so the placeholder can't clip its own
+          // label at larger text sizes.
+          <div className="flex flex-col items-center justify-center gap-1.5 px-3 py-7 text-center border border-dashed border-border rounded-lg bg-surface">
+            <Sparkles size={14} className="text-text-light" />
+            {/* "No delegations" was a lie whenever a filter was on — the column may be full, just
+                not of anything matching. Different fact, different next move. */}
+            <span className="text-[11px] font-medium text-text-light">
+              {isFiltered ? 'None match your filters' : 'No delegations'}
+            </span>
           </div>
         ) : (
-          tasks.map(task => (
+          visible.map(task => (
             <DraggableCard
               key={task.id}
               task={task}
@@ -132,10 +234,23 @@ const Column = ({ status, tasks, assigneeNames, departmentNames, isVerifier, onO
               departmentName={task.departmentId ? departmentNames?.get(task.departmentId) : undefined}
               fields={fields}
               isNewlyAssigned={newlyAssignedTaskIds?.has(task.id)}
+              onMove={onMove}
             />
           ))
         )}
       </div>
+
+      {canToggle && (
+        <button
+          type="button"
+          onClick={() => setExpanded(v => !v)}
+          aria-expanded={expanded}
+          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-md text-[11px] font-semibold text-text-muted hover:text-text hover:bg-surface-hover transition-all duration-200 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        >
+          {expanded ? 'Show fewer' : `Show ${hiddenCount} more`}
+          <ChevronDown size={13} className={`transition-transform duration-200 ease-in-out ${expanded ? 'rotate-180' : ''}`} />
+        </button>
+      )}
 
       {/* New tasks always start in "To Do" server-side, so a quick-add only makes sense here —
           it reuses the same handler as the toolbar's "New Task" button. */}
@@ -143,20 +258,40 @@ const Column = ({ status, tasks, assigneeNames, departmentNames, isVerifier, onO
         <button
           type="button"
           onClick={onAddTask}
-          className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-md text-xs font-medium text-text-muted bg-surface/60 hover:bg-surface hover:text-primary-600 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
+          className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-md border border-dashed border-border text-xs font-medium text-text-muted hover:border-primary-400 hover:text-primary-600 transition-all duration-200 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
         >
           <Plus size={14} />
           Add new task
         </button>
       )}
-    </div>
+    </section>
   );
 };
 
-export const TaskBoard = ({ tasks, assigneeNames, departmentNames, isVerifier = false, onOpen, onAddTask, fields, newlyAssignedTaskIds }: TaskBoardProps) => {
-  const updateMutation = useUpdateTaskMutation();
+// memo: every prop TaskList passes is now referentially stable, so the board (and with it every
+// card, each of which does date maths, checklist progress and avatar colouring) no longer
+// re-renders when unrelated page state changes — opening a dialog, typing in a filter, a socket
+// invalidation landing.
+const TaskBoardComponent = ({ tasks, assigneeNames, departmentNames, isVerifier = false, onOpen, onAddTask, fields, newlyAssignedTaskIds, isFiltered, groupBy = 'status' }: TaskBoardProps) => {
+  const { requestMove, statusRemarkDialog } = useTaskStatusMove(isVerifier);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const byStatus = groupBy === 'status';
+  const columns = useMemo(
+    () => buildBoardColumns(tasks, groupBy, departmentNames, assigneeNames),
+    [tasks, groupBy, departmentNames, assigneeNames],
+  );
+  // Status and Priority always fit; grouping by department or assignee can produce a dozen
+  // columns, which as a grid would be a dozen slivers. Those stay a scroller at every width.
+  const fitsOneRow = columns.length > 0 && columns.length <= 4;
+  // Split sensors instead of one PointerSensor. PointerSensor treats touch and mouse identically,
+  // so an 8px activation distance meant any finger swipe starting on a card began a drag rather
+  // than scrolling the board. A mouse gets the distance threshold (drag starts as soon as you
+  // clearly mean it); a finger gets press-and-hold, with `tolerance` allowing a little wobble
+  // during the hold before the gesture is handed back to the browser as a scroll.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: DRAG_SLOP_PX } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveTask(tasks.find(t => t.id === event.active.id) ?? null);
@@ -164,44 +299,61 @@ export const TaskBoard = ({ tasks, assigneeNames, departmentNames, isVerifier = 
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveTask(null);
+    // Columns are only droppable when they're statuses, so `over.id` is a status here or nothing.
+    if (!byStatus) return;
 
     const newStatus = event.over?.id as Task['status'] | undefined;
     if (!newStatus) return;
 
     const task = tasks.find(t => t.id === event.active.id);
-    if (!task || task.status === newStatus) return;
-
-    // Mirrors task.service.ts's update() guard — "done" only happens through the verification
-    // flow (TaskVerifyActions' Approve), not a raw status drop, so block it client-side with a
-    // clear reason instead of letting the request round-trip into a 403.
-    if (newStatus === 'done' && !isVerifier) {
-      toast.error('Only a verifier can mark a task done — send it for review instead.');
-      return;
-    }
-
-    updateMutation.mutate({ id: task.id, payload: { status: newStatus } });
+    if (task) requestMove(task, newStatus);
   };
 
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveTask(null)}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
-        {COLUMNS.map(status => (
+      {/* Horizontal scroller below xl, real 4-up grid from xl — the same shape TicketBoard's
+          columns row already uses, so the two boards behave identically.
+          It replaced `sm:grid-cols-2`, which wrapped the four statuses into a 2×2 block: a
+          pipeline you read left-to-right became a square, and Done ended up underneath To Do.
+          Scrolling keeps the order intact at every width. The negative margins bleed the scroll
+          track to the viewport edge so a half-visible next column signals there's more.
+          No `items-start` anywhere: it sized each column to its own contents, so a column holding
+          one card was a ~250px drop target beside a column 1000px tall, and releasing below it did
+          nothing. Stretched columns make the entire row height a valid target. */}
+      <div
+        className={`flex gap-4 items-stretch overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          fitsOneRow ? `xl:grid ${XL_GRID_COLS[columns.length]} xl:overflow-visible xl:snap-none xl:pb-0 xl:mx-0 xl:px-0` : ''
+        }`}
+      >
+        {columns.map(column => (
           <Column
-            key={status}
-            status={status}
-            tasks={tasks.filter(t => t.status === status)}
+            key={column.key}
+            columnKey={column.key}
+            label={column.label}
+            tasks={column.tasks}
+            isDropTarget={byStatus}
+            fillsRow={fitsOneRow}
             assigneeNames={assigneeNames}
             departmentNames={departmentNames}
             isVerifier={isVerifier}
             onOpen={onOpen}
-            onAddTask={status === 'todo' ? onAddTask : undefined}
+            // New delegations always start in "To Do" server-side, so quick-add only belongs on
+            // that column — and only while the board is actually grouped by status.
+            onAddTask={byStatus && column.key === 'todo' ? onAddTask : undefined}
             fields={fields}
             newlyAssignedTaskIds={newlyAssignedTaskIds}
+            onMove={requestMove}
+            // Done only ever grows and is almost entirely history. Capped so a board six months
+            // old doesn't open with a column of two hundred cards nobody scrolls; every other
+            // column holds live work, where hiding anything behind a toggle would be wrong.
+            maxVisible={byStatus && column.key === 'done' ? 8 : undefined}
+            isFiltered={isFiltered}
           />
         ))}
       </div>
@@ -211,7 +363,10 @@ export const TaskBoard = ({ tasks, assigneeNames, departmentNames, isVerifier = 
           regardless of stacking context, and gives it a "lifted" tilt/shadow as feedback. */}
       <DragOverlay dropAnimation={DROP_ANIMATION}>
         {activeTask && (
-          <div className="w-60 rotate-1 scale-105 shadow-xl cursor-grabbing">
+          // No width class: dnd-kit sizes the overlay wrapper from the dragged card's measured
+          // rect, so `w-full` makes the ghost exactly the width of the card you picked up. The old
+          // fixed `w-60` was right for one column width and wrong at every other breakpoint.
+          <div className="w-full rotate-1 scale-105 shadow-xl cursor-grabbing">
             <TaskCard
               task={activeTask}
               isVerifier={isVerifier}
@@ -224,6 +379,10 @@ export const TaskBoard = ({ tasks, assigneeNames, departmentNames, isVerifier = 
           </div>
         )}
       </DragOverlay>
+
+      {statusRemarkDialog}
     </DndContext>
   );
 };
+
+export const TaskBoard = memo(TaskBoardComponent);

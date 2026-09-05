@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard,
   Contact,
@@ -196,16 +195,19 @@ export const AdminLayout = () => {
           )}
         </div>
 
-        <AnimatePresence initial={false}>
-          {hasChildren && showLabel && isExpanded && (
-            <motion.div
-              key="submenu"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden"
-            >
+        {hasChildren && showLabel && (
+          // Same grid-rows 0fr/1fr trick as the main Sidebar: `height: auto` isn't animatable in
+          // CSS but `grid-template-rows` is, and it measures the content the same way. Stays
+          // mounted so it animates closed too; `inert` keeps the links out of the tab order.
+          <div
+            inert={!isExpanded}
+            aria-hidden={!isExpanded}
+            className={cn(
+              'grid overflow-hidden transition-[grid-template-rows,opacity] duration-250 ease-out motion-reduce:transition-none',
+              isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+            )}
+          >
+            <div className="min-h-0">
               <div className="flex flex-col gap-0.5 mt-1 mb-1.5 ml-[19px] pl-3 border-l border-white/10">
                 {children!.map((child) => {
                   const isChildActive = location.pathname === child.to;
@@ -221,37 +223,32 @@ export const AdminLayout = () => {
                   );
                 })}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col h-svh overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans">
+    <div className="flex flex-col h-svh overflow-hidden bg-background text-text transition-colors duration-300 font-sans">
       <AdminHeader onToggleSidebar={() => setSidebarOpen(v => !v)} pageLabel={currentNav?.label ?? 'Overview'} />
 
       <div className="flex flex-1 min-h-0 relative">
         {/* Mobile Backdrop Overlay */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden fixed inset-0 z-30 bg-slate-900/60 backdrop-blur-sm"
-              onClick={() => setSidebarOpen(false)}
-              aria-hidden="true"
-            />
+        <div
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+          className={cn(
+            'md:hidden fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out motion-reduce:transition-none',
+            sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none',
           )}
-        </AnimatePresence>
+        />
 
         {/* 1. Mobile Drawer */}
         <aside
           className={cn(
-            "md:hidden fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[80vw] h-full flex flex-col rounded-r-3xl bg-gradient-to-b from-slate-950 via-primary-800 to-primary-600 px-4 pt-8 pb-6 shadow-2xl transition-transform duration-300 ease-in-out",
+            "md:hidden fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[80vw] h-full flex flex-col rounded-r-3xl bg-gradient-to-b from-primary-900 via-primary-800 to-primary-600 px-4 pt-8 pb-6 shadow-2xl transition-transform duration-300 ease-in-out",
             sidebarOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
           )}
         >
@@ -295,7 +292,7 @@ export const AdminLayout = () => {
             with the app's primary color per the reference layout's dark rail concept. */}
         <aside
           className={cn(
-            "hidden md:flex relative flex-col shrink-0 m-3 rounded-2xl bg-gradient-to-b from-slate-950 via-primary-800 to-primary-600 shadow-lg shadow-primary-900/20",
+            "hidden md:flex relative flex-col shrink-0 m-3 rounded-2xl bg-gradient-to-b from-primary-900 via-primary-800 to-primary-600 shadow-lg shadow-primary-900/20",
             "transition-all duration-300 ease-in-out overflow-hidden py-6",
             sidebarOpen ? "w-64 px-4" : "w-[84px] px-3"
           )}
@@ -348,7 +345,7 @@ export const AdminLayout = () => {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 bg-slate-50 dark:bg-slate-950">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 bg-background">
           {/* pb-44 clears BottomNav plus any page's floating Fab (e.g. Tickets' Create FAB),
               which floats ~56px above the nav — see Dashboard.tsx's identical comment. */}
           <div className="max-w-7xl mx-auto w-full p-3 sm:p-5 lg:p-8 pb-44 md:pb-8">
@@ -358,20 +355,18 @@ export const AdminLayout = () => {
             {breadcrumbs && <Breadcrumbs items={breadcrumbs} className="mb-4" />}
 
             {/* Route Transitions */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 12, scale: 0.99 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.99 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="w-full"
-              >
-                <Suspense fallback={<RouteFallback />}>
-                  <Outlet />
-                </Suspense>
-              </motion.div>
-            </AnimatePresence>
+            {/* Keying on the pathname remounts this node per navigation, replaying the entrance
+                animation. The exit half is gone — holding a replaced page on screen is JS-only
+                orchestration — and with it `mode="wait"`, which had been delaying every incoming
+                admin page until the outgoing one finished leaving. */}
+            <div
+              key={location.pathname}
+              className="w-full animate-in fade-in slide-in-from-bottom-3 duration-250 ease-out"
+            >
+              <Suspense fallback={<RouteFallback />}>
+                <Outlet />
+              </Suspense>
+            </div>
 
           </div>
         </main>

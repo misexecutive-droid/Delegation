@@ -24,8 +24,7 @@ const PRIORITY_RANK: Record<Ticket['priority'], number> = {
   CRITICAL: 3,
 };
 
-// Tickets with no TAT deadline sort after every dated ticket, regardless of sort direction —
-// mirrors Task's own dueDate comparator (client/src/features/tasks/taskFilters.ts).
+
 export const SORT_COMPARATORS: Record<TicketSortKey, (a: Ticket, b: Ticket) => number> = {
   tatDueAt: (a, b) => {
     if (!a.tatDueAt && !b.tatDueAt) return 0;

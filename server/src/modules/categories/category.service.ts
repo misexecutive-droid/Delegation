@@ -4,6 +4,14 @@ import { eq, asc, inArray } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { AppError } from "../../utils/AppError.js";
 import type { CreateCategoryInput, UpdateCategoryInput } from "./category.validation.js";
+import { auditService } from "../audit/audit.service.js";
+import { cached, invalidate, cacheKey } from "../../config/queryCache.js";
+
+// Same reasoning as departments: read constantly, written rarely. `attachRelations` also
+// runs a second query per list call, so the cache saves both.
+const CACHE_PREFIX = "lookup:Category";
+const CACHE_TTL_SECONDS = 300;
+const dropCache = () => invalidate(CACHE_PREFIX);
 
 // NOTE: the conventions doc suggests Drizzle's relational query API (`db.query.x.findMany({
 // with: ... })`) for populate-style reads. That generates LATERAL-join SQL which this
@@ -67,15 +75,17 @@ const getByIdOrThrow = async (id: string) => {
 
 export const categoryService = {
     async list() {
-        const rows = await db.select().from(categories).orderBy(asc(categories.name));
-        return attachRelations(rows);
+        return cached(cacheKey(CACHE_PREFIX, "all"), CACHE_TTL_SECONDS, async () => {
+            const rows = await db.select().from(categories).orderBy(asc(categories.name));
+            return attachRelations(rows);
+        });
     },
 
     async getById(id: string) {
         return getByIdOrThrow(id);
     },
 
-    async create(input: CreateCategoryInput) {
+    async create(input: CreateCategoryInput, actorId: string) {
         const [existing] = await db.select({ id: categories.id }).from(categories).where(eq(categories.name, input.name)).limit(1);
         if (existing) throw AppError.conflict("Name is already exists");
 
@@ -100,12 +110,14 @@ export const categoryService = {
             }
         });
 
-        return getByIdOrThrow(id);
+        const created = await getByIdOrThrow(id);
+        await auditService.record({ entityType: "Category", entityId: id, action: "CREATE", actorId, after: created });
+        await dropCache();
+        return created;
     },
 
-    async update(id: string, input: UpdateCategoryInput) {
-        const [existing] = await db.select({ id: categories.id }).from(categories).where(eq(categories.id, id)).limit(1);
-        if (!existing) throw AppError.notFound("Category not found");
+    async update(id: string, input: UpdateCategoryInput, actorId: string) {
+        const before = await getByIdOrThrow(id);
 
         const { assigneeIds, ...rest } = input;
 
@@ -127,14 +139,19 @@ export const categoryService = {
             }
         });
 
-        return getByIdOrThrow(id);
+        const after = await getByIdOrThrow(id);
+        await auditService.record({ entityType: "Category", entityId: id, action: "UPDATE", actorId, before, after });
+        await dropCache();
+        return after;
     },
 
-    async remove(id: string) {
+    async remove(id: string, actorId: string) {
         const category = await getByIdOrThrow(id);
         // CategoryAssignee.categoryId has onDelete: 'cascade', so junction rows are removed
         // automatically along with the category row.
         await db.delete(categories).where(eq(categories.id, id));
+        await auditService.record({ entityType: "Category", entityId: id, action: "DELETE", actorId, before: category });
+        await dropCache();
         return category;
     }
 };

@@ -53,7 +53,7 @@ function PaginationLink({
           : "h-10 sm:h-11 px-3 sm:px-4",
         isActive
           ? "bg-primary-600 text-white shadow-md shadow-primary-600/30 hover:bg-primary-700 focus-visible:ring-primary-100/50"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-100",
+          : "text-text-secondary hover:bg-surface-hover hover:text-text focus-visible:ring-border",
         className,
       )}
       {...props}
@@ -101,7 +101,7 @@ function PaginationEllipsis({ className, ...props }: React.ComponentProps<"span"
       aria-hidden
       data-slot="pagination-ellipsis"
       className={cn(
-        "flex h-10 sm:h-11 min-w-[2.5rem] sm:min-w-[2.75rem] items-center justify-center text-slate-400", 
+        "flex h-10 sm:h-11 min-w-[2.5rem] sm:min-w-[2.75rem] items-center justify-center text-text-light",
         className
       )}
       {...props}

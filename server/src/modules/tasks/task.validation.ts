@@ -65,6 +65,10 @@ export const updateTaskSchema = createTaskSchema.partial().extend({
     assigneeId : objectId.nullable().optional(),
     departmentId : objectId.nullable().optional(),
     reminderMinutesBefore : z.number().int().positive().nullable().optional(),
+    // Why the status change is being made. Not a Task column — the service peels it off and writes
+    // it to TaskStatusUpdate. Required (enforced in the service, which is the only place that can
+    // see whether `status` actually differs from what's stored) whenever the status moves.
+    statusRemark : z.string().trim().min(1, "A remark is required to change the status.").max(1000).optional(),
 });
 
 

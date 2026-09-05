@@ -227,7 +227,7 @@ export const checklistBulkImportService = {
         }
     },
 
-    async applyBatch(rows: BulkImportApplyRow[], schedule: BulkImportSchedule): Promise<BulkImportApplySummary> {
+    async applyBatch(rows: BulkImportApplyRow[], schedule: BulkImportSchedule, actorId: string): Promise<BulkImportApplySummary> {
         if (!rows.length) throw AppError.badRequest("No rows to apply.")
 
         const groups = new Map<string, { storeIds: Set<string>; userIds: Set<string> }>()
@@ -286,7 +286,9 @@ export const checklistBulkImportService = {
                     conditionalActions: item.conditionalActions ?? undefined,
                 })),
             }
-            await checklistDefinitionService.update(definitionId, input)
+            // Each definition the import touches gets its own audit row, so a bulk import is
+            // as traceable as the equivalent edits made by hand.
+            await checklistDefinitionService.update(definitionId, input, actorId)
         }
 
         return { updatedDefinitions: groups.size, storesAdded, assigneesAdded }

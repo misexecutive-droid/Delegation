@@ -23,7 +23,7 @@ export const TaskAttachmentsGrid = ({ taskId, attachments, canManage }: TaskAtta
         const Icon = attachmentIconFor(file.mimeType);
         const isImage = isImageAttachment(file.mimeType);
         return (
-          <div key={file.id} className="group relative rounded-lg border border-border bg-surface overflow-hidden shadow-2xs">
+          <div key={file.id} className="group relative rounded-lg border border-border bg-surface overflow-hidden hover:border-border-hover transition-colors">
             <a
               href={`${UPLOADS_BASE}${file.url}`}
               target="_blank"

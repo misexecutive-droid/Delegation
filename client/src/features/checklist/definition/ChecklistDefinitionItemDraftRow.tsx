@@ -92,7 +92,7 @@ export const ChecklistDefinitionItemDraftRow = ({
 
   return (
     <div
-      className={`flex flex-col gap-3.5 p-4 rounded-xl border border-border bg-surface shadow-xs transition-all duration-150 hover:border-border/90 hover:shadow-sm ${className}`}
+      className={`flex flex-col gap-3.5 p-4 rounded-xl border border-border bg-surface transition-all duration-150 hover:border-border-hover ${className}`}
     >
       {/* Item Index + Main Description Input */}
       <div className="flex items-center gap-2.5">
@@ -110,11 +110,12 @@ export const ChecklistDefinitionItemDraftRow = ({
         />
       </div>
 
-      {/* Horizontal Question Type Switcher */}
+      {/* Question Type Switcher — wraps to multiple rows instead of scrolling sideways, so all
+          16 types stay visible and scannable even with several items stacked in the builder. */}
       <div
         role="radiogroup"
         aria-label="Question type switcher"
-        className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-lg border border-border/80 bg-muted/30 p-1 text-xs font-display"
+        className="flex flex-wrap gap-1.5 rounded-lg border border-border/80 bg-muted/30 p-2 text-xs font-display"
       >
         {ITEM_TYPES.map((type) => {
           const isSelected = draft.itemType === type;
@@ -127,7 +128,7 @@ export const ChecklistDefinitionItemDraftRow = ({
               aria-label={`Switch type to ${ITEM_TYPE_LABEL[type]}`}
               onClick={() => patch({ itemType: type })}
               className={[
-                'shrink-0 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
+                'whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-150 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
                 isSelected
                   ? 'bg-primary-700 text-white shadow-2xs font-semibold'
                   : 'text-text-muted hover:text-text hover:bg-surface/60',
